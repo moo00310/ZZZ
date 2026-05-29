@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"e:\\\\Unity\\\\project\\\\Assets\\\\Documentation\")",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "PowerShell(gh --version 2>&1)",
+      "PowerShell(git lfs version)"
+    ]
+  }
+}
