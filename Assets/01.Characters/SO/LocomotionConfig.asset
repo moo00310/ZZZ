@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18324d760e55bdb48b6ce4d7d5875987, type: 3}
+  m_Name: LocomotionConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.LocomotionConfig
+  MoveSpeed: 5
+  SprintSpeed: 7
+  RotationSpeed: 15
+  AnimatorSpeed: 1
+  UseRootMotion_WalkStart: 1
+  UseRootMotion_WalkEnd: 1
+  UseRootMotion_RunEnd: 1
+  WalkStartClip: {fileID: 7400000, guid: 998467612ae011044a4551f08410d8d8, type: 2}
+  WalkEndClip: {fileID: 7400000, guid: b712f6bd8b134364a9a9993702e0a4fd, type: 2}
+  RunEndClip: {fileID: 0}
