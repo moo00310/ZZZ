@@ -13,40 +13,72 @@ MonoBehaviour:
   m_Name: WalkConfig
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: New Track
-  LoopTrack: 0
+  LoopTrack: 1
   ComboResetTime: 1.2
   DoneThreshold: 0.85
   EntrySection: 
   Clips:
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Walk_Start
+  - SectionName: Walk_Start
     Clip: {fileID: 7400000, guid: 998467612ae011044a4551f08410d8d8, type: 2}
     Loop: 0
-    UseRootMotion: 1
     Speed: 1
-    TransitionIn: 0.1
+    MoveMode: 2
+    MoveSpeed: 4
     Links:
-    - TargetSection: Avatar_Female_Size02_Burnice_Ani_Walk_Start_End
+    - TargetConfig: {fileID: 11400000}
+      TargetSection: Walk_Start_End
+      Trigger: 0
+      BlendDuration: 0.15
       Input: 0
-      WindowStart: 0.08572138
-      WindowEnd: 0.2241379
-    - TargetSection: 
+      WindowStart: 0.38149604
+      WindowEnd: 0.60441965
+      Move: 1
+    - TargetConfig: {fileID: 11400000}
+      TargetSection: Walk_Loop
+      Trigger: 1
+      BlendDuration: 0.01
       Input: 0
-      WindowStart: 0.5
-      WindowEnd: 1
+      WindowStart: 0.9827586
+      WindowEnd: 0.99999994
+      Move: 3
     Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Walk_Start_End
-    Clip: {fileID: 7400000, guid: 4524b9c7ba8c244498476f93a3cdd63f, type: 2}
-    Loop: 0
-    UseRootMotion: 1
-    Speed: 1
-    TransitionIn: 0.1
-    Links: []
-    Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Walk_Start_End
+  - SectionName: Walk_Loop
     Clip: {fileID: 7400000, guid: 5a57912a993dfd64d99f6c5bb14e6fdf, type: 2}
     Loop: 0
-    UseRootMotion: 1
     Speed: 1
-    TransitionIn: 0.1
+    MoveMode: 2
+    MoveSpeed: 4
+    Links:
+    - TargetConfig: {fileID: 11400000}
+      TargetSection: Walk_End
+      Trigger: 1
+      BlendDuration: 0.02
+      Input: 0
+      WindowStart: 0.9788732
+      WindowEnd: 1
+      Move: 1
+    - TargetConfig: {fileID: 11400000}
+      TargetSection: Walk_Loop
+      Trigger: 1
+      BlendDuration: 0
+      Input: 0
+      WindowStart: 0.98275864
+      WindowEnd: 1
+      Move: 3
+    Notifies: []
+  - SectionName: Walk_End
+    Clip: {fileID: 7400000, guid: b712f6bd8b134364a9a9993702e0a4fd, type: 2}
+    Loop: 0
+    Speed: 1
+    MoveMode: 2
+    MoveSpeed: 4
+    Links: []
+    Notifies: []
+  - SectionName: Walk_Start_End
+    Clip: {fileID: 7400000, guid: 4524b9c7ba8c244498476f93a3cdd63f, type: 2}
+    Loop: 0
+    Speed: 1
+    MoveMode: 2
+    MoveSpeed: 4
     Links: []
     Notifies: []

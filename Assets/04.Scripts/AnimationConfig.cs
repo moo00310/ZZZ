@@ -38,27 +38,55 @@ namespace ZZZ
         public AnimationClip Clip;
 
         [Header("Playback")]
-        public bool  Loop          = false;
-        public bool  UseRootMotion = false;
-        public float Speed         = 1f;
-        public float TransitionIn  = 0.1f;  // 이전 → 이 클립 CrossFade 시간
+        public bool  Loop  = false;  // 이 클립을 반복 재생할지 (Idle/WalkLoop 등)
+        public float Speed = 1f;
+
+        [Header("Movement")]
+        public MoveMode MoveMode  = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
+        public float    MoveSpeed = 4f;             // MoveMode.Planar일 때 코드 이동 속도
 
         [Header("Links")]   // 이 섹션에서 분기 가능한 다음 섹션들
         public List<ClipLink> Links = new List<ClipLink>();
 
         public List<TrackNotify> Notifies = new List<TrackNotify>();
+
+        public bool UseRootMotion => MoveMode == MoveMode.RootMotion;
     }
 
-    // Unreal Montage의 Section Link에 해당.
-    // "이 입력이 이 윈도우 구간 안에 들어오면 → TargetSection으로 전이"
+    // 클립 재생 중 캐릭터 이동 방식
+    public enum MoveMode
+    {
+        None,        // 제자리 (이동 없음)
+        Planar,      // 입력 방향으로 코드 이동 (MoveSpeed) — 걷기/달리기 루프
+        RootMotion   // 루트본 이동량 적용 — 공격/대시
+    }
+
+    // 섹션 간 전이 정의. Trigger 종류에 따라 발동 조건이 다름.
     [Serializable]
     public class ClipLink
     {
-        public string     TargetSection = "";   // 빈 값 = 트랙 종료(복귀)
-        public ComboInput  Input        = ComboInput.Normal;
+        // 전이 대상. TargetConfig가 비어있으면 현재 config 내 전이,
+        // 지정되면 그 config로 갈아끼우고 TargetSection(비면 EntrySection)으로 진입.
+        public AnimationConfig TargetConfig;        // null = 현재 config
+        public string          TargetSection = "";  // 빈 값 = (현재)복귀 / (타겟)EntrySection
+        public LinkTrigger     Trigger       = LinkTrigger.Input;
+        public float           BlendDuration = 0.1f;  // 이 전이가 발동할 때 CrossFade 시간(초)
 
-        [Range(0f, 1f)] public float WindowStart = 0.5f;  // 입력 수용 시작 (normalizedTime)
+        [Header("Input Trigger")]
+        public ComboInput Input = ComboInput.Normal;  // Trigger=Input일 때 공격 종류
+        [Range(0f, 1f)] public float WindowStart = 0.5f;  // 입력 수용 시작
         [Range(0f, 1f)] public float WindowEnd   = 1.0f;  // 입력 수용 끝
+
+        [Header("Condition (모든 트리거에 AND)")]
+        public MoveDir Move = MoveDir.Any;   // 이동 조건
+    }
+
+    // 전이를 일으키는 트리거 종류
+    public enum LinkTrigger
+    {
+        Input,      // 입력이 윈도우 구간 안에 들어옴 (콤보)
+        OnEnd,      // 클립이 끝나면 다른 섹션으로 전이 (WalkEnd→Idle 등). 루프 클립엔 무효
+        WhileMove   // Move 조건이 충족되는 동안 즉시 (Idle→Walk 등)
     }
 
     public enum ComboInput
@@ -68,6 +96,18 @@ namespace ZZZ
         Special,
         Dodge,
         Any
+    }
+
+    // 이동키 방향 조건
+    public enum MoveDir
+    {
+        Any,        // 이동 상관없음
+        Neutral,    // 이동 입력 없음 (정지)
+        Moving,     // 아무 방향이든 이동 중
+        Forward,    // W
+        Back,       // S
+        Left,       // A
+        Right       // D
     }
 
     [Serializable]

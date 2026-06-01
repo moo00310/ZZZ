@@ -24,7 +24,7 @@ namespace ZZZ.Player.StateMachine.States
 
             // 클립이 끝나거나 타임아웃 시 복귀
             if (normalizedTime >= 0.95f || _timer >= MaxDuration)
-                Machine.ChangeState<LocomotionState>();
+                Machine.ChangeState<ConfigState>();
         }
     }
 }

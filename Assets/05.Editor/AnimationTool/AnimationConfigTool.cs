@@ -22,12 +22,14 @@ namespace ZZZ.Editor.AnimationTool
         private bool   _comboMode;        // true = 링크 흐름 재생
         private int    _comboActiveClip;  // 현재 재생 중 클립 인덱스
         private float  _comboClipTime;    // 현재 클립 로컬 시간(초, 스피드 적용 후)
-        private bool[] _heldInput = new bool[5];  // 토글로 눌러둔 입력 (ComboInput 인덱스)
-        private string _comboLog = "";    // 전이 흐름 로그
+        private bool[]  _heldInput = new bool[5]; // 토글로 눌러둔 입력 (ComboInput 인덱스)
+        private MoveDir _simMoveDir = MoveDir.Neutral;  // 시뮬레이션 이동 방향
+        private string  _comboLog = "";   // 전이 흐름 로그
 
         // ── Transition 블렌딩 (CrossFade 시뮬레이션) ──────────────
         private bool          _blending;
         private AnimationClip _blendFromClip;
+        private bool          _blendFromUsesRM; // 이전 클립이 루트모션 사용 여부
         private float         _blendFromTime;   // 이전 클립 로컬 시간(초)
         private float         _blendElapsed;
         private float         _blendDuration;
@@ -150,18 +152,28 @@ namespace ZZZ.Editor.AnimationTool
                 if (_blendElapsed >= _blendDuration) _blending = false;
             }
 
-            // 눌러둔 입력이 매칭 링크 윈도우 안이면 → 점프
+            // 트리거 종류별로 링크 검사 (런타임 ConfigState와 동일 규칙)
+            float done = _config.DoneThreshold > 0f ? _config.DoneThreshold : 0.95f;
             foreach (var link in tc.Links)
             {
-                if (!IsInputHeld(link.Input)) continue;
-                if (nt >= link.WindowStart && nt <= link.WindowEnd)
+                if (!MoveMatches(link.Move)) continue;
+
+                bool fire = false;
+                switch (link.Trigger)
                 {
-                    JumpToLink(link);
-                    return;
+                    case LinkTrigger.Input:
+                        float p = tc.Loop ? Mathf.Repeat(nt, 1f) : nt;
+                        fire = IsInputHeld(link.Input)
+                            && p >= link.WindowStart && p <= link.WindowEnd;
+                        break;
+                    case LinkTrigger.OnEnd:    fire = !tc.Loop && nt >= done; break;
+                    case LinkTrigger.WhileMove: fire = true;      break;
                 }
+
+                if (fire) { JumpToLink(link); return; }
             }
 
-            // 클립 끝 도달
+            // 클립 끝 도달 (루프 클립은 계속 반복)
             if (nt >= 1f)
             {
                 if (tc.Loop) { _comboClipTime = Mathf.Repeat(_comboClipTime, clipLen); }
@@ -184,6 +196,8 @@ namespace ZZZ.Editor.AnimationTool
             {
                 float w = Mathf.Clamp01(_blendElapsed / _blendDuration);
                 SampleBlended(_blendFromClip, _blendFromTime, tc.Clip, ct, w);
+                // 루트모션 클립이면 블렌드 중에도 루트본을 0으로 → 베이크 이동량 튐 방지
+                if (tc.UseRootMotion || _blendFromUsesRM) ResetRootBoneVisual();
             }
             else
             {
@@ -253,8 +267,27 @@ namespace ZZZ.Editor.AnimationTool
             return _heldInput[(int)input];
         }
 
+        // 링크의 이동 조건이 현재 시뮬레이션 방향과 맞는지
+        private bool MoveMatches(MoveDir req)
+        {
+            switch (req)
+            {
+                case MoveDir.Any:    return true;
+                case MoveDir.Moving: return _simMoveDir != MoveDir.Neutral;
+                default:             return req == _simMoveDir;
+            }
+        }
+
         private void JumpToLink(ClipLink link)
         {
+            // 다른 config로 가는 링크는 프리뷰에서 따라가지 않음 (게임에서 검증)
+            if (link.TargetConfig != null && link.TargetConfig != _config)
+            {
+                _comboLog += $"  → [{link.TargetConfig.name}]";
+                _isPlaying = false;
+                return;
+            }
+
             int ti = _config.IndexOfSection(link.TargetSection);
 
             if (ti < 0)   // End
@@ -274,16 +307,17 @@ namespace ZZZ.Editor.AnimationTool
 
             _comboLog += $"  →({link.Input})→ {SectionLabel(ti)}";
 
-            // TransitionIn 동안 이전 클립 → 새 클립 블렌딩 시작
+            // 링크의 Blend 시간 동안 이전 클립 → 새 클립 블렌딩 시작
             var fromTc = _config.Clips[_comboActiveClip];
-            float dur  = _config.Clips[ti].TransitionIn;
+            float dur  = link.BlendDuration;
             if (fromTc.Clip != null && dur > 0.0001f)
             {
-                _blending      = true;
-                _blendFromClip = fromTc.Clip;
-                _blendFromTime = Mathf.Clamp(_comboClipTime, 0f, fromTc.Clip.length);
-                _blendElapsed  = 0f;
-                _blendDuration = dur;
+                _blending        = true;
+                _blendFromClip   = fromTc.Clip;
+                _blendFromUsesRM = fromTc.UseRootMotion;
+                _blendFromTime   = Mathf.Clamp(_comboClipTime, 0f, fromTc.Clip.length);
+                _blendElapsed    = 0f;
+                _blendDuration   = dur;
             }
             else _blending = false;
 
@@ -315,9 +349,11 @@ namespace ZZZ.Editor.AnimationTool
 
             if (_comboMode)
             {
-                // Entry 섹션(없으면 첫 클립)부터 시작
-                int entry = _config.IndexOfSection(_config.EntrySection);
-                _comboActiveClip = entry >= 0 ? entry : 0;
+                // 시작 클립: 선택된 클립 > EntrySection > 첫 클립
+                int start = (_selectedClip >= 0 && _selectedClip < _config.Clips.Count)
+                    ? _selectedClip
+                    : _config.IndexOfSection(_config.EntrySection);
+                _comboActiveClip = start >= 0 ? start : 0;
                 _comboClipTime   = 0f;
                 _comboLog        = SectionLabel(_comboActiveClip);
                 SampleClipPose(_config.Clips[_comboActiveClip], _comboActiveClip, 0f, false);
@@ -566,6 +602,10 @@ namespace ZZZ.Editor.AnimationTool
                 InputToggle(ComboInput.Dodge,    "Dodge",    56);
                 if (GUILayout.Button("Clear", GUILayout.Width(48)))
                     System.Array.Clear(_heldInput, 0, _heldInput.Length);
+
+                GUILayout.Label("Move", GUILayout.Width(36));
+                _simMoveDir = (MoveDir)EditorGUILayout.EnumPopup(_simMoveDir, GUILayout.Width(72));
+
                 DrawLoopToggle();
                 GUILayout.Label(_comboLog, EditorStyles.miniLabel);
             }
@@ -809,9 +849,15 @@ namespace ZZZ.Editor.AnimationTool
                 foreach (var link in tc.Links)
                 {
                     int   ti = _config.IndexOfSection(link.TargetSection);
-                    Color col = InputColor(link.Input);
-                    // 윈도우 끝 지점에서 출발
-                    float sx = barX + link.WindowEnd * barW;
+                    Color col = LinkColor(link);
+                    // 출발 지점: Input=윈도우끝, OnEnd=클립끝, WhileMove=시작부
+                    float srcN = link.Trigger switch
+                    {
+                        LinkTrigger.Input     => link.WindowEnd,
+                        LinkTrigger.OnEnd     => 1f,
+                        _                      => 0.1f,
+                    };
+                    float sx = barX + srcN * barW;
 
                     if (ti < 0)
                     {
@@ -919,29 +965,46 @@ namespace ZZZ.Editor.AnimationTool
             _                   => new Color(0.7f, 0.7f, 0.7f),
         };
 
-        // 클립 바 하단에 각 Link의 입력 수용 윈도우를 밴드로 표시
+        // 링크 트리거별 색상 (Input은 입력 종류 색)
+        private static Color LinkColor(ClipLink link) => link.Trigger switch
+        {
+            LinkTrigger.Input     => InputColor(link.Input),
+            LinkTrigger.OnEnd     => new Color(0.75f, 0.75f, 0.75f),
+            _                      => new Color(0.5f, 0.85f, 0.55f),   // WhileMove
+        };
+
+        // 클립 바 하단에 각 Link를 트리거별로 표시
         private void DrawLinkWindows(TrackClip tc, float barX, float barW, float rowY)
         {
             float bandH    = 5f;
-            float baseY    = rowY + ClipH - 7f - bandH;   // 바 하단 안쪽
-            int   linkCount = tc.Links.Count;
+            float baseY    = rowY + ClipH - 7f - bandH;
 
-            for (int i = 0; i < linkCount; i++)
+            for (int i = 0; i < tc.Links.Count; i++)
             {
                 var   link = tc.Links[i];
-                float wsX  = barX + link.WindowStart * barW;
-                float weX  = barX + link.WindowEnd   * barW;
-                float y    = baseY - i * (bandH + 1f);   // 링크마다 한 줄씩 위로 쌓음
-                Color col  = InputColor(link.Input);
+                float y    = baseY - i * (bandH + 1f);
+                Color col  = LinkColor(link);
 
-                EditorGUI.DrawRect(new Rect(wsX, y, Mathf.Max(2f, weX - wsX), bandH),
+                // 밴드 구간: Input=윈도우, OnEnd=끝부분, WhileMove=전체
+                float aN, bN;
+                switch (link.Trigger)
+                {
+                    case LinkTrigger.Input: aN = link.WindowStart; bN = link.WindowEnd; break;
+                    case LinkTrigger.OnEnd: aN = 0.92f;            bN = 1f;             break;
+                    default:                aN = 0f;               bN = 1f;             break; // WhileMove
+                }
+                float aX = barX + aN * barW;
+                float bX = barX + bN * barW;
+                EditorGUI.DrawRect(new Rect(aX, y, Mathf.Max(2f, bX - aX), bandH),
                     new Color(col.r, col.g, col.b, 0.75f));
 
-                // 타겟 섹션 라벨 (윈도우가 충분히 넓을 때)
                 string targ = string.IsNullOrEmpty(link.TargetSection) ? "End" : link.TargetSection;
-                if (weX - wsX > 36f)
-                    GUI.Label(new Rect(wsX + 2, y - 9f, 80, 10),
-                        $"{link.Input}→{targ}",
+                string mv   = link.Move == MoveDir.Any ? "" : $"+{link.Move}";
+                string trg  = link.Trigger == LinkTrigger.Input ? link.Input.ToString()
+                            : link.Trigger.ToString();
+                if (bX - aX > 30f)
+                    GUI.Label(new Rect(aX + 2, y - 9f, 120, 10),
+                        $"{trg}{mv}→{targ}",
                         new GUIStyle(EditorStyles.miniLabel)
                         { fontSize = 8, normal = { textColor = col }, clipping = TextClipping.Clip });
             }
@@ -1194,9 +1257,29 @@ namespace ZZZ.Editor.AnimationTool
 
         private void DrawTrackLevelInspector()
         {
-            EditorGUILayout.LabelField(_config.TrackName, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Track", EditorStyles.boldLabel);
+
+            EditorGUI.BeginChangeCheck();
+            string trackName = EditorGUILayout.TextField("Name", _config.TrackName);
+
+            // Entry Section 드롭다운 (시작 섹션)
+            string[] opts = BuildSectionOptions(_config);   // [0] = (End/Entry) = 첫 클립
+            int cur = Mathf.Max(0, Array.IndexOf(opts,
+                string.IsNullOrEmpty(_config.EntrySection) ? "(End/Entry)" : _config.EntrySection));
+            int sel = EditorGUILayout.Popup("Entry Section", cur, opts);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_config, "Edit Track");
+                _config.TrackName    = trackName;
+                _config.EntrySection = sel == 0 ? "" : opts[sel];
+                EditorUtility.SetDirty(_config);
+            }
+
             EditorGUILayout.LabelField($"Clips: {_config.Clips.Count}  /  Total: {GetTotalDuration():F2}s",
                 EditorStyles.miniLabel);
+            EditorGUILayout.HelpBox("콤보 Play는 [선택한 클립] → [Entry Section] → [첫 클립] 순으로 시작합니다.",
+                MessageType.None);
 
             DrawSeparator();
             EditorGUILayout.LabelField("Root Motion", EditorStyles.boldLabel);
@@ -1208,7 +1291,7 @@ namespace ZZZ.Editor.AnimationTool
             _rootMotionScale = EditorGUILayout.FloatField("RM Scale", _rootMotionScale);
 
             EditorGUILayout.HelpBox(
-                "클립에서 Use Root Motion을 켜고 Play하면\n루트본 이동량이 GameObject에 적용됩니다.",
+                "클립 Move Mode = RootMotion이면\n루트본 이동량이 GameObject에 적용됩니다.",
                 MessageType.None);
 
             DrawSeparator();
@@ -1225,17 +1308,20 @@ namespace ZZZ.Editor.AnimationTool
             string sect = EditorGUILayout.TextField("Section Name", tc.SectionName);
             var   clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", tc.Clip, typeof(AnimationClip), false);
             bool  loop = EditorGUILayout.Toggle("Loop",            tc.Loop);
-            bool  rm   = EditorGUILayout.Toggle("Use Root Motion", tc.UseRootMotion);
             float spd  = EditorGUILayout.FloatField("Speed",       tc.Speed);
-            float fade = EditorGUILayout.FloatField("Transition In (s)", tc.TransitionIn);
+            var   mode = (MoveMode)EditorGUILayout.EnumPopup("Move Mode", tc.MoveMode);
+            float mspd = tc.MoveSpeed;
+            if (mode == MoveMode.Planar)
+                mspd = EditorGUILayout.FloatField("  Move Speed", tc.MoveSpeed);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_config, "Edit Clip");
                 // 섹션 이름이 비었으면 클립 이름으로 자동 채움
                 if (string.IsNullOrEmpty(sect) && clip != null) sect = clip.name;
                 tc.SectionName = sect;
-                tc.Clip = clip; tc.Loop = loop; tc.UseRootMotion = rm;
-                tc.Speed = Mathf.Max(0.01f, spd); tc.TransitionIn = Mathf.Max(0f, fade);
+                tc.Clip = clip; tc.Loop = loop;
+                tc.Speed = Mathf.Max(0.01f, spd);
+                tc.MoveMode = mode; tc.MoveSpeed = Mathf.Max(0f, mspd);
                 EditorUtility.SetDirty(_config);
             }
 
@@ -1257,9 +1343,6 @@ namespace ZZZ.Editor.AnimationTool
 
         private void DrawLinksEditor(TrackClip tc)
         {
-            // 섹션 이름 드롭다운 후보 (빈 항목 = 트랙 종료)
-            string[] sectionOptions = BuildSectionOptions();
-
             for (int i = 0; i < tc.Links.Count; i++)
             {
                 var link = tc.Links[i];
@@ -1280,24 +1363,47 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUI.BeginChangeCheck();
-                // Target Section 드롭다운
-                int curIdx = Mathf.Max(0, Array.IndexOf(sectionOptions,
-                    string.IsNullOrEmpty(link.TargetSection) ? "(End)" : link.TargetSection));
-                int newIdx = EditorGUILayout.Popup("Target", curIdx, sectionOptions);
-                var input  = (ComboInput)EditorGUILayout.EnumPopup("Input", link.Input);
 
-                // 윈도우 (min-max 슬라이더)
+                // Target Config (비우면 현재 config 내 전이)
+                var targetCfg = (AnimationConfig)EditorGUILayout.ObjectField(
+                    "Target Config", link.TargetConfig, typeof(AnimationConfig), false);
+
+                // 섹션 후보는 타겟 config(없으면 현재) 기준
+                var      cfgForSections = targetCfg != null ? targetCfg : _config;
+                string[] sectionOptions = BuildSectionOptions(cfgForSections);
+                int curIdx = Mathf.Max(0, Array.IndexOf(sectionOptions,
+                    string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
+                int newIdx  = EditorGUILayout.Popup("Target Section", curIdx, sectionOptions);
+                var trigger = (LinkTrigger)EditorGUILayout.EnumPopup("Trigger", link.Trigger);
+
+                // Trigger=Input일 때만 입력 종류 + 윈도우 표시
+                var   input = link.Input;
                 float ws = link.WindowStart, we = link.WindowEnd;
-                EditorGUILayout.MinMaxSlider(
-                    new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
+                if (trigger == LinkTrigger.Input)
+                {
+                    input = (ComboInput)EditorGUILayout.EnumPopup("Input", link.Input);
+                    EditorGUILayout.MinMaxSlider(
+                        new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
+                }
+                else if (trigger == LinkTrigger.OnEnd)
+                {
+                    EditorGUILayout.LabelField(" ", "클립 종료 시 자동 전이", EditorStyles.miniLabel);
+                }
+
+                var   move  = (MoveDir)EditorGUILayout.EnumPopup("Move", link.Move);
+                float blend = EditorGUILayout.FloatField("Blend (s)", link.BlendDuration);
 
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RecordObject(_config, "Edit Link");
+                    link.TargetConfig  = targetCfg;
                     link.TargetSection = newIdx == 0 ? "" : sectionOptions[newIdx];
+                    link.Trigger       = trigger;
                     link.Input         = input;
+                    link.Move          = move;
                     link.WindowStart   = ws;
                     link.WindowEnd     = we;
+                    link.BlendDuration = Mathf.Max(0f, blend);
                     EditorUtility.SetDirty(_config);
                 }
                 EditorGUILayout.EndVertical();
@@ -1312,11 +1418,12 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
-        // [0] = "(End)" + 모든 섹션 이름
-        private string[] BuildSectionOptions()
+        // [0] = "(End/Entry)" + 해당 config의 모든 섹션 이름
+        private string[] BuildSectionOptions(AnimationConfig cfg)
         {
-            var list = new System.Collections.Generic.List<string> { "(End)" };
-            foreach (var c in _config.Clips)
+            var list = new System.Collections.Generic.List<string> { "(End/Entry)" };
+            if (cfg == null) return list.ToArray();
+            foreach (var c in cfg.Clips)
             {
                 string n = !string.IsNullOrEmpty(c.SectionName) ? c.SectionName
                          : c.Clip != null ? c.Clip.name : "";

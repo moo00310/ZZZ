@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 namespace ZZZ.Player
 {
+    using ZZZ;   // MoveDir
+
     [RequireComponent(typeof(CharacterController))]
     public class PlayerController : MonoBehaviour
     {
@@ -36,6 +38,18 @@ namespace ZZZ.Player
         public bool             IsSprinting   => _isSprinting;
         public Vector3          MoveDirection => _moveDirection;
         public LocomotionConfig Config        => _config;
+
+        // 원시 WASD 입력 기준 방향 (W=Forward) — 콤보 Link 조건 판정용
+        public MoveDir CurrentMoveDir
+        {
+            get
+            {
+                if (_moveInput.sqrMagnitude < 0.01f) return MoveDir.Neutral;
+                if (Mathf.Abs(_moveInput.y) >= Mathf.Abs(_moveInput.x))
+                    return _moveInput.y > 0f ? MoveDir.Forward : MoveDir.Back;
+                return _moveInput.x > 0f ? MoveDir.Right : MoveDir.Left;
+            }
+        }
 
         // 라이브 모니터용
         public bool  IsRootMotionActive => !UseCodeMovement && _rootBone != null;

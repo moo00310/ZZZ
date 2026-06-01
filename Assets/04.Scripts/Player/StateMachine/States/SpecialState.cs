@@ -23,7 +23,7 @@ namespace ZZZ.Player.StateMachine.States
             float normalizedTime = Ctx.Animator.GetCurrentNormalizedTime();
 
             if (normalizedTime >= 0.95f || _timer >= MaxDuration)
-                Machine.ChangeState<LocomotionState>();
+                Machine.ChangeState<ConfigState>();
         }
     }
 }

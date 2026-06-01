@@ -35,7 +35,7 @@ namespace ZZZ.Player.StateMachine.States
 
                 if (_comboIndex >= MaxCombo)
                 {
-                    Machine.ChangeState<LocomotionState>();
+                    Machine.ChangeState<ConfigState>();
                     return;
                 }
 
@@ -45,7 +45,7 @@ namespace ZZZ.Player.StateMachine.States
             }
 
             if (_comboTimer >= ComboResetTime && !_nextQueued)
-                Machine.ChangeState<LocomotionState>();
+                Machine.ChangeState<ConfigState>();
         }
 
         public void QueueNext() => _nextQueued = true;
