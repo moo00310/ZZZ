@@ -5,7 +5,14 @@
       "Bash(git --version)",
       "Bash(gh --version)",
       "PowerShell(gh --version 2>&1)",
-      "PowerShell(git lfs version)"
+      "PowerShell(git lfs version)",
+      "Bash(git ls-remote *)",
+      "Bash(git push *)",
+      "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\AnimationEventTool.cs\" -Force)",
+      "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\AnimationEventTool.cs.meta\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\AnimationToolWindow.cs\" -Force)",
+      "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\AnimationToolWindow.cs.meta\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\StateMachineEditorWindow.cs\" -Force)"
     ]
   }
 }

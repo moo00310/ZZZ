@@ -1,4 +1,5 @@
 using UnityEngine;
+using ZZZ;
 using ZZZ.Player.StateMachine.States;
 
 namespace ZZZ.Player.StateMachine
@@ -8,6 +9,9 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(CharacterController))]
     public class PlayerStateMachine : MonoBehaviour
     {
+        [Header("Animation Configs")]
+        [SerializeField] private AnimationConfig _normalComboConfig;
+
         private StateMachine       _machine;
         private PlayerStateContext _ctx;
 
@@ -22,7 +26,7 @@ namespace ZZZ.Player.StateMachine
 
             _machine = new StateMachine();
             _machine.AddState(new LocomotionState(_ctx, this));
-            _machine.AddState(new NormalComboState(_ctx, this));
+            _machine.AddState(new NormalComboState(_ctx, this, _normalComboConfig));
             _machine.AddState(new EnhanceComboState(_ctx, this));
             _machine.AddState(new RushState(_ctx, this));
             _machine.AddState(new SpecialState(_ctx, this));
