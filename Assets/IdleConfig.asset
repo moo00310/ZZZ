@@ -20,9 +20,8 @@ MonoBehaviour:
   Clips:
   - SectionName: Idle1
     Clip: {fileID: 7400000, guid: 72fe7b7efae86e5448f3e7e4ae29a481, type: 2}
-    Loop: 0
     Speed: 1
-    MoveMode: 2
+    MoveMode: 1
     MoveSpeed: 4
     Links:
     - TargetConfig: {fileID: 11400000}
@@ -36,9 +35,8 @@ MonoBehaviour:
     Notifies: []
   - SectionName: Idle_akf
     Clip: {fileID: 7400000, guid: 0086db5c593760f4c97699d093514f5a, type: 2}
-    Loop: 0
     Speed: 1
-    MoveMode: 2
+    MoveMode: 1
     MoveSpeed: 4
     Links:
     - TargetConfig: {fileID: 11400000}
@@ -52,9 +50,8 @@ MonoBehaviour:
     Notifies: []
   - SectionName: Idle2
     Clip: {fileID: 7400000, guid: 72fe7b7efae86e5448f3e7e4ae29a481, type: 2}
-    Loop: 0
     Speed: 1
-    MoveMode: 2
+    MoveMode: 1
     MoveSpeed: 4
     Links:
     - TargetConfig: {fileID: 11400000}

@@ -14,6 +14,7 @@ namespace ZZZ.Player.StateMachine.States
         private AnimationConfig _config;   // 현재 구동 중 config
         private int             _active;   // 현재 클립 인덱스
         private bool[]          _notifyFired;
+        private float           _clipTime; // 현재 섹션 진입 후 경과 시간(초) — 전환마다 0으로 리셋
 
         public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine,
             AnimationConfig homeConfig)
@@ -46,8 +47,12 @@ namespace ZZZ.Player.StateMachine.States
             if (_config == null) return;
             if (_active < 0 || _active >= _config.Clips.Count) return;
 
-            var   tc    = _config.Clips[_active];
-            float ntRaw = Ctx.Animator.GetCurrentNormalizedTime();
+            var tc = _config.Clips[_active];
+
+            // 섹션 자체 경과 시간으로 nt 계산 (CrossFade 중 애니메이터가 옛 클립 시간을
+            // 반환하는 문제 회피 → 전환마다 0부터 다시 시작)
+            _clipTime += Time.deltaTime;
+            float ntRaw = SectionNormalizedTime(tc);
 
             FireNotifies(tc, ntRaw);
 
@@ -66,7 +71,7 @@ namespace ZZZ.Player.StateMachine.States
                 // 조건(공격+방향)이 안 맞으면 어떤 타이밍이든 발동 안 함
                 if (!ConditionMatches(link, moveDir)) continue;
 
-                float p = tc.Loop ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+                float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
                 bool fire = false;
                 switch (link.Timing)
                 {
@@ -80,7 +85,9 @@ namespace ZZZ.Player.StateMachine.States
                         break;
 
                     case LinkTiming.OnEnd:
-                        fire = !tc.Loop && ntRaw >= EndThreshold(tc);
+                        // 루프 클립도 사이클 끝(wrap된 p)에서 탈출 조건을 검사한다.
+                        // 조건(Direction 등)이 안 맞으면 위 ConditionMatches에서 이미 걸러짐.
+                        fire = p >= EndThreshold(tc);
                         break;
                 }
 
@@ -137,6 +144,8 @@ namespace ZZZ.Player.StateMachine.States
 
         private void PlayActive(float blend)
         {
+            _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
+
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
 
@@ -146,13 +155,23 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
             if (tc.MoveMode == MoveMode.RootMotion) Ctx.Controller.FlushRootPos();
 
+            // 시작 부스트 (0이면 내부에서 해제) — 매 섹션 진입마다 갱신
+            Ctx.Controller.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
+
             _notifyFired = new bool[tc.Notifies.Count];
+        }
+
+        // 섹션 진입 후 경과 시간을 normalizedTime으로 변환 (Speed 반영, 루프는 계속 증가)
+        private float SectionNormalizedTime(TrackClip tc)
+        {
+            if (tc.Clip == null || tc.Clip.length <= 0f) return 1f;
+            return _clipTime * Mathf.Max(0.01f, tc.Speed) / tc.Clip.length;
         }
 
         private void FireNotifies(TrackClip tc, float ntRaw)
         {
             if (_notifyFired == null) return;
-            float p = tc.Loop ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
             for (int i = 0; i < tc.Notifies.Count && i < _notifyFired.Length; i++)
             {
                 if (_notifyFired[i]) continue;
@@ -219,7 +238,9 @@ namespace ZZZ.Player.StateMachine.States
         public string ActiveSection =>
             (_config != null && _active >= 0 && _active < _config.Clips.Count)
                 ? _config.Clips[_active].SectionName : null;
-        public float   CurrentNormalizedTime => Ctx.Animator.GetCurrentNormalizedTime();
+        public float CurrentNormalizedTime =>
+            (_config != null && _active >= 0 && _active < _config.Clips.Count)
+                ? SectionNormalizedTime(_config.Clips[_active]) : 0f;
         public MoveDir CurrentMoveDir        => Ctx.Controller.CurrentMoveDir;
     }
 }

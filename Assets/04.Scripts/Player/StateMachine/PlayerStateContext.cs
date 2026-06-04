@@ -16,20 +16,16 @@ namespace ZZZ.Player.StateMachine
         public bool    IsGrounded    => CC.isGrounded;
         public Vector3 MoveDirection => Controller.MoveDirection;
 
-        public LocomotionConfig Config { get; }
-
         public PlayerStateContext(
             PlayerController     controller,
             PlayerAnimatorBridge animator,
             CharacterController  cc,
-            Transform            transform,
-            LocomotionConfig     config = null)
+            Transform            transform)
         {
             Controller = controller;
             Animator   = animator;
             CC         = cc;
             Transform  = transform;
-            Config     = config;
         }
     }
 }

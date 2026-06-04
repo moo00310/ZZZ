@@ -20,16 +20,17 @@ MonoBehaviour:
   Clips:
   - SectionName: Walk_Start
     Clip: {fileID: 7400000, guid: 998467612ae011044a4551f08410d8d8, type: 2}
-    Loop: 0
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    StartBoostSpeed: 3
+    StartBoostTime: 0.5
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Loop
       BlendDuration: 0.01
       Attack: 5
-      Direction: 3
+      Direction: 2
       Timing: 2
       WindowStart: 0.5
       WindowEnd: 1
@@ -39,15 +40,16 @@ MonoBehaviour:
       Attack: 5
       Direction: 1
       Timing: 0
-      WindowStart: 0.4
-      WindowEnd: 0.85
+      WindowStart: 0
+      WindowEnd: 0.9999999
     Notifies: []
   - SectionName: Walk_Loop
     Clip: {fileID: 7400000, guid: 5a57912a993dfd64d99f6c5bb14e6fdf, type: 2}
-    Loop: 0
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_End
@@ -60,18 +62,19 @@ MonoBehaviour:
     Notifies: []
   - SectionName: Walk_End
     Clip: {fileID: 7400000, guid: b712f6bd8b134364a9a9993702e0a4fd, type: 2}
-    Loop: 0
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
       BlendDuration: 0.05
       Attack: 5
-      Direction: 3
+      Direction: 2
       Timing: 0
-      WindowStart: 0.33124995
+      WindowStart: 0
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
@@ -84,18 +87,19 @@ MonoBehaviour:
     Notifies: []
   - SectionName: Walk_Start_End
     Clip: {fileID: 7400000, guid: 4524b9c7ba8c244498476f93a3cdd63f, type: 2}
-    Loop: 0
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
       BlendDuration: 0.1
       Attack: 5
-      Direction: 3
+      Direction: 2
       Timing: 0
-      WindowStart: 0.21875
+      WindowStart: 0
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1

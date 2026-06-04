@@ -8,8 +8,10 @@ namespace ZZZ.Player
     [RequireComponent(typeof(CharacterController))]
     public class PlayerController : MonoBehaviour
     {
-        [Header("Config")]
-        [SerializeField] private LocomotionConfig _config;
+        [Header("Locomotion")]
+        [SerializeField] private float _moveSpeed     = 5f;
+        [SerializeField] private float _sprintSpeed   = 7f;
+        [SerializeField] private float _rotationSpeed = 15f;
 
         [Header("Root Motion")]
         [SerializeField] private Transform _rootBone;       // 이동량 추출 후 로컬 0으로 리셋
@@ -33,12 +35,16 @@ namespace ZZZ.Player
         private float   _currentSpeed;
         private Vector3 _moveDirection;
 
+        // 시작 부스트 (클립 시작 시 진행 방향으로 짧게 가속 → 루트모션 워밍업 보완)
+        private float _boostSpeed;
+        private float _boostDuration;
+        private float _boostTimeLeft;
+
         public bool UseCodeMovement { get; set; } = true;
 
-        public float            CurrentSpeed  => _currentSpeed;
-        public bool             IsSprinting   => _isSprinting;
-        public Vector3          MoveDirection => _moveDirection;
-        public LocomotionConfig Config        => _config;
+        public float   CurrentSpeed  => _currentSpeed;
+        public bool    IsSprinting   => _isSprinting;
+        public Vector3 MoveDirection => _moveDirection;
 
         // 원시 WASD 입력 기준 방향 (W=Forward) — 콤보 Link 조건 판정용
         public MoveDir CurrentMoveDir
@@ -71,6 +77,30 @@ namespace ZZZ.Player
         {
             ApplyGravity();
             Move();
+            ApplyStartBoost();
+        }
+
+        // 클립 시작 시 진행 방향으로 짧게 이동 보강 (ConfigState가 섹션 진입 때 호출)
+        public void AddStartBoost(float speed, float duration)
+        {
+            if (speed <= 0f || duration <= 0f) { _boostTimeLeft = 0f; return; }
+            _boostSpeed    = speed;
+            _boostDuration = duration;
+            _boostTimeLeft = duration;
+        }
+
+        // 진행 방향(입력 있으면 입력 방향, 없으면 바라보는 방향)으로 부스트를 적용하며 0까지 감쇠
+        private void ApplyStartBoost()
+        {
+            if (_boostTimeLeft <= 0f) return;
+            _boostTimeLeft -= Time.deltaTime;
+            float ramp = Mathf.Clamp01(_boostTimeLeft / _boostDuration);   // 1 → 0
+
+            Vector3 dir = _moveDirection.sqrMagnitude > k_moveThreshold
+                ? _moveDirection : transform.forward;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.0001f) dir.Normalize();
+            _cc.Move(dir * (_boostSpeed * ramp * Time.deltaTime));
         }
 
         private void OnMove(InputValue value)   => _moveInput   = value.Get<Vector2>();
@@ -94,16 +124,13 @@ namespace ZZZ.Player
 
                 _moveDirection = (camForward * _moveInput.y + camRight * _moveInput.x).normalized;
 
-                float speed = _config != null
-                    ? (_isSprinting ? _config.SprintSpeed : _config.MoveSpeed)
-                    : (_isSprinting ? 7f : 4f);
+                float speed = _isSprinting ? _sprintSpeed : _moveSpeed;
                 _currentSpeed = speed;
 
                 if (UseCodeMovement)
                     _cc.Move(_moveDirection * (speed * Time.deltaTime));
 
-                float rotSpeed = _config != null ? _config.RotationSpeed : 15f;
-                RotateToward(_moveDirection, rotSpeed);
+                RotateToward(_moveDirection, _rotationSpeed);
             }
         }
 

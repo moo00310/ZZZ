@@ -10,8 +10,9 @@ namespace ZZZ.Editor.AnimationTool
     public class AnimationConfigTool : EditorWindow
     {
         // ── 기본 ─────────────────────────────────────────────────
-        private GameObject      _target;
-        private AnimationConfig _config;
+        // [SerializeField] = Play 진입 시 도메인 리로드 후에도 선택 상태 유지
+        [SerializeField] private GameObject      _target;
+        [SerializeField] private AnimationConfig _config;
         private SerializedObject _serializedConfig;
 
         // ── Preview ───────────────────────────────────────────────
@@ -49,11 +50,11 @@ namespace ZZZ.Editor.AnimationTool
         private const float InspW     = 250f;   // 우측 인스펙터 폭
 
         // ── 타임라인 ─────────────────────────────────────────────
-        private float _pxPerSec = 80f;
-        private float _scrollX  = 0f;
+        [SerializeField] private float _pxPerSec = 80f;
+        [SerializeField] private float _scrollX  = 0f;
 
         // ── 선택 ─────────────────────────────────────────────────
-        private int _selectedClip   = -1;
+        [SerializeField] private int _selectedClip   = -1;
         private int _selectedNotify = -1;
         private int _notifyClipIdx  = -1;
 
@@ -91,6 +92,8 @@ namespace ZZZ.Editor.AnimationTool
         private bool               _liveHasBuffered;
         private ComboInput         _liveBuffered;
         private MoveDir            _liveMove = MoveDir.Any;
+        [SerializeField] private bool _liveFollow = true;   // 런타임 config를 자동으로 따라가기
+        [SerializeField] private AnimationConfig _preplayConfig;  // Play 진입 전 보던 config (종료 시 복원)
 
         // ── Notify 색상 ───────────────────────────────────────────
         private static readonly Color[] NotifyColors =
@@ -112,6 +115,9 @@ namespace ZZZ.Editor.AnimationTool
         {
             EditorApplication.update += OnEditorUpdate;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            // 도메인 리로드(Play 진입 등) 후 _config는 [SerializeField]로 살아남지만
+            // SerializedObject는 직렬화 안 되므로 다시 만든다
+            if (_config != null) _serializedConfig = new SerializedObject(_config);
         }
 
         private void OnDisable()
@@ -124,12 +130,20 @@ namespace ZZZ.Editor.AnimationTool
         // 플레이 진입/종료 시 에디터 프리뷰(AnimationMode)를 끔 — 런타임 애니메이터와 충돌 방지
         private void OnPlayModeChanged(PlayModeStateChange s)
         {
-            if (s == PlayModeStateChange.ExitingEditMode || s == PlayModeStateChange.EnteredPlayMode)
+            if (s == PlayModeStateChange.ExitingEditMode)
+            {
+                ExitPreview();
+                _preplayConfig = _config;   // Follow로 바뀌기 전 보던 config 기억
+            }
+            if (s == PlayModeStateChange.EnteredPlayMode)
                 ExitPreview();
             if (s == PlayModeStateChange.EnteredEditMode)
             {
                 _liveMachine = null;
                 _liveConfig  = null;
+                // Play 중 Follow로 다른 config를 따라갔다면 원래 보던 것으로 복원
+                if (_preplayConfig != null && _preplayConfig != _config)
+                    ShowConfig(_preplayConfig);
             }
         }
 
@@ -158,7 +172,7 @@ namespace ZZZ.Editor.AnimationTool
         private void UpdateLiveState()
         {
             if (_liveMachine == null)
-                _liveMachine = UnityEngine.Object.FindObjectOfType<PlayerStateMachine>();
+                _liveMachine = UnityEngine.Object.FindFirstObjectByType<PlayerStateMachine>();
             if (_liveMachine == null) { _liveConfig = null; return; }
 
             _liveConfig      = _liveMachine.CurrentConfig;
@@ -169,14 +183,19 @@ namespace ZZZ.Editor.AnimationTool
             _liveBuffered    = _liveMachine.BufferedInput;
             _liveMove        = _liveMachine.CurrentMoveDir;
 
-            // 창에 config가 없으면 런타임 config를 자동 표시
-            if (_config == null && _liveConfig != null)
-            {
-                _config = _liveConfig;
-                _serializedConfig = new SerializedObject(_config);
-            }
+            // Follow ON이면 런타임 config를 자동으로 따라간다 (config가 비어 있으면 무조건 채움)
+            if (_liveConfig != null && _liveConfig != _config && (_liveFollow || _config == null))
+                ShowConfig(_liveConfig);
 
             Repaint();
+        }
+
+        // 창에 표시할 config를 교체 (SerializedObject 재생성 + 선택/스크롤 초기화)
+        private void ShowConfig(AnimationConfig cfg)
+        {
+            _config = cfg;
+            _serializedConfig = cfg != null ? new SerializedObject(cfg) : null;
+            _selectedClip = -1; _selectedNotify = -1; _scrollX = 0f;
         }
 
         private void SequentialUpdate(float delta)
@@ -225,7 +244,7 @@ namespace ZZZ.Editor.AnimationTool
             // 클립 끝 도달 (루프 클립은 계속 반복)
             if (nt >= 1f)
             {
-                if (tc.Loop) { _comboClipTime = Mathf.Repeat(_comboClipTime, clipLen); }
+                if (tc.IsLooping) { _comboClipTime = Mathf.Repeat(_comboClipTime, clipLen); }
                 else if (_config.LoopTrack)
                 {
                     _comboLog += "  → [Loop]";
@@ -311,13 +330,13 @@ namespace ZZZ.Editor.AnimationTool
             {
                 if (!ConditionMatches(link)) continue;
 
-                float p = tc.Loop ? Mathf.Repeat(nt, 1f) : nt;
+                float p = tc.IsLooping ? Mathf.Repeat(nt, 1f) : nt;
                 bool fire = false;
                 switch (link.Timing)
                 {
                     case LinkTiming.WhenMatched:  fire = p >= link.WindowStart && p <= link.WindowEnd; break;
                     case LinkTiming.OnWindowMiss: fire = p > link.WindowEnd;                            break;
-                    case LinkTiming.OnEnd:        fire = !tc.Loop && nt >= EndThreshold(tc);            break;
+                    case LinkTiming.OnEnd:        fire = p >= EndThreshold(tc);                         break;
                 }
 
                 if (fire) { JumpToLink(link); return true; }
@@ -495,7 +514,7 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     float local    = Mathf.Clamp(time - t, 0f, dur);
                     float clipTime = local * tc.Speed;
-                    if (tc.Loop) clipTime = Mathf.Repeat(clipTime, tc.Clip.length);
+                    if (tc.IsLooping) clipTime = Mathf.Repeat(clipTime, tc.Clip.length);
                     clipTime = Mathf.Clamp(clipTime, 0f, tc.Clip.length);
                     SampleClipPose(tc, i, clipTime, advancePlayback);
                     return;
@@ -524,7 +543,7 @@ namespace ZZZ.Editor.AnimationTool
             if (advancePlayback)
             {
                 bool sameClip = _rmPrevClipIdx == clipIdx;
-                bool wrapped  = tc.Loop && clipTime < _rmPrevClipTime - 0.0001f; // 루프 되감김
+                bool wrapped  = tc.IsLooping && clipTime < _rmPrevClipTime - 0.0001f; // 루프 되감김
                 bool valid    = _rmHasPrev && sameClip && !wrapped;
 
                 if (valid)
@@ -701,15 +720,19 @@ namespace ZZZ.Editor.AnimationTool
                 GUILayout.Label($"Buffered: {(_liveHasBuffered ? _liveBuffered.ToString() : "-")}",
                     bufStyle, GUILayout.Width(150));
             }
-            if (_liveConfig != null && _liveConfig != _config)
+
+            // Follow: 런타임 config 자동 추적 (ON이면 전환 시 창도 따라감)
+            var prevBg = GUI.backgroundColor;
+            if (_liveFollow) GUI.backgroundColor = new Color(0.4f, 0.9f, 0.45f);
+            _liveFollow = GUILayout.Toggle(_liveFollow, "Follow", "Button", GUILayout.Width(60));
+            GUI.backgroundColor = prevBg;
+
+            // Follow OFF이고 런타임과 다른 config를 보고 있으면 수동 전환 버튼
+            if (!_liveFollow && _liveConfig != null && _liveConfig != _config)
             {
                 if (GUILayout.Button("이 Config 표시", GUILayout.Width(110)))
-                {
-                    _config = _liveConfig;
-                    _serializedConfig = new SerializedObject(_config);
-                    _selectedClip = -1; _selectedNotify = -1; _scrollX = 0f;
-                }
-                GUILayout.Label("(창에 다른 config 표시 중)", EditorStyles.miniLabel);
+                    ShowConfig(_liveConfig);
+                GUILayout.Label("(다른 config 표시 중)", EditorStyles.miniLabel);
             }
             EditorGUILayout.EndHorizontal();
 
@@ -903,7 +926,7 @@ namespace ZZZ.Editor.AnimationTool
                     float lStartT = GetClipStartTime(_liveClipIdx);
                     float lBarX   = LabelW + lStartT * _pxPerSec - _scrollX;
                     float lDur    = ltc.Clip.length / Mathf.Max(0.01f, ltc.Speed);
-                    float lNt     = ltc.Loop ? Mathf.Repeat(_liveNt, 1f) : Mathf.Clamp01(_liveNt);
+                    float lNt     = ltc.IsLooping ? Mathf.Repeat(_liveNt, 1f) : Mathf.Clamp01(_liveNt);
                     float lPhX    = lBarX + lNt * lDur * _pxPerSec;
                     EditorGUI.DrawRect(new Rect(lPhX - 1f, lRowY, 2f, ClipH), new Color(0.3f, 1f, 0.35f));
                 }
@@ -1015,22 +1038,34 @@ namespace ZZZ.Editor.AnimationTool
         }
 
         // ── Link 연결선 (윈도우 끝 → 타겟 섹션 행) ────────────────
+        // 선택한 클립의 링크는 진하고 굵게(+화살표), 나머지는 흐리게 → 겹쳐도 읽기 쉽게
         private void DrawTransitionConnectors()
         {
+            bool hasSel = _selectedClip >= 0 && _selectedClip < _config.Clips.Count;
+
             for (int i = 0; i < _config.Clips.Count; i++)
             {
                 var tc = _config.Clips[i];
                 if (tc.Clip == null) continue;
+
+                bool  bright = hasSel && i == _selectedClip;
+                bool  dim    = hasSel && i != _selectedClip;
+                float lineW  = bright ? 3.5f : dim ? 1.25f : 2f;
+                float alpha  = bright ? 1.0f  : dim ? 0.12f : 0.5f;
+                bool  arrow  = !dim;
+
                 float startT = GetClipStartTime(i);
                 float dur    = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                 float barX   = LabelW + startT * _pxPerSec - _scrollX;
                 float barW   = dur * _pxPerSec;
-                float srcY   = i * (ClipH + ClipGap) + ClipH * 0.5f;
+                float srcYc  = i * (ClipH + ClipGap) + ClipH * 0.5f;
 
-                foreach (var link in tc.Links)
+                for (int li = 0; li < tc.Links.Count; li++)
                 {
-                    int   ti = _config.IndexOfSection(link.TargetSection);
-                    Color col = LinkColor(link);
+                    var   link = tc.Links[li];
+                    Color col  = LinkColor(link);
+                    Color c    = new Color(col.r, col.g, col.b, alpha);
+
                     // 출발 지점: WhenMatched/OnWindowMiss=윈도우끝, OnEnd=클립끝
                     float srcN = link.Timing switch
                     {
@@ -1040,11 +1075,14 @@ namespace ZZZ.Editor.AnimationTool
                         _                        => link.WindowEnd,
                     };
                     float sx = barX + srcN * barW;
+                    // 같은 클립의 여러 링크가 겹치지 않게 출발 Y를 살짝 분산
+                    float srcY = srcYc + (li - (tc.Links.Count - 1) * 0.5f) * 6f;
 
+                    int ti = _config.IndexOfSection(link.TargetSection);
                     if (ti < 0)
                     {
-                        // End: 아래로 짧게 떨어지는 선
-                        Handles.color = new Color(col.r, col.g, col.b, 0.5f);
+                        // End/복귀: 아래로 짧게 떨어지는 점선
+                        Handles.color = c;
                         Handles.DrawDottedLine(new Vector3(sx, srcY + 6f),
                             new Vector3(sx, srcY + ClipH * 0.5f), 3f);
                         continue;
@@ -1054,18 +1092,20 @@ namespace ZZZ.Editor.AnimationTool
                     float dstX = LabelW + dstStartT * _pxPerSec - _scrollX;
                     float dstY = ti * (ClipH + ClipGap) + ClipH * 0.5f;
 
-                    Handles.color = new Color(col.r, col.g, col.b, 0.7f);
-                    float cdx = Mathf.Abs(dstY - srcY) * 0.4f + 20f;
+                    float cdx = Mathf.Abs(dstY - srcY) * 0.4f + 24f;
                     Handles.DrawBezier(
                         new Vector3(sx, srcY), new Vector3(dstX, dstY),
                         new Vector3(sx + cdx, srcY), new Vector3(dstX - cdx, dstY),
-                        col, null, 2f);
+                        c, null, lineW);
 
-                    // 타겟 도착 화살표
-                    Handles.DrawAAConvexPolygon(
-                        new Vector3(dstX, dstY),
-                        new Vector3(dstX - 6f, dstY - 4f),
-                        new Vector3(dstX - 6f, dstY + 4f));
+                    if (arrow)
+                    {
+                        Handles.color = c;
+                        Handles.DrawAAConvexPolygon(
+                            new Vector3(dstX, dstY),
+                            new Vector3(dstX - 7f, dstY - 5f),
+                            new Vector3(dstX - 7f, dstY + 5f));
+                    }
                 }
             }
         }
@@ -1092,7 +1132,7 @@ namespace ZZZ.Editor.AnimationTool
                     normal = { textColor = sel ? Color.white : new Color(0.82f, 0.82f, 0.82f) }
                 });
 
-            DrawBadge("Loop", tc.Loop, new Rect(7, rowY + 22, 34, 12));
+            DrawBadge("Loop", tc.IsLooping, new Rect(7, rowY + 22, 34, 12));
             DrawBadge("RM",   tc.UseRootMotion, new Rect(43, rowY + 22, 26, 12));
 
             if (tc.Clip != null)
@@ -1510,23 +1550,38 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUI.BeginChangeCheck();
             string sect = EditorGUILayout.TextField("Section Name", tc.SectionName);
             var   clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", tc.Clip, typeof(AnimationClip), false);
-            bool  loop = EditorGUILayout.Toggle("Loop",            tc.Loop);
             float spd  = EditorGUILayout.FloatField("Speed",       tc.Speed);
             var   mode = (MoveMode)EditorGUILayout.EnumPopup("Move Mode", tc.MoveMode);
             float mspd = tc.MoveSpeed;
             if (mode == MoveMode.Planar)
                 mspd = EditorGUILayout.FloatField("  Move Speed", tc.MoveSpeed);
+
+            // 시작 부스트 (루트모션 워밍업 보완)
+            float boostSpd = EditorGUILayout.FloatField(
+                new GUIContent("Start Boost", "클립 시작 순간 진행 방향 속도 (0=끔). 시간이 지나며 감쇠"),
+                tc.StartBoostSpeed);
+            float boostT = tc.StartBoostTime;
+            if (boostSpd > 0f)
+                boostT = EditorGUILayout.FloatField("  Boost Time(s)", tc.StartBoostTime);
+
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_config, "Edit Clip");
                 // 섹션 이름이 비었으면 클립 이름으로 자동 채움
                 if (string.IsNullOrEmpty(sect) && clip != null) sect = clip.name;
                 tc.SectionName = sect;
-                tc.Clip = clip; tc.Loop = loop;
+                tc.Clip = clip;
                 tc.Speed = Mathf.Max(0.01f, spd);
                 tc.MoveMode = mode; tc.MoveSpeed = Mathf.Max(0f, mspd);
+                tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
+                tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
                 EditorUtility.SetDirty(_config);
             }
+
+            // Loop은 클립 임포트 설정(Loop Time)에서 자동 표시 — 편집 불가
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.Toggle(new GUIContent("Loop (클립 설정)",
+                    "클립 임포트의 Loop Time 설정을 그대로 표시 (config에서 관리 안 함)"), tc.IsLooping);
 
             if (tc.Clip != null)
                 EditorGUILayout.LabelField(

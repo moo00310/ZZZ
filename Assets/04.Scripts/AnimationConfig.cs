@@ -44,12 +44,15 @@ namespace ZZZ
         public AnimationClip Clip;
 
         [Header("Playback")]
-        public bool  Loop  = false;  // 이 클립을 반복 재생할지 (Idle/WalkLoop 등)
         public float Speed = 1f;
 
         [Header("Movement")]
         public MoveMode MoveMode  = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
         public float    MoveSpeed = 4f;             // MoveMode.Planar일 때 코드 이동 속도
+
+        [Header("Start Boost — 시작 시 진행방향 초기 이동(루트모션 워밍업 보완)")]
+        public float StartBoostSpeed = 0f;   // 클립 시작 순간 속도(0 = 끔). 시간이 지나며 0으로 감쇠
+        public float StartBoostTime  = 0.15f; // 부스트가 0으로 감쇠하기까지의 시간(초)
 
         [Header("Links")]   // 이 섹션에서 분기 가능한 다음 섹션들
         public List<ClipLink> Links = new List<ClipLink>();
@@ -57,6 +60,9 @@ namespace ZZZ
         public List<TrackNotify> Notifies = new List<TrackNotify>();
 
         public bool UseRootMotion => MoveMode == MoveMode.RootMotion;
+
+        // 루프 여부는 클립 임포트 설정(Loop Time)에서 가져온다 — config가 따로 관리하지 않음(표시용)
+        public bool IsLooping => Clip != null && Clip.isLooping;
     }
 
     // 클립 재생 중 캐릭터 이동 방식

@@ -32,9 +32,8 @@ namespace ZZZ.Player.StateMachine
             var controller = GetComponent<PlayerController>();
             var animator   = GetComponent<PlayerAnimatorBridge>();
             var cc         = GetComponent<CharacterController>();
-            var config     = controller.Config;
 
-            _ctx = new PlayerStateContext(controller, animator, cc, transform, config);
+            _ctx = new PlayerStateContext(controller, animator, cc, transform);
 
             _machine = new StateMachine();
             _machine.AddState(new ConfigState(_ctx, this, _startConfig));
