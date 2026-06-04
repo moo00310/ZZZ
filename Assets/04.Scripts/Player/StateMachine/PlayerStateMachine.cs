@@ -53,6 +53,14 @@ namespace ZZZ.Player.StateMachine
 
         public string CurrentStateName => _machine.CurrentState?.GetType().Name ?? "-";
 
+        // ── 에디터 라이브 모니터용 (현재 State가 ConfigState일 때만 유효) ──
+        private ConfigState ActiveConfigState => _machine.CurrentState as ConfigState;
+        public AnimationConfig CurrentConfig         => ActiveConfigState?.CurrentConfig;
+        public int             CurrentClipIndex      => ActiveConfigState?.ActiveIndex ?? -1;
+        public string          CurrentSection        => ActiveConfigState?.ActiveSection;
+        public float           CurrentNormalizedTime => ActiveConfigState?.CurrentNormalizedTime ?? 0f;
+        public MoveDir         CurrentMoveDir         => ActiveConfigState?.CurrentMoveDir ?? MoveDir.Any;
+
         // ── 입력 콜백 (PlayerInput SendMessages) ──────────────────
         private void OnAttack(InputValue value)  { if (value.isPressed) BufferInput(ComboInput.Normal); }
         private void OnEnhanced(InputValue value) { if (value.isPressed) BufferInput(ComboInput.Enhanced); }

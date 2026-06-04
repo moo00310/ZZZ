@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Player.StateMachine;
 
 namespace ZZZ.Editor.AnimationTool
 {
@@ -80,6 +82,16 @@ namespace ZZZ.Editor.AnimationTool
 
         private Vector2 _inspScroll;
 
+        // ── 라이브 모니터 (플레이 중 런타임 상태 추적) ────────────
+        private PlayerStateMachine _liveMachine;
+        private AnimationConfig    _liveConfig;
+        private int                _liveClipIdx = -1;
+        private string             _liveSection;
+        private float              _liveNt;
+        private bool               _liveHasBuffered;
+        private ComboInput         _liveBuffered;
+        private MoveDir            _liveMove = MoveDir.Any;
+
         // ── Notify 색상 ───────────────────────────────────────────
         private static readonly Color[] NotifyColors =
         {
@@ -96,12 +108,41 @@ namespace ZZZ.Editor.AnimationTool
             w.minSize = new Vector2(640f, 480f);
         }
 
-        private void OnEnable()  => EditorApplication.update += OnEditorUpdate;
-        private void OnDisable() { EditorApplication.update -= OnEditorUpdate; ExitPreview(); }
+        private void OnEnable()
+        {
+            EditorApplication.update += OnEditorUpdate;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            ExitPreview();
+        }
+
+        // 플레이 진입/종료 시 에디터 프리뷰(AnimationMode)를 끔 — 런타임 애니메이터와 충돌 방지
+        private void OnPlayModeChanged(PlayModeStateChange s)
+        {
+            if (s == PlayModeStateChange.ExitingEditMode || s == PlayModeStateChange.EnteredPlayMode)
+                ExitPreview();
+            if (s == PlayModeStateChange.EnteredEditMode)
+            {
+                _liveMachine = null;
+                _liveConfig  = null;
+            }
+        }
 
         // ── Editor Update ────────────────────────────────────────
         private void OnEditorUpdate()
         {
+            // 플레이 중에는 자체 프리뷰 대신 런타임 상태를 추적만 한다
+            if (EditorApplication.isPlaying)
+            {
+                UpdateLiveState();
+                return;
+            }
+
             if (!_isPlaying || _config == null) return;
             double now   = EditorApplication.timeSinceStartup;
             float  delta = (float)(now - _lastEditorTime) * _previewSpeed;
@@ -109,6 +150,31 @@ namespace ZZZ.Editor.AnimationTool
 
             if (_comboMode) ComboUpdate(delta);
             else            SequentialUpdate(delta);
+
+            Repaint();
+        }
+
+        // 플레이 중인 씬에서 PlayerStateMachine을 찾아 현재 config/섹션/시간을 읽어온다
+        private void UpdateLiveState()
+        {
+            if (_liveMachine == null)
+                _liveMachine = UnityEngine.Object.FindObjectOfType<PlayerStateMachine>();
+            if (_liveMachine == null) { _liveConfig = null; return; }
+
+            _liveConfig      = _liveMachine.CurrentConfig;
+            _liveClipIdx     = _liveMachine.CurrentClipIndex;
+            _liveSection     = _liveMachine.CurrentSection;
+            _liveNt          = _liveMachine.CurrentNormalizedTime;
+            _liveHasBuffered = _liveMachine.HasBufferedInput;
+            _liveBuffered    = _liveMachine.BufferedInput;
+            _liveMove        = _liveMachine.CurrentMoveDir;
+
+            // 창에 config가 없으면 런타임 config를 자동 표시
+            if (_config == null && _liveConfig != null)
+            {
+                _config = _liveConfig;
+                _serializedConfig = new SerializedObject(_config);
+            }
 
             Repaint();
         }
@@ -152,26 +218,9 @@ namespace ZZZ.Editor.AnimationTool
                 if (_blendElapsed >= _blendDuration) _blending = false;
             }
 
-            // 트리거 종류별로 링크 검사 (런타임 ConfigState와 동일 규칙)
-            float done = _config.DoneThreshold > 0f ? _config.DoneThreshold : 0.95f;
-            foreach (var link in tc.Links)
-            {
-                if (!MoveMatches(link.Move)) continue;
-
-                bool fire = false;
-                switch (link.Trigger)
-                {
-                    case LinkTrigger.Input:
-                        float p = tc.Loop ? Mathf.Repeat(nt, 1f) : nt;
-                        fire = IsInputHeld(link.Input)
-                            && p >= link.WindowStart && p <= link.WindowEnd;
-                        break;
-                    case LinkTrigger.OnEnd:    fire = !tc.Loop && nt >= done; break;
-                    case LinkTrigger.WhileMove: fire = true;      break;
-                }
-
-                if (fire) { JumpToLink(link); return; }
-            }
+            // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 검사 (런타임 ConfigState와 동일)
+            if (TryLinksPreview(tc.Links, tc, nt)) return;
+            if (_config.GlobalLinks != null && TryLinksPreview(_config.GlobalLinks, tc, nt)) return;
 
             // 클립 끝 도달 (루프 클립은 계속 반복)
             if (nt >= 1f)
@@ -255,16 +304,60 @@ namespace ZZZ.Editor.AnimationTool
             _comboLog += $" → {SectionLabel(_comboActiveClip)}";
         }
 
-        // Any 링크는 아무 입력이나 눌려있으면 활성
-        private bool IsInputHeld(ComboInput input)
+        // links를 순서대로 검사해 첫 발동 링크로 점프. 점프했으면 true.
+        private bool TryLinksPreview(List<ClipLink> links, TrackClip tc, float nt)
         {
-            if (input == ComboInput.Any)
+            foreach (var link in links)
             {
-                for (int i = 0; i < _heldInput.Length; i++)
-                    if (_heldInput[i]) return true;
-                return false;
+                if (!ConditionMatches(link)) continue;
+
+                float p = tc.Loop ? Mathf.Repeat(nt, 1f) : nt;
+                bool fire = false;
+                switch (link.Timing)
+                {
+                    case LinkTiming.WhenMatched:  fire = p >= link.WindowStart && p <= link.WindowEnd; break;
+                    case LinkTiming.OnWindowMiss: fire = p > link.WindowEnd;                            break;
+                    case LinkTiming.OnEnd:        fire = !tc.Loop && nt >= EndThreshold(tc);            break;
+                }
+
+                if (fire) { JumpToLink(link); return true; }
             }
-            return _heldInput[(int)input];
+            return false;
+        }
+
+        // 링크의 공격+방향 조건이 현재 시뮬레이션 입력 상태와 모두 맞는지
+        private bool ConditionMatches(ClipLink link)
+            => AttackMatches(link.Attack) && MoveMatches(link.Direction);
+
+        // OnEnd 발동 기준 (런타임 ConfigState와 동일 규칙)
+        private float EndThreshold(TrackClip tc)
+        {
+            float dt = _config != null ? _config.DoneThreshold : 0f;
+            if (dt > 0f && dt < 1f) return dt;
+            if (tc.Clip != null && tc.Clip.frameRate > 0f)
+            {
+                float frames = tc.Clip.length * tc.Clip.frameRate;
+                if (frames > 1f) return Mathf.Clamp01(1f - 1f / frames);
+            }
+            return 0.999f;
+        }
+
+        // 공격 입력 조건 (눌러둔 토글 기준)
+        private bool AttackMatches(ComboInput required)
+        {
+            switch (required)
+            {
+                case ComboInput.None: return !AnyInputHeld();
+                case ComboInput.Any:  return AnyInputHeld();
+                default:              return _heldInput[(int)required];
+            }
+        }
+
+        private bool AnyInputHeld()
+        {
+            for (int i = 0; i < _heldInput.Length; i++)
+                if (_heldInput[i]) return true;
+            return false;
         }
 
         // 링크의 이동 조건이 현재 시뮬레이션 방향과 맞는지
@@ -280,51 +373,63 @@ namespace ZZZ.Editor.AnimationTool
 
         private void JumpToLink(ClipLink link)
         {
-            // 다른 config로 가는 링크는 프리뷰에서 따라가지 않음 (게임에서 검증)
+            // 블렌드용으로 현재(이전) 클립 먼저 캡처
+            var fromTc = _config.Clips[_comboActiveClip];
+
+            // ── 다른 config로 전이 → 프리뷰 config 자체를 교체 ──
             if (link.TargetConfig != null && link.TargetConfig != _config)
             {
-                _comboLog += $"  → [{link.TargetConfig.name}]";
-                _isPlaying = false;
+                var newCfg = link.TargetConfig;
+                if (newCfg.Clips.Count == 0) { _isPlaying = false; return; }
+
+                int t = !string.IsNullOrEmpty(link.TargetSection)
+                    ? newCfg.IndexOfSection(link.TargetSection)
+                    : newCfg.IndexOfSection(newCfg.EntrySection);
+                if (t < 0) t = 0;
+
+                // 표시 중인 config 교체
+                _config           = newCfg;
+                _serializedConfig = new SerializedObject(_config);
+                _selectedClip     = -1;
+                _selectedNotify   = -1;
+                _scrollX          = 0f;
+
+                _comboLog += $"  →[{newCfg.name}] {SectionLabel(t)}";
+                BeginJump(fromTc, t, link.BlendDuration);
                 return;
             }
 
+            // ── 같은 config 내 전이 ──
             int ti = _config.IndexOfSection(link.TargetSection);
-
-            if (ti < 0)   // End
+            if (ti < 0)   // End / Loop
             {
-                if (_config.LoopTrack)
-                {
-                    _comboLog += $"  →({link.Input})→ [Loop]";
-                    RestartCombo();
-                }
-                else
-                {
-                    _comboLog += $"  →({link.Input})→ [End]";
-                    _isPlaying = false;
-                }
+                if (_config.LoopTrack) { _comboLog += "  → [Loop]"; RestartCombo(); }
+                else                   { _comboLog += "  → [End]";  _isPlaying = false; }
                 return;
             }
 
-            _comboLog += $"  →({link.Input})→ {SectionLabel(ti)}";
+            _comboLog += $"  → {SectionLabel(ti)}";
+            BeginJump(fromTc, ti, link.BlendDuration);
+        }
 
-            // 링크의 Blend 시간 동안 이전 클립 → 새 클립 블렌딩 시작
-            var fromTc = _config.Clips[_comboActiveClip];
-            float dur  = link.BlendDuration;
-            if (fromTc.Clip != null && dur > 0.0001f)
+        // 이전 클립 → toIdx 클립으로 전이 (블렌드 + 루트모션 추적 초기화)
+        private void BeginJump(TrackClip fromTc, int toIdx, float blendDur)
+        {
+            if (fromTc.Clip != null && blendDur > 0.0001f)
             {
                 _blending        = true;
                 _blendFromClip   = fromTc.Clip;
                 _blendFromUsesRM = fromTc.UseRootMotion;
                 _blendFromTime   = Mathf.Clamp(_comboClipTime, 0f, fromTc.Clip.length);
                 _blendElapsed    = 0f;
-                _blendDuration   = dur;
+                _blendDuration   = blendDur;
             }
             else _blending = false;
 
-            _comboActiveClip = ti;
+            _comboActiveClip = toIdx;
             _comboClipTime   = 0f;
-            _rmHasPrev       = false;   // 전이 시 루트모션 델타 끊기
-            _rmPrevClipIdx   = ti;
+            _rmHasPrev       = false;
+            _rmPrevClipIdx   = toIdx;
         }
 
         private string SectionLabel(int idx)
@@ -376,6 +481,7 @@ namespace ZZZ.Editor.AnimationTool
         private void SampleAtTime(float time, bool advancePlayback)
         {
             if (_target == null || _config == null) return;
+            if (EditorApplication.isPlaying) return;   // 런타임 애니메이터와 충돌 방지
             if (!AnimationMode.InAnimationMode()) AnimationMode.StartAnimationMode();
 
             float t = 0f;
@@ -496,7 +602,9 @@ namespace ZZZ.Editor.AnimationTool
             DrawToolbar();
             if (_config != null && _serializedConfig != null) _serializedConfig.Update();
 
-            DrawPlaybar(new Rect(0, ToolbarH, position.width, PlaybarH));
+            var barRect = new Rect(0, ToolbarH, position.width, PlaybarH);
+            if (EditorApplication.isPlaying) DrawLivebar(barRect);
+            else                             DrawPlaybar(barRect);
 
             float contentY = ToolbarH + PlaybarH;
             float contentH = position.height - contentY;
@@ -553,6 +661,58 @@ namespace ZZZ.Editor.AnimationTool
                 }
             }
             EditorGUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        // ── Livebar (플레이 중 런타임 상태 표시) ──────────────────
+        private void DrawLivebar(Rect area)
+        {
+            EditorGUI.DrawRect(area, new Color(0.14f, 0.19f, 0.14f));
+            GUILayout.BeginArea(area);
+
+            // 1행: LIVE 배지 + 현재 config/섹션/시간
+            EditorGUILayout.BeginHorizontal();
+            var liveStyle = new GUIStyle(EditorStyles.boldLabel)
+            { normal = { textColor = new Color(0.4f, 1f, 0.45f) } };
+            GUILayout.Label("● LIVE", liveStyle, GUILayout.Width(52));
+
+            if (_liveMachine == null)
+                GUILayout.Label("씬에서 PlayerStateMachine을 찾는 중…", EditorStyles.miniLabel);
+            else if (_liveConfig == null)
+                GUILayout.Label("현재 State가 ConfigState가 아님", EditorStyles.miniLabel);
+            else
+            {
+                GUILayout.Label($"Config: {_liveConfig.name}", GUILayout.Width(180));
+                var secStyle = new GUIStyle(EditorStyles.boldLabel)
+                { normal = { textColor = new Color(1f, 0.85f, 0.3f) } };
+                GUILayout.Label($"▶ {(_liveSection ?? "-")}", secStyle, GUILayout.Width(160));
+                GUILayout.Label($"nt={Mathf.Repeat(_liveNt, 1f):F2}", GUILayout.Width(70));
+            }
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+
+            // 2행: 입력 상태 + config 동기화 버튼
+            EditorGUILayout.BeginHorizontal();
+            if (_liveMachine != null)
+            {
+                GUILayout.Label($"Move: {_liveMove}", GUILayout.Width(120));
+                var bufStyle = new GUIStyle(EditorStyles.miniLabel)
+                { normal = { textColor = _liveHasBuffered ? InputColor(_liveBuffered) : Color.gray } };
+                GUILayout.Label($"Buffered: {(_liveHasBuffered ? _liveBuffered.ToString() : "-")}",
+                    bufStyle, GUILayout.Width(150));
+            }
+            if (_liveConfig != null && _liveConfig != _config)
+            {
+                if (GUILayout.Button("이 Config 표시", GUILayout.Width(110)))
+                {
+                    _config = _liveConfig;
+                    _serializedConfig = new SerializedObject(_config);
+                    _selectedClip = -1; _selectedNotify = -1; _scrollX = 0f;
+                }
+                GUILayout.Label("(창에 다른 config 표시 중)", EditorStyles.miniLabel);
+            }
+            EditorGUILayout.EndHorizontal();
+
             GUILayout.EndArea();
         }
 
@@ -687,16 +847,17 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUI.DrawRect(new Rect(0, area.y, LabelW, RulerH), new Color(0.18f, 0.18f, 0.18f));
             DrawRuler(new Rect(LabelW, area.y, area.width - LabelW, RulerH));
 
-            // 플레이헤드 삼각형 + 선 (눈금자) — 순차 모드에서만
+            // 플레이헤드 삼각형 + 선 (눈금자) — 순차 모드 & 비-플레이 중에만
+            bool editPreview = !EditorApplication.isPlaying;
             float phX = LabelW + _trackTime * _pxPerSec - _scrollX;
-            if (!_comboMode && phX >= LabelW && phX <= area.width)
+            if (editPreview && !_comboMode && phX >= LabelW && phX <= area.width)
             {
                 EditorGUI.DrawRect(new Rect(phX - 1f, area.y, 2f, RulerH), new Color(1f, 0.6f, 0f));
                 DrawPlayheadHandle(phX, area.y, 7f, new Color(1f, 0.6f, 0f));
             }
 
-            // 눈금자 플레이헤드 드래그 (순차 모드에서만)
-            if (!_comboMode)
+            // 눈금자 플레이헤드 드래그 (순차 모드 & 비-플레이 중에만)
+            if (editPreview && !_comboMode)
                 HandleRulerInput(new Rect(LabelW, area.y, area.width - LabelW, RulerH));
 
             // ── 클립 행 영역 ──────────────────────────────────────
@@ -705,12 +866,12 @@ namespace ZZZ.Editor.AnimationTool
             GUI.BeginClip(new Rect(0, rowsY, area.width, rowsH));
             var localArea = new Rect(0, 0, area.width, rowsH);
 
-            // 플레이헤드 세로선 (클립 영역) — 순차 모드
-            if (!_comboMode && phX >= LabelW && phX <= area.width)
+            // 플레이헤드 세로선 (클립 영역) — 순차 모드 & 비-플레이 중에만
+            if (editPreview && !_comboMode && phX >= LabelW && phX <= area.width)
                 EditorGUI.DrawRect(new Rect(phX - 1f, 0, 2f, rowsH), new Color(1f, 0.6f, 0f, 0.6f));
 
-            // 콤보 모드: 활성 클립 행 강조 + 로컬 플레이헤드
-            if (_comboMode && _comboActiveClip >= 0 && _comboActiveClip < _config.Clips.Count)
+            // 콤보 모드: 활성 클립 행 강조 + 로컬 플레이헤드 (비-플레이 중에만)
+            if (editPreview && _comboMode && _comboActiveClip >= 0 && _comboActiveClip < _config.Clips.Count)
             {
                 var   atc  = _config.Clips[_comboActiveClip];
                 float aRowY = _comboActiveClip * (ClipH + ClipGap);
@@ -725,6 +886,26 @@ namespace ZZZ.Editor.AnimationTool
                     float aDur    = atc.Clip.length / Mathf.Max(0.01f, atc.Speed);
                     float aPhX    = aBarX + Mathf.Clamp01(aNt) * aDur * _pxPerSec;
                     EditorGUI.DrawRect(new Rect(aPhX - 1f, aRowY, 2f, ClipH), new Color(1f, 0.6f, 0f));
+                }
+            }
+
+            // 라이브 모드: 런타임 활성 섹션 행 강조 + 런타임 플레이헤드 (초록)
+            if (EditorApplication.isPlaying && _liveConfig == _config &&
+                _liveClipIdx >= 0 && _liveClipIdx < _config.Clips.Count)
+            {
+                var   ltc   = _config.Clips[_liveClipIdx];
+                float lRowY = _liveClipIdx * (ClipH + ClipGap);
+                EditorGUI.DrawRect(new Rect(LabelW, lRowY, area.width - LabelW, ClipH),
+                    new Color(0.3f, 1f, 0.35f, 0.10f));
+
+                if (ltc.Clip != null)
+                {
+                    float lStartT = GetClipStartTime(_liveClipIdx);
+                    float lBarX   = LabelW + lStartT * _pxPerSec - _scrollX;
+                    float lDur    = ltc.Clip.length / Mathf.Max(0.01f, ltc.Speed);
+                    float lNt     = ltc.Loop ? Mathf.Repeat(_liveNt, 1f) : Mathf.Clamp01(_liveNt);
+                    float lPhX    = lBarX + lNt * lDur * _pxPerSec;
+                    EditorGUI.DrawRect(new Rect(lPhX - 1f, lRowY, 2f, ClipH), new Color(0.3f, 1f, 0.35f));
                 }
             }
 
@@ -850,12 +1031,13 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     int   ti = _config.IndexOfSection(link.TargetSection);
                     Color col = LinkColor(link);
-                    // 출발 지점: Input=윈도우끝, OnEnd=클립끝, WhileMove=시작부
-                    float srcN = link.Trigger switch
+                    // 출발 지점: WhenMatched/OnWindowMiss=윈도우끝, OnEnd=클립끝
+                    float srcN = link.Timing switch
                     {
-                        LinkTrigger.Input     => link.WindowEnd,
-                        LinkTrigger.OnEnd     => 1f,
-                        _                      => 0.1f,
+                        LinkTiming.WhenMatched  => link.WindowEnd,
+                        LinkTiming.OnWindowMiss => link.WindowEnd,
+                        LinkTiming.OnEnd        => 1f,
+                        _                        => link.WindowEnd,
                     };
                     float sx = barX + srcN * barW;
 
@@ -962,16 +1144,20 @@ namespace ZZZ.Editor.AnimationTool
             ComboInput.Enhanced => new Color(1.0f, 0.55f, 0.15f),
             ComboInput.Special  => new Color(0.9f, 0.3f, 0.9f),
             ComboInput.Dodge    => new Color(0.3f, 0.9f, 0.6f),
-            _                   => new Color(0.7f, 0.7f, 0.7f),
+            ComboInput.None     => new Color(0.5f, 0.85f, 0.55f),  // 공격 없음 = 초록
+            _                   => new Color(0.7f, 0.7f, 0.7f),    // Any
         };
 
-        // 링크 트리거별 색상 (Input은 입력 종류 색)
-        private static Color LinkColor(ClipLink link) => link.Trigger switch
+        // 링크 색상: OnWindowMiss=빨강(캔슬), OnEnd=회색, 그 외는 공격/방향 조건 색
+        private static Color LinkColor(ClipLink link)
         {
-            LinkTrigger.Input     => InputColor(link.Input),
-            LinkTrigger.OnEnd     => new Color(0.75f, 0.75f, 0.75f),
-            _                      => new Color(0.5f, 0.85f, 0.55f),   // WhileMove
-        };
+            switch (link.Timing)
+            {
+                case LinkTiming.OnWindowMiss: return new Color(0.95f, 0.35f, 0.35f);
+                case LinkTiming.OnEnd:        return new Color(0.75f, 0.75f, 0.75f);
+                default:                      return InputColor(link.Attack);
+            }
+        }
 
         // 클립 바 하단에 각 Link를 트리거별로 표시
         private void DrawLinkWindows(TrackClip tc, float barX, float barW, float rowY)
@@ -985,26 +1171,27 @@ namespace ZZZ.Editor.AnimationTool
                 float y    = baseY - i * (bandH + 1f);
                 Color col  = LinkColor(link);
 
-                // 밴드 구간: Input=윈도우, OnEnd=끝부분, WhileMove=전체
+                // 밴드 구간: WhenMatched=윈도우, OnWindowMiss=윈도우끝~이후, OnEnd=끝부분
                 float aN, bN;
-                switch (link.Trigger)
+                switch (link.Timing)
                 {
-                    case LinkTrigger.Input: aN = link.WindowStart; bN = link.WindowEnd; break;
-                    case LinkTrigger.OnEnd: aN = 0.92f;            bN = 1f;             break;
-                    default:                aN = 0f;               bN = 1f;             break; // WhileMove
+                    case LinkTiming.WhenMatched:   aN = link.WindowStart; bN = link.WindowEnd; break;
+                    case LinkTiming.OnWindowMiss:  aN = link.WindowEnd;   bN = 1f;             break;
+                    case LinkTiming.OnEnd:         aN = 0.92f;            bN = 1f;             break;
+                    default:                       aN = 0f;               bN = 1f;             break;
                 }
                 float aX = barX + aN * barW;
                 float bX = barX + bN * barW;
                 EditorGUI.DrawRect(new Rect(aX, y, Mathf.Max(2f, bX - aX), bandH),
                     new Color(col.r, col.g, col.b, 0.75f));
+                // OnWindowMiss는 WindowEnd 지점에 마커
+                if (link.Timing == LinkTiming.OnWindowMiss)
+                    EditorGUI.DrawRect(new Rect(aX - 1f, y - 2f, 2f, bandH + 4f), col);
 
                 string targ = string.IsNullOrEmpty(link.TargetSection) ? "End" : link.TargetSection;
-                string mv   = link.Move == MoveDir.Any ? "" : $"+{link.Move}";
-                string trg  = link.Trigger == LinkTrigger.Input ? link.Input.ToString()
-                            : link.Trigger.ToString();
                 if (bX - aX > 30f)
                     GUI.Label(new Rect(aX + 2, y - 9f, 120, 10),
-                        $"{trg}{mv}→{targ}",
+                        $"{CondLabel(link)}→{targ}",
                         new GUIStyle(EditorStyles.miniLabel)
                         { fontSize = 8, normal = { textColor = col }, clipping = TextClipping.Clip });
             }
@@ -1268,11 +1455,16 @@ namespace ZZZ.Editor.AnimationTool
                 string.IsNullOrEmpty(_config.EntrySection) ? "(End/Entry)" : _config.EntrySection));
             int sel = EditorGUILayout.Popup("Entry Section", cur, opts);
 
+            float done  = EditorGUILayout.Slider("OnEnd 발동 (0=마지막프레임)", _config.DoneThreshold, 0f, 1f);
+            float reset = EditorGUILayout.FloatField("Combo Reset (s)", _config.ComboResetTime);
+
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_config, "Edit Track");
-                _config.TrackName    = trackName;
-                _config.EntrySection = sel == 0 ? "" : opts[sel];
+                _config.TrackName      = trackName;
+                _config.EntrySection   = sel == 0 ? "" : opts[sel];
+                _config.DoneThreshold  = done;
+                _config.ComboResetTime = reset;
                 EditorUtility.SetDirty(_config);
             }
 
@@ -1280,6 +1472,17 @@ namespace ZZZ.Editor.AnimationTool
                 EditorStyles.miniLabel);
             EditorGUILayout.HelpBox("콤보 Play는 [선택한 클립] → [Entry Section] → [첫 클립] 순으로 시작합니다.",
                 MessageType.None);
+
+            // ── Global Links (모든 클립에 적용 = Any State 전이) ──
+            DrawSeparator();
+            EditorGUILayout.LabelField($"Global Links  ({_config.GlobalLinks.Count})",
+                EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "여기 링크는 이 config의 모든 섹션에서 평가됩니다 (Any State).\n" +
+                "예: 이동 입력 시 어디서든 Walk로. 클립마다 달 필요 없음.\n" +
+                "평가 순서: 각 클립 고유 Links → Global Links.",
+                MessageType.None);
+            DrawLinksEditor(_config.GlobalLinks);
 
             DrawSeparator();
             EditorGUILayout.LabelField("Root Motion", EditorStyles.boldLabel);
@@ -1334,26 +1537,30 @@ namespace ZZZ.Editor.AnimationTool
             // ── Links (다음 섹션 분기) ───────────────────────────
             DrawSeparator();
             EditorGUILayout.LabelField($"Links  ({tc.Links.Count})", EditorStyles.boldLabel);
-            DrawLinksEditor(tc);
+            DrawLinksEditor(tc.Links);
 
             DrawSeparator();
             EditorGUILayout.LabelField($"Notifies  ({tc.Notifies.Count})  —  우클릭 추가",
                 EditorStyles.miniLabel);
         }
 
-        private void DrawLinksEditor(TrackClip tc)
+        private void DrawLinksEditor(List<ClipLink> links)
         {
-            for (int i = 0; i < tc.Links.Count; i++)
+            for (int i = 0; i < links.Count; i++)
             {
-                var link = tc.Links[i];
+                var link = links[i];
                 EditorGUILayout.BeginVertical("box");
 
+                // ── 헤더: 요약 + 삭제 ──
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"#{i}", GUILayout.Width(24));
+                var sumStyle = new GUIStyle(EditorStyles.boldLabel)
+                { normal = { textColor = LinkColor(link) } };
+                EditorGUILayout.LabelField($"#{i}  {CondLabel(link)} → " +
+                    (string.IsNullOrEmpty(link.TargetSection) ? "End/복귀" : link.TargetSection), sumStyle);
                 if (GUILayout.Button("×", GUILayout.Width(20)))
                 {
                     Undo.RecordObject(_config, "Remove Link");
-                    tc.Links.RemoveAt(i);
+                    links.RemoveAt(i);
                     EditorUtility.SetDirty(_config);
                     Repaint();
                     EditorGUILayout.EndHorizontal();
@@ -1364,33 +1571,30 @@ namespace ZZZ.Editor.AnimationTool
 
                 EditorGUI.BeginChangeCheck();
 
-                // Target Config (비우면 현재 config 내 전이)
+                // ── 대상 ──
                 var targetCfg = (AnimationConfig)EditorGUILayout.ObjectField(
                     "Target Config", link.TargetConfig, typeof(AnimationConfig), false);
-
-                // 섹션 후보는 타겟 config(없으면 현재) 기준
                 var      cfgForSections = targetCfg != null ? targetCfg : _config;
                 string[] sectionOptions = BuildSectionOptions(cfgForSections);
                 int curIdx = Mathf.Max(0, Array.IndexOf(sectionOptions,
                     string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
-                int newIdx  = EditorGUILayout.Popup("Target Section", curIdx, sectionOptions);
-                var trigger = (LinkTrigger)EditorGUILayout.EnumPopup("Trigger", link.Trigger);
+                int newIdx = EditorGUILayout.Popup("→ Section", curIdx, sectionOptions);
 
-                // Trigger=Input일 때만 입력 종류 + 윈도우 표시
-                var   input = link.Input;
+                // ── 조건 (Attack + Direction) ──
+                EditorGUILayout.LabelField("조건 (Condition)", EditorStyles.miniBoldLabel);
+                var attack = (ComboInput)EditorGUILayout.EnumPopup("  Attack",    link.Attack);
+                var dir    = (MoveDir)EditorGUILayout.EnumPopup(   "  Direction", link.Direction);
+
+                // ── 타이밍 (Timing) ──
+                EditorGUILayout.LabelField("타이밍 (Timing)", EditorStyles.miniBoldLabel);
+                var timing = (LinkTiming)EditorGUILayout.EnumPopup("  When", link.Timing);
+
                 float ws = link.WindowStart, we = link.WindowEnd;
-                if (trigger == LinkTrigger.Input)
-                {
-                    input = (ComboInput)EditorGUILayout.EnumPopup("Input", link.Input);
+                if (timing != LinkTiming.OnEnd)   // OnEnd는 윈도우 불필요
                     EditorGUILayout.MinMaxSlider(
-                        new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
-                }
-                else if (trigger == LinkTrigger.OnEnd)
-                {
-                    EditorGUILayout.LabelField(" ", "클립 종료 시 자동 전이", EditorStyles.miniLabel);
-                }
+                        new GUIContent($"  Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
+                EditorGUILayout.LabelField(" ", TimingHelp(timing), EditorStyles.miniLabel);
 
-                var   move  = (MoveDir)EditorGUILayout.EnumPopup("Move", link.Move);
                 float blend = EditorGUILayout.FloatField("Blend (s)", link.BlendDuration);
 
                 if (EditorGUI.EndChangeCheck())
@@ -1398,9 +1602,9 @@ namespace ZZZ.Editor.AnimationTool
                     Undo.RecordObject(_config, "Edit Link");
                     link.TargetConfig  = targetCfg;
                     link.TargetSection = newIdx == 0 ? "" : sectionOptions[newIdx];
-                    link.Trigger       = trigger;
-                    link.Input         = input;
-                    link.Move          = move;
+                    link.Attack        = attack;
+                    link.Direction     = dir;
+                    link.Timing        = timing;
                     link.WindowStart   = ws;
                     link.WindowEnd     = we;
                     link.BlendDuration = Mathf.Max(0f, blend);
@@ -1409,14 +1613,66 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.EndVertical();
             }
 
-            if (GUILayout.Button("+ Add Link"))
-            {
-                Undo.RecordObject(_config, "Add Link");
-                tc.Links.Add(new ClipLink());
-                EditorUtility.SetDirty(_config);
-                Repaint();
-            }
+            // ── 프리셋 추가 버튼 (4가지 케이스) ──
+            EditorGUILayout.LabelField("+ 추가", EditorStyles.miniBoldLabel);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(new GUIContent("방향+공격", "특정 방향 + 공격 입력 시 전이"),
+                EditorStyles.miniButton))
+                AddLink(links, new ClipLink { Attack = ComboInput.Normal, Direction = MoveDir.Forward,
+                    Timing = LinkTiming.WhenMatched, WindowStart = 0f, WindowEnd = 1f });
+            if (GUILayout.Button(new GUIContent("입력없음", "입력이 없을 때 전이 (Idle 복귀 등)"),
+                EditorStyles.miniButton))
+                AddLink(links, new ClipLink { Attack = ComboInput.None, Direction = MoveDir.Neutral,
+                    Timing = LinkTiming.WhenMatched, WindowStart = 0f, WindowEnd = 1f });
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(new GUIContent("구간 공격", "구간 안에서 공격 입력 시 전이 (콤보)"),
+                EditorStyles.miniButton))
+                AddLink(links, new ClipLink { Attack = ComboInput.Normal, Direction = MoveDir.Any,
+                    Timing = LinkTiming.WhenMatched, WindowStart = 0.4f, WindowEnd = 0.85f });
+            if (GUILayout.Button(new GUIContent("구간 방향", "구간 안에서 방향 입력 시 전이"),
+                EditorStyles.miniButton))
+                AddLink(links, new ClipLink { Attack = ComboInput.None, Direction = MoveDir.Moving,
+                    Timing = LinkTiming.WhenMatched, WindowStart = 0.4f, WindowEnd = 0.85f });
+            EditorGUILayout.EndHorizontal();
+            if (GUILayout.Button("+ 빈 Link"))
+                AddLink(links, new ClipLink());
         }
+
+        private void AddLink(List<ClipLink> links, ClipLink link)
+        {
+            Undo.RecordObject(_config, "Add Link");
+            links.Add(link);
+            EditorUtility.SetDirty(_config);
+            Repaint();
+        }
+
+        // 링크 조건을 짧은 문자열로 (타임라인/인스펙터 공용)
+        private static string CondLabel(ClipLink link)
+        {
+            string cond = "";
+            if (link.Attack != ComboInput.None) cond = link.Attack.ToString();
+            if (link.Direction != MoveDir.Any)
+                cond = string.IsNullOrEmpty(cond) ? link.Direction.ToString()
+                                                  : cond + "+" + link.Direction;
+            if (string.IsNullOrEmpty(cond)) cond = "무조건";
+
+            string suffix = link.Timing switch
+            {
+                LinkTiming.OnWindowMiss => " (miss)",
+                LinkTiming.OnEnd        => " (end)",
+                _                        => "",
+            };
+            return cond + suffix;
+        }
+
+        private static string TimingHelp(LinkTiming t) => t switch
+        {
+            LinkTiming.WhenMatched  => "윈도우 안에서 조건 충족 시 즉시 전이",
+            LinkTiming.OnWindowMiss => "윈도우 끝까지 조건 유지되면 전이 (캔슬/타임아웃)",
+            LinkTiming.OnEnd        => "클립이 끝나면 전이 (루프 클립 제외)",
+            _                        => "",
+        };
 
         // [0] = "(End/Entry)" + 해당 config의 모든 섹션 이름
         private string[] BuildSectionOptions(AnimationConfig cfg)

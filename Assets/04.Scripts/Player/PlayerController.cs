@@ -26,6 +26,7 @@ namespace ZZZ.Player
         private float               _verticalVelocity;
         private Vector3             _prevRootPos;
         private bool                _flushRootPosPending;
+        private float               _prevRootNormFrac;   // 직전 프레임 normalizedTime의 소수부 (루프 wrap 검출용)
 
         private Vector2 _moveInput;
         private bool    _isSprinting;
@@ -125,7 +126,18 @@ namespace ZZZ.Player
 
                 bool inTransition = _animator != null && _animator.IsInTransition(0);
 
-                if (_flushRootPosPending || inTransition)
+                // 루프 클립이 끝(≈1)에서 처음(≈0)으로 되감기면 baked 루트 위치가 뒤로 점프한다.
+                // normalizedTime 소수부가 줄어든 프레임 = wrap → 그 프레임 델타는 버린다.
+                bool wrapped = false;
+                if (_animator != null)
+                {
+                    float nt   = _animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                    float frac = nt - Mathf.Floor(nt);
+                    wrapped = frac + 0.0001f < _prevRootNormFrac;
+                    _prevRootNormFrac = frac;
+                }
+
+                if (_flushRootPosPending || inTransition || wrapped)
                 {
                     _prevRootPos         = currentPos;
                     _flushRootPosPending = false;

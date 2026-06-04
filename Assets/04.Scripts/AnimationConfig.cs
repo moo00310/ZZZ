@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ZZZ
 {
@@ -14,12 +15,17 @@ namespace ZZZ
 
         [Header("Combo Timing")]
         public float ComboResetTime = 1.2f;   // 입력 없으면 이 시간 후 복귀
-        public float DoneThreshold  = 0.85f;  // normalizedTime >= 이 값이면 "클립 끝" 판정
+        public float DoneThreshold  = 0f;     // OnEnd 발동 normalizedTime. 0 = 자동(클립 마지막 프레임 = 1 - 1/frames)
 
         [Header("Entry")]
         public string EntrySection = "";      // 트랙 시작 시 재생할 섹션 (빈 값 = 첫 클립)
 
         public List<TrackClip> Clips = new List<TrackClip>();
+
+        [Header("Global Links — 모든 클립에 적용 (Any State 전이)")]
+        // 여기에 둔 링크는 어떤 섹션이 재생 중이든 매 프레임 평가된다.
+        // 예: Idle config 어디서든 이동 입력 시 Walk로. 클립마다 같은 링크를 달 필요 없음.
+        public List<ClipLink> GlobalLinks = new List<ClipLink>();
 
         // 섹션 이름으로 클립 인덱스 검색 (-1 = 없음)
         public int IndexOfSection(string section)
@@ -61,7 +67,10 @@ namespace ZZZ
         RootMotion   // 루트본 이동량 적용 — 공격/대시
     }
 
-    // 섹션 간 전이 정의. Trigger 종류에 따라 발동 조건이 다름.
+    // 섹션 간 전이 정의.
+    // 조건(Attack + Direction)이 타이밍(Timing) 규칙에 맞게 충족되면 전이한다.
+    //   조건 = 공격 입력 + 방향 입력 (둘 다 AND)
+    //   타이밍 = 언제 그 조건을 평가/발동할지 (즉시 / 윈도우 통과 시 / 클립 끝)
     [Serializable]
     public class ClipLink
     {
@@ -69,24 +78,26 @@ namespace ZZZ
         // 지정되면 그 config로 갈아끼우고 TargetSection(비면 EntrySection)으로 진입.
         public AnimationConfig TargetConfig;        // null = 현재 config
         public string          TargetSection = "";  // 빈 값 = (현재)복귀 / (타겟)EntrySection
-        public LinkTrigger     Trigger       = LinkTrigger.Input;
         public float           BlendDuration = 0.1f;  // 이 전이가 발동할 때 CrossFade 시간(초)
 
-        [Header("Input Trigger")]
-        public ComboInput Input = ComboInput.Normal;  // Trigger=Input일 때 공격 종류
-        [Range(0f, 1f)] public float WindowStart = 0.5f;  // 입력 수용 시작
-        [Range(0f, 1f)] public float WindowEnd   = 1.0f;  // 입력 수용 끝
+        [Header("Condition — 공격/방향 입력 조건 (AND)")]
+        [FormerlySerializedAs("Input")]
+        public ComboInput Attack    = ComboInput.None;  // 요구 공격 입력 (None = 공격 없음)
+        [FormerlySerializedAs("Move")]
+        public MoveDir    Direction = MoveDir.Any;       // 요구 방향 입력 (Any = 상관없음)
 
-        [Header("Condition (모든 트리거에 AND)")]
-        public MoveDir Move = MoveDir.Any;   // 이동 조건
+        [Header("Timing — 언제 평가할지")]
+        public LinkTiming Timing = LinkTiming.WhenMatched;
+        [Range(0f, 1f)] public float WindowStart = 0f;   // 평가 구간 시작 (normalizedTime)
+        [Range(0f, 1f)] public float WindowEnd   = 1f;   // 평가 구간 끝
     }
 
-    // 전이를 일으키는 트리거 종류
-    public enum LinkTrigger
+    // 전이 조건을 언제 평가/발동할지
+    public enum LinkTiming
     {
-        Input,      // 입력이 윈도우 구간 안에 들어옴 (콤보)
-        OnEnd,      // 클립이 끝나면 다른 섹션으로 전이 (WalkEnd→Idle 등). 루프 클립엔 무효
-        WhileMove   // Move 조건이 충족되는 동안 즉시 (Idle→Walk 등)
+        WhenMatched,   // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
+        OnWindowMiss,  // 윈도우 끝까지 조건이 충족되지 않고 지나가면 (콤보 캔슬 / 타임아웃)
+        OnEnd          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
     }
 
     public enum ComboInput
@@ -95,7 +106,8 @@ namespace ZZZ
         Enhanced,
         Special,
         Dodge,
-        Any
+        Any,        // 아무 공격 입력
+        None        // 공격 입력 없음 (※ 직렬화 호환 위해 맨 끝에 추가)
     }
 
     // 이동키 방향 조건
