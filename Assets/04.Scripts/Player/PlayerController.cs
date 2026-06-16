@@ -40,7 +40,13 @@ namespace ZZZ.Player
         private float _boostDuration;
         private float _boostTimeLeft;
 
+        // 타겟 워프 — 공격 루트모션을 적 방향으로 재조준 (ConfigState가 설정)
+        private Transform _warpTarget;
+        private float     _warpStopDistance;
+        private ZZZ.Combat.EnemySensor _enemySensor;
+
         public bool UseCodeMovement { get; set; } = true;
+        public bool AllowRotation   { get; set; } = true;   // false면 이동 입력이 있어도 캐릭터 회전 안 함 (피격/경직 등)
 
         public float   CurrentSpeed  => _currentSpeed;
         public bool    IsSprinting   => _isSprinting;
@@ -64,13 +70,44 @@ namespace ZZZ.Player
 
         public void FlushRootPos() => _flushRootPosPending = true;
 
+        // ── 타겟 워프 API (ConfigState가 구동) ─────────────────────
+        public ZZZ.Combat.EnemySensor EnemySensor => _enemySensor;
+        public bool WarpWindowActive { get; set; }   // 트래킹 윈도우 안인지 — ConfigState가 매 프레임 갱신
+
+        public void SetWarpTarget(Transform target, float stopDistance)
+        {
+            _warpTarget       = target;
+            _warpStopDistance = stopDistance;
+            WarpWindowActive  = false;
+        }
+
+        public void ClearWarpTarget()
+        {
+            _warpTarget      = null;
+            WarpWindowActive = false;
+        }
+
+        // 즉시 회전 (공격 진입 시 타겟 방향 스냅)
+        public void FaceToward(Vector3 worldDir)
+        {
+            worldDir.y = 0f;
+            if (worldDir.sqrMagnitude < 0.0001f) return;
+            transform.rotation = Quaternion.LookRotation(worldDir);
+        }
+
+        // 공격 연출용 추가 yaw(도) — bip001에 애니 포즈 위로 얹는다. ConfigState가 구동하며
+        // 섹션 종료 시 0으로 복귀(임시 비주얼). 루트/카메라/이동 방향은 건드리지 않는다.
+        private float _bodyYaw;
+        public void SetBodyYaw(float degrees) => _bodyYaw = degrees;
+
         private const float k_moveThreshold = 0.01f;
 
         private void Awake()
         {
-            _cc         = GetComponent<CharacterController>();
-            _animator   = GetComponentInChildren<Animator>();
-            _mainCamera = Camera.main;
+            _cc          = GetComponent<CharacterController>();
+            _animator    = GetComponentInChildren<Animator>();
+            _mainCamera  = Camera.main;
+            _enemySensor = GetComponent<ZZZ.Combat.EnemySensor>();
         }
 
         private void Update()
@@ -100,7 +137,23 @@ namespace ZZZ.Player
                 ? _moveDirection : transform.forward;
             dir.y = 0f;
             if (dir.sqrMagnitude > 0.0001f) dir.Normalize();
-            _cc.Move(dir * (_boostSpeed * ramp * Time.deltaTime));
+
+            float step = _boostSpeed * ramp * Time.deltaTime;
+
+            // 워프 타겟이 있으면 부스트도 타겟 방향 + StopDistance 클램프
+            // (제자리 공격 클립의 흡착을 부스트가 담당)
+            if (_warpTarget != null)
+            {
+                Vector3 to = _warpTarget.position - transform.position;
+                to.y = 0f;
+                float dist = to.magnitude;
+                if (dist > 0.001f)
+                {
+                    dir  = to / dist;
+                    step = Mathf.Min(step, Mathf.Max(0f, dist - _warpStopDistance));
+                }
+            }
+            _cc.Move(dir * step);
         }
 
         private void OnMove(InputValue value)   => _moveInput   = value.Get<Vector2>();
@@ -130,7 +183,8 @@ namespace ZZZ.Player
                 if (UseCodeMovement)
                     _cc.Move(_moveDirection * (speed * Time.deltaTime));
 
-                RotateToward(_moveDirection, _rotationSpeed);
+                if (AllowRotation)
+                    RotateToward(_moveDirection, _rotationSpeed);
             }
         }
 
@@ -143,6 +197,11 @@ namespace ZZZ.Player
                 local.x = 0f;
                 local.z = 0f;
                 _bip001Bone.localPosition = local;
+
+                // 공격 연출용 추가 yaw — 애니 포즈(클립 회전) 위에 엉덩이 피벗으로 얹는다.
+                // Animator가 매 프레임 클립 값으로 덮으므로 누적되지 않고 오프셋만 더해진다.
+                if (Mathf.Abs(_bodyYaw) > 1e-4f)
+                    _bip001Bone.rotation = Quaternion.AngleAxis(_bodyYaw, Vector3.up) * _bip001Bone.rotation;
             }
 
             // Root 이동량 추출 → CharacterController에 적용 후 로컬 위치 리셋
@@ -175,6 +234,7 @@ namespace ZZZ.Player
                 _rootBone.localPosition = Vector3.zero;
 
                 Vector3 move = transform.TransformDirection(deltaLocal) * _rootMotionScale;
+                WarpRootMotion(ref move);
                 move.y = _verticalVelocity * Time.deltaTime;
                 _cc.Move(move);
                 LastRootDelta = deltaLocal.magnitude * _rootMotionScale;
@@ -183,6 +243,24 @@ namespace ZZZ.Player
             {
                 LastRootDelta = 0f;
             }
+        }
+
+        // 루트모션 수평 이동을 타겟 방향으로 재조준하고 StopDistance 앞에서 멈춘다.
+        // 크기는 원본 delta를 유지 → 애니메이션이 만든 속도감 보존, 방향만 휘어짐.
+        private void WarpRootMotion(ref Vector3 move)
+        {
+            if (_warpTarget == null || !WarpWindowActive) return;
+
+            Vector3 to = _warpTarget.position - transform.position;
+            to.y = 0f;
+            float dist = to.magnitude;
+            if (dist < 0.001f) return;
+
+            Vector3 dir    = to / dist;
+            float   remain = Mathf.Max(0f, dist - _warpStopDistance);
+            float   step   = Mathf.Min(new Vector3(move.x, 0f, move.z).magnitude, remain);
+            move.x = dir.x * step;
+            move.z = dir.z * step;
         }
 
         private void RotateToward(Vector3 direction, float speed)

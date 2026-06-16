@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace ZZZ.Player.StateMachine
@@ -5,7 +6,12 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(Animator))]
     public class PlayerAnimatorBridge : MonoBehaviour
     {
-        private Animator _animator;
+        [Header("Additive Hit Shake (layer 1)")]
+        [SerializeField] private int   _additiveLayer = 1;
+        [SerializeField] private float _shakeFade     = 0.15f;  // 흔들림이 0으로 사라지기까지 시간(초)
+
+        private Animator  _animator;
+        private Coroutine _shakeRoutine;
 
         // ── Clip Name Constants ───────────────────────────────────
         public const string Idle      = "Avatar_Female_Size02_Burnice_Ani_Idle";
@@ -34,6 +40,12 @@ namespace ZZZ.Player.StateMachine
         public const string AttackCounter      = "Avatar_Female_Size02_Burnice_Ani_Attack_Counter_01";
         public const string AttackParryStart   = "Avatar_Female_Size02_Burnice_Ani_Attack_ParryAid_Start";
 
+        // Hit (피격) — 아래 두 이름은 Animator Controller의 State 이름과 정확히 일치해야 함.
+        //   HitFront : layer 0 (base 모션, walk/콤보를 덮어씀)
+        //   HitShake : layer 1 (Additive blending 레이어의 State)
+        public const string HitFront = "Avatar_Female_Size02_Burnice_Ani_Hit_H_Front";
+        public const string HitShake = "Avatar_Female_Size02_Burnice_Ani_Hit_Shake";
+
         private void Awake()
         {
             _animator = GetComponent<Animator>();
@@ -49,6 +61,49 @@ namespace ZZZ.Player.StateMachine
         public void Play(string stateName, float crossFade = 0.1f)
         {
             _animator.CrossFade(stateName, crossFade, 0);
+        }
+
+        // 지정 레이어에 CrossFade (Additive 레이어 등 layer 0 외의 재생용)
+        public void PlayAdditive(string stateName, int layer, float crossFade = 0.05f)
+        {
+            _animator.CrossFade(stateName, crossFade, layer);
+        }
+
+        // 레이어 가중치 제어 (Additive 적용 강도)
+        public void SetLayerWeight(int layer, float weight)
+        {
+            _animator.SetLayerWeight(layer, weight);
+        }
+
+        // ── Hit Shake (Additive) ──────────────────────────────────
+        // Hit config 클립의 Notify(EventName="OnHitShake")가 SendMessage로 호출한다.
+        // additive 레이어에 Hit_Shake를 재생하고 끝나면 weight를 0으로 페이드.
+        public void OnHitShake()
+        {
+            Debug.Log("[Hit] OnHitShake 호출 — layer1 additive 흔들림 재생", this);
+            if (_shakeRoutine != null) StopCoroutine(_shakeRoutine);
+            _shakeRoutine = StartCoroutine(ShakeRoutine());
+        }
+
+        private IEnumerator ShakeRoutine()
+        {
+            PlayAdditive(HitShake, _additiveLayer, 0.05f);
+            _animator.SetLayerWeight(_additiveLayer, 1f);
+
+            // Hit_Shake 클립 길이만큼 weight 1 유지 → 그 뒤 _shakeFade 동안 0으로 감쇠
+            float hold = _animator.GetCurrentAnimatorStateInfo(_additiveLayer).length;
+            if (hold <= 0.01f) hold = 0.4f;   // 길이 못 읽으면 기본값
+            yield return new WaitForSeconds(Mathf.Max(0f, hold - _shakeFade));
+
+            float t = 0f;
+            while (t < _shakeFade)
+            {
+                t += Time.deltaTime;
+                _animator.SetLayerWeight(_additiveLayer, 1f - Mathf.Clamp01(t / _shakeFade));
+                yield return null;
+            }
+            _animator.SetLayerWeight(_additiveLayer, 0f);
+            _shakeRoutine = null;
         }
 
         // ── Locomotion Shortcuts ──────────────────────────────────

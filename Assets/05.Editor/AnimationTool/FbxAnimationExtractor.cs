@@ -48,8 +48,6 @@ namespace ZZZ.Editor.AnimationTool
                         AnimationClip newClip = Object.Instantiate(clip);
                         newClip.name = clip.name;
 
-                        RemoveFaceBlendShapeTracks(newClip);
-
                         string savePath = outputDir + "/" + clip.name + ".anim";
                         AssetDatabase.CreateAsset(newClip, savePath);
                         count++;
@@ -71,21 +69,6 @@ namespace ZZZ.Editor.AnimationTool
             );
 
             Debug.Log($"[FbxAnimationExtractor] {count}개 추출 완료 → {outputDir}");
-        }
-
-        // Burnice_Face의 SkinnedMeshRenderer BlendShape 트랙만 제거 (SRT는 유지)
-        private static void RemoveFaceBlendShapeTracks(AnimationClip clip)
-        {
-            EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(clip);
-            foreach (EditorCurveBinding binding in bindings)
-            {
-                bool isFacePath = binding.path == "Burnice_Face" || binding.path.EndsWith("/Burnice_Face");
-                bool isBlendShape = binding.type == typeof(SkinnedMeshRenderer)
-                                    && binding.propertyName.StartsWith("blendShape");
-
-                if (isFacePath && isBlendShape)
-                    AnimationUtility.SetEditorCurve(clip, binding, null);
-            }
         }
     }
 }

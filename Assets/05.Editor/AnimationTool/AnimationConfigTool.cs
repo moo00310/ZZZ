@@ -48,10 +48,12 @@ namespace ZZZ.Editor.AnimationTool
         private const float ClipGap   = 3f;
         private const float LabelW    = 144f;
         private const float InspW     = 250f;   // 우측 인스펙터 폭
+        private const float HScrollH  = 14f;    // 하단 가로 스크롤바 높이
 
         // ── 타임라인 ─────────────────────────────────────────────
         [SerializeField] private float _pxPerSec = 80f;
-        [SerializeField] private float _scrollX  = 0f;
+        [SerializeField] private float _scrollX  = 0f;   // 수평 스크롤 — 하단 스크롤바로 조정
+        [SerializeField] private float _scrollY  = 0f;   // 수직 스크롤 — 마우스 휠로 조정
 
         // ── 선택 ─────────────────────────────────────────────────
         [SerializeField] private int _selectedClip   = -1;
@@ -195,7 +197,7 @@ namespace ZZZ.Editor.AnimationTool
         {
             _config = cfg;
             _serializedConfig = cfg != null ? new SerializedObject(cfg) : null;
-            _selectedClip = -1; _selectedNotify = -1; _scrollX = 0f;
+            _selectedClip = -1; _selectedNotify = -1; _scrollX = 0f; _scrollY = 0f;
         }
 
         private void SequentialUpdate(float delta)
@@ -412,6 +414,7 @@ namespace ZZZ.Editor.AnimationTool
                 _selectedClip     = -1;
                 _selectedNotify   = -1;
                 _scrollX          = 0f;
+                _scrollY          = 0f;
 
                 _comboLog += $"  →[{newCfg.name}] {SectionLabel(t)}";
                 BeginJump(fromTc, t, link.BlendDuration);
@@ -494,7 +497,14 @@ namespace ZZZ.Editor.AnimationTool
         private void ExitPreview()
         {
             _isPlaying = false;
-            if (AnimationMode.InAnimationMode()) AnimationMode.StopAnimationMode();
+            if (!AnimationMode.InAnimationMode()) return;
+
+            // StopAnimationMode는 내부적으로 UI Toolkit 바인딩 스타일 갱신을 강제하는데,
+            // 윈도우 종료 시점엔 다른 Inspector의 SerializedObject가 이미 Dispose돼 있어
+            // "SerializedObject ... has been Disposed" NRE가 Unity 내부 폴러에서 발생한다.
+            // 우리 코드 밖에서 나는 무해한 예외이므로 삼킨다 (Unity 알려진 이슈).
+            try { AnimationMode.StopAnimationMode(); }
+            catch (System.NullReferenceException) { }
         }
 
         private void SampleAtTime(float time, bool advancePlayback)
@@ -857,12 +867,16 @@ namespace ZZZ.Editor.AnimationTool
                 return;
             }
 
-            // 수평 스크롤
+            // 수직 스크롤 (휠) — 수평은 하단 스크롤바로 조정
+            float contentRowsH = _config.Clips.Count * (ClipH + ClipGap) + 34f;   // +Add 버튼 여백 포함
+            float viewRowsH    = area.height - RulerH - HScrollH;
+            float maxScrollY   = Mathf.Max(0f, contentRowsH - viewRowsH);
             if (Event.current.type == EventType.ScrollWheel && area.Contains(Event.current.mousePosition))
             {
-                _scrollX = Mathf.Max(0f, _scrollX + Event.current.delta.y * 15f);
+                _scrollY = Mathf.Clamp(_scrollY + Event.current.delta.y * 15f, 0f, maxScrollY);
                 Event.current.Use(); Repaint();
             }
+            _scrollY = Mathf.Clamp(_scrollY, 0f, maxScrollY);   // 클립 수 변동/리사이즈 대응
 
             // ── 눈금자 ────────────────────────────────────────────
             var rulerBg = new Rect(0, area.y, area.width, RulerH);
@@ -885,7 +899,7 @@ namespace ZZZ.Editor.AnimationTool
 
             // ── 클립 행 영역 ──────────────────────────────────────
             float rowsY = area.y + RulerH;
-            float rowsH = area.height - RulerH;
+            float rowsH = viewRowsH;   // 하단 스크롤바 높이만큼 제외
             GUI.BeginClip(new Rect(0, rowsY, area.width, rowsH));
             var localArea = new Rect(0, 0, area.width, rowsH);
 
@@ -897,7 +911,7 @@ namespace ZZZ.Editor.AnimationTool
             if (editPreview && _comboMode && _comboActiveClip >= 0 && _comboActiveClip < _config.Clips.Count)
             {
                 var   atc  = _config.Clips[_comboActiveClip];
-                float aRowY = _comboActiveClip * (ClipH + ClipGap);
+                float aRowY = _comboActiveClip * (ClipH + ClipGap) - _scrollY;
                 EditorGUI.DrawRect(new Rect(LabelW, aRowY, area.width - LabelW, ClipH),
                     new Color(1f, 0.6f, 0f, 0.08f));
 
@@ -917,7 +931,7 @@ namespace ZZZ.Editor.AnimationTool
                 _liveClipIdx >= 0 && _liveClipIdx < _config.Clips.Count)
             {
                 var   ltc   = _config.Clips[_liveClipIdx];
-                float lRowY = _liveClipIdx * (ClipH + ClipGap);
+                float lRowY = _liveClipIdx * (ClipH + ClipGap) - _scrollY;
                 EditorGUI.DrawRect(new Rect(LabelW, lRowY, area.width - LabelW, ClipH),
                     new Color(0.3f, 1f, 0.35f, 0.10f));
 
@@ -943,7 +957,7 @@ namespace ZZZ.Editor.AnimationTool
             // 클립 행 그리기
             for (int i = 0; i < _config.Clips.Count; i++)
             {
-                float rowY    = i * (ClipH + ClipGap);
+                float rowY    = i * (ClipH + ClipGap) - _scrollY;
                 float startT  = GetClipStartTime(i);
                 var   tc      = _config.Clips[i];
                 float dur     = tc.Clip != null ? tc.Clip.length / Mathf.Max(0.01f, tc.Speed) : 0f;
@@ -962,12 +976,12 @@ namespace ZZZ.Editor.AnimationTool
             // 순서 변경 삽입 위치 표시선
             if (_reorderingClip >= 0 && _reorderTargetIdx >= 0)
             {
-                float lineY = _reorderTargetIdx * (ClipH + ClipGap) - 1f;
+                float lineY = _reorderTargetIdx * (ClipH + ClipGap) - _scrollY - 1f;
                 EditorGUI.DrawRect(new Rect(0, lineY, area.width, 3f), new Color(0.3f, 0.65f, 1f));
             }
 
             // 클립 추가 버튼
-            float addY = _config.Clips.Count * (ClipH + ClipGap) + 6f;
+            float addY = _config.Clips.Count * (ClipH + ClipGap) - _scrollY + 6f;
             if (addY < rowsH && GUI.Button(new Rect(4, addY, 100, 22), "+ Add Clip"))
             {
                 Undo.RecordObject(_config, "Add Clip");
@@ -979,6 +993,14 @@ namespace ZZZ.Editor.AnimationTool
 
             HandleInput(localArea);
             GUI.EndClip();
+
+            // ── 가로 스크롤바 (하단) ──────────────────────────────
+            float contentW = GetTotalDuration() * _pxPerSec + 40f;   // 약간의 여백
+            float viewW    = area.width - LabelW;
+            var   hbarRect = new Rect(LabelW, area.y + area.height - HScrollH, viewW, HScrollH);
+            EditorGUI.DrawRect(new Rect(0, hbarRect.y, area.width, HScrollH), new Color(0.18f, 0.18f, 0.18f));
+            _scrollX = Mathf.Max(0f, GUI.HorizontalScrollbar(
+                hbarRect, _scrollX, Mathf.Min(viewW, contentW), 0f, contentW));
         }
 
         // ── 눈금자 플레이헤드 드래그 ─────────────────────────────
@@ -1058,7 +1080,7 @@ namespace ZZZ.Editor.AnimationTool
                 float dur    = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                 float barX   = LabelW + startT * _pxPerSec - _scrollX;
                 float barW   = dur * _pxPerSec;
-                float srcYc  = i * (ClipH + ClipGap) + ClipH * 0.5f;
+                float srcYc  = i * (ClipH + ClipGap) - _scrollY + ClipH * 0.5f;
 
                 for (int li = 0; li < tc.Links.Count; li++)
                 {
@@ -1090,7 +1112,7 @@ namespace ZZZ.Editor.AnimationTool
 
                     float dstStartT = GetClipStartTime(ti);
                     float dstX = LabelW + dstStartT * _pxPerSec - _scrollX;
-                    float dstY = ti * (ClipH + ClipGap) + ClipH * 0.5f;
+                    float dstY = ti * (ClipH + ClipGap) - _scrollY + ClipH * 0.5f;
 
                     float cdx = Mathf.Abs(dstY - srcY) * 0.4f + 24f;
                     Handles.DrawBezier(
@@ -1167,6 +1189,9 @@ namespace ZZZ.Editor.AnimationTool
                         { normal = { textColor = new Color(0.68f, 0.68f, 0.68f) },
                           clipping = TextClipping.Clip });
 
+                // Section Turn 윈도우 (바 위 밴드)
+                DrawSectionTurnWindow(tc, barX, barW, rowY);
+
                 // Link 윈도우 밴드 (바 하단)
                 DrawLinkWindows(tc, barX, barW, rowY);
             }
@@ -1197,6 +1222,31 @@ namespace ZZZ.Editor.AnimationTool
                 case LinkTiming.OnEnd:        return new Color(0.75f, 0.75f, 0.75f);
                 default:                      return InputColor(link.Attack);
             }
+        }
+
+        // Section Turn 윈도우 표시 — SectionTurn일 때 [TurnWindowStart, End] 구간을
+        // 바 위에 보라 반투명 밴드 + 양끝 경계 마커로 그린다 (회전이 작동하는 normalizedTime 구간).
+        private void DrawSectionTurnWindow(TrackClip tc, float barX, float barW, float rowY)
+        {
+            if (!tc.SectionTurn || barW <= 0f) return;
+
+            float aN = Mathf.Clamp01(Mathf.Min(tc.TurnWindowStart, tc.TurnWindowEnd));
+            float bN = Mathf.Clamp01(Mathf.Max(tc.TurnWindowStart, tc.TurnWindowEnd));
+            float aX = barX + aN * barW;
+            float bX = barX + bN * barW;
+            float y  = rowY + 6f;
+            float h  = ClipH - 12f;
+            var   col = new Color(0.72f, 0.45f, 1f);   // 보라 = 회전
+
+            EditorGUI.DrawRect(new Rect(aX, y, Mathf.Max(2f, bX - aX), h),
+                new Color(col.r, col.g, col.b, 0.16f));
+            EditorGUI.DrawRect(new Rect(aX - 1f, y, 2f, h), col);   // 시작 경계
+            EditorGUI.DrawRect(new Rect(bX - 1f, y, 2f, h), col);   // 끝 경계
+
+            if (bX - aX > 34f)
+                GUI.Label(new Rect(aX + 3f, y + 1f, bX - aX - 4f, 11f), $"Turn {tc.TurnAngle:0}°",
+                    new GUIStyle(EditorStyles.miniLabel)
+                    { fontSize = 8, normal = { textColor = col }, clipping = TextClipping.Clip });
         }
 
         // 클립 바 하단에 각 Link를 트리거별로 표시
@@ -1292,7 +1342,7 @@ namespace ZZZ.Editor.AnimationTool
 
                 for (int i = 0; i < _config.Clips.Count && !hitSomething; i++)
                 {
-                    float rowY = i * (ClipH + ClipGap);
+                    float rowY = i * (ClipH + ClipGap) - _scrollY;
                     if (ev.mousePosition.y < rowY || ev.mousePosition.y >= rowY + ClipH) continue;
 
                     // 레이블 영역 클릭 → 순서 변경 드래그 시작
@@ -1373,7 +1423,7 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     // 마우스 Y 위치로 삽입 인덱스 계산
                     int target = Mathf.Clamp(
-                        Mathf.RoundToInt(ev.mousePosition.y / (ClipH + ClipGap)),
+                        Mathf.RoundToInt((ev.mousePosition.y + _scrollY) / (ClipH + ClipGap)),
                         0, _config.Clips.Count);
                     _reorderTargetIdx = target;
                     ev.Use(); Repaint();
@@ -1418,7 +1468,7 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     var tc = _config.Clips[i];
                     if (tc.Clip == null) continue;
-                    float rowY   = i * (ClipH + ClipGap);
+                    float rowY   = i * (ClipH + ClipGap) - _scrollY;
                     float startT = GetClipStartTime(i);
                     float dur    = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                     float barX   = LabelW + startT * _pxPerSec - _scrollX;
@@ -1555,6 +1605,9 @@ namespace ZZZ.Editor.AnimationTool
             float mspd = tc.MoveSpeed;
             if (mode == MoveMode.Planar)
                 mspd = EditorGUILayout.FloatField("  Move Speed", tc.MoveSpeed);
+            bool lockRot = EditorGUILayout.Toggle(
+                new GUIContent("Lock Rotation", "이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)"),
+                tc.LockRotation);
 
             // 시작 부스트 (루트모션 워밍업 보완)
             float boostSpd = EditorGUILayout.FloatField(
@@ -1563,6 +1616,46 @@ namespace ZZZ.Editor.AnimationTool
             float boostT = tc.StartBoostTime;
             if (boostSpd > 0f)
                 boostT = EditorGUILayout.FloatField("  Boost Time(s)", tc.StartBoostTime);
+
+            // 타겟 트래킹 (루트모션 워프) — RootMotion 모드 전용
+            bool  track = tc.EnableTracking;
+            float twS   = tc.TrackWindowStart;
+            float twE   = tc.TrackWindowEnd;
+            float stopD = tc.StopDistance;
+            bool  snap  = tc.SnapRotation;
+            if (mode == MoveMode.RootMotion)
+            {
+                track = EditorGUILayout.Toggle(
+                    new GUIContent("Target Tracking", "전방 적이 있으면 루트모션을 적 방향으로 워프. 없으면 원본 그대로"),
+                    tc.EnableTracking);
+                if (track)
+                {
+                    EditorGUILayout.MinMaxSlider(
+                        new GUIContent($"  Window  {twS:F2}~{twE:F2}", "워프가 작동하는 normalizedTime 구간. 타격 이후엔 끊을 것"),
+                        ref twS, ref twE, 0f, 1f);
+                    stopD = EditorGUILayout.FloatField(
+                        new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지)"), tc.StopDistance);
+                    snap = EditorGUILayout.Toggle(
+                        new GUIContent("  Snap Rotation", "섹션 진입 시 타겟 방향으로 즉시 회전"), tc.SnapRotation);
+                }
+            }
+
+            // 공격 중 고정 각도 회전 (애니에 없는 회전 보강) — 모든 MoveMode에서 사용 가능
+            bool  secTurn = tc.SectionTurn;
+            float turnAng = tc.TurnAngle;
+            float swS     = tc.TurnWindowStart;
+            float swE     = tc.TurnWindowEnd;
+            secTurn = EditorGUILayout.Toggle(
+                new GUIContent("Section Turn", "윈도우 동안 bip001(몸통)을 정해진 각도만큼 회전 — 섹션 종료 시 복귀 (루트/카메라 영향 없음)"),
+                tc.SectionTurn);
+            if (secTurn)
+            {
+                turnAng = EditorGUILayout.FloatField(
+                    new GUIContent("  Turn Angle", "구간 동안 누적 회전할 총 각도(도). + 오른쪽 / - 왼쪽"), tc.TurnAngle);
+                EditorGUILayout.MinMaxSlider(
+                    new GUIContent($"  Window  {swS:F2}~{swE:F2}", "회전이 작동하는 normalizedTime 구간"),
+                    ref swS, ref swE, 0f, 1f);
+            }
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -1573,8 +1666,18 @@ namespace ZZZ.Editor.AnimationTool
                 tc.Clip = clip;
                 tc.Speed = Mathf.Max(0.01f, spd);
                 tc.MoveMode = mode; tc.MoveSpeed = Mathf.Max(0f, mspd);
+                tc.LockRotation = lockRot;
                 tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
                 tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
+                tc.EnableTracking   = track;
+                tc.TrackWindowStart = Mathf.Clamp01(Mathf.Min(twS, twE));
+                tc.TrackWindowEnd   = Mathf.Clamp01(Mathf.Max(twS, twE));
+                tc.StopDistance     = Mathf.Max(0f, stopD);
+                tc.SnapRotation     = snap;
+                tc.SectionTurn     = secTurn;
+                tc.TurnAngle       = turnAng;
+                tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(swS, swE));
+                tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(swS, swE));
                 EditorUtility.SetDirty(_config);
             }
 

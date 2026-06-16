@@ -2,16 +2,13 @@
 
 ## 진행중
 
-핵심 원인이 보입니다. 루트모션 베이크 때문입니다.
-
-설명: 루트모션 클립은 루트본의 localPosition에 이동량이 베이크돼 있습니다. 평소엔 매 프레임 루트본을 0으로 리셋해서 메시가 제자리에 있지만, 블렌딩 중에는 리셋을 안 하고 두 포즈의 루트본 위치를 그대로 보간합니다.
-
-예: 이전 클립 끝에서 루트본 = (0,0,3) (3m 전진), 새 클립 시작 = (0,0,0). 블렌드 첫 프레임에 루트본이 갑자기 3으로 튀었다가 0으로 슬라이드 → 이게 튀는 현상입니다.
-
-수정: 블렌딩 중에도 루트본을 리셋합니다. 먼저 ApplyRootMotion에서 리셋 부분을 헬퍼로 분리합니다.
+- [ ] 타겟 트래킹(루트모션 워프) 테스트
+  - 코드 구현 완료 (EnemySensor / PlayerController 워프 / ConfigState / ConfigTool UI)
+  - 씬 셋업 필요: 플레이어 루트(PlayerController와 같은 오브젝트)에 `EnemySensor` 컴포넌트 부착
+  - AttackConfig의 공격 클립에서 `Target Tracking` 켜고 Window/StopDistance 조정
 
 
 
 ## 발견된 버그
 
- Add Link Target 새로운 애니메이션 추가 안됨 이슈
+

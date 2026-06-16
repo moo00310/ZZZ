@@ -23,8 +23,9 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    LockRotation: 0
     StartBoostSpeed: 3
-    StartBoostTime: 0.5
+    StartBoostTime: 1
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Loop
@@ -48,6 +49,7 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     Links:
@@ -65,6 +67,7 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     Links:
@@ -90,6 +93,7 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     MoveSpeed: 4
+    LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     Links:
@@ -110,4 +114,12 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
-  GlobalLinks: []
+  GlobalLinks:
+  - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
+    TargetSection: 
+    BlendDuration: 0.1
+    Attack: 0
+    Direction: 0
+    Timing: 0
+    WindowStart: 0
+    WindowEnd: 1

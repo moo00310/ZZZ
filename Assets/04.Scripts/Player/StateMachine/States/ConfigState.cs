@@ -29,6 +29,15 @@ namespace ZZZ.Player.StateMachine.States
             Machine.ConsumeInput();
         }
 
+        // 외부 이벤트(피격 등)로 현재 config를 즉시 갈아끼운다.
+        // 입력 조건이 아닌 이벤트로 진입해야 하는 config(Hit 등)용.
+        // 해당 config가 OnEnd Link로 home(걷기)에 복귀하면 자연스럽게 돌아온다.
+        public void InterruptWith(AnimationConfig config, string section = null, float blend = 0.1f)
+        {
+            if (config == null) return;
+            SwitchConfig(config, section, blend);
+        }
+
         // config를 갈아끼우고 지정 섹션(비면 EntrySection)으로 진입
         private void SwitchConfig(AnimationConfig config, string section, float blend)
         {
@@ -55,6 +64,8 @@ namespace ZZZ.Player.StateMachine.States
             float ntRaw = SectionNormalizedTime(tc);
 
             FireNotifies(tc, ntRaw);
+            UpdateWarpWindow(tc, ntRaw);
+            UpdateSectionTurn(tc, ntRaw);
 
             MoveDir moveDir = Ctx.Controller.CurrentMoveDir;
 
@@ -145,6 +156,7 @@ namespace ZZZ.Player.StateMachine.States
         private void PlayActive(float blend)
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
+            Ctx.Controller.SetBodyYaw(0f);   // 직전 섹션의 연출 회전 해제 → 원래 facing 복귀
 
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
@@ -153,7 +165,23 @@ namespace ZZZ.Player.StateMachine.States
 
             // 이동 방식 적용
             Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
+            Ctx.Controller.AllowRotation   = !tc.LockRotation;
             if (tc.MoveMode == MoveMode.RootMotion) Ctx.Controller.FlushRootPos();
+
+            // 타겟 워프 — 전방 적이 있으면 루트모션을 적 방향으로 보정 (없으면 원본 그대로)
+            // 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
+            Ctx.Controller.ClearWarpTarget();
+            if (tc.MoveMode == MoveMode.RootMotion && tc.EnableTracking)
+            {
+                var sensor = Ctx.Controller.EnemySensor;
+                var target = sensor != null ? sensor.FindTarget() : null;
+                if (target != null)
+                {
+                    Ctx.Controller.SetWarpTarget(target, tc.StopDistance);
+                    if (tc.SnapRotation)
+                        Ctx.Controller.FaceToward(target.position - Ctx.Transform.position);
+                }
+            }
 
             // 시작 부스트 (0이면 내부에서 해제) — 매 섹션 진입마다 갱신
             Ctx.Controller.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
@@ -166,6 +194,28 @@ namespace ZZZ.Player.StateMachine.States
         {
             if (tc.Clip == null || tc.Clip.length <= 0f) return 1f;
             return _clipTime * Mathf.Max(0.01f, tc.Speed) / tc.Clip.length;
+        }
+
+        // 트래킹 윈도우 안에서만 워프 작동 — 타격 이후 적을 따라 휙 도는 것 방지
+        private void UpdateWarpWindow(TrackClip tc, float ntRaw)
+        {
+            if (!tc.EnableTracking) return;
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+            Ctx.Controller.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
+        }
+
+        // 공격 연출용 회전 — 윈도우 진행도에 비례한 절대 yaw를 bip001에 얹는다.
+        // 매 프레임 절대값으로 세팅(애니 포즈 위 오프셋이라 누적 불필요). 윈도우 이후엔
+        // TurnAngle을 유지하다가 섹션 종료 시 PlayActive에서 0으로 복귀.
+        private void UpdateSectionTurn(TrackClip tc, float ntRaw)
+        {
+            if (!tc.SectionTurn) return;
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : Mathf.Clamp01(ntRaw);
+            if (p < tc.TurnWindowStart) return;
+
+            float winLen = Mathf.Max(1e-4f, tc.TurnWindowEnd - tc.TurnWindowStart);
+            float wp     = Mathf.Clamp01((p - tc.TurnWindowStart) / winLen);   // 윈도우 내 진행도 0~1
+            Ctx.Controller.SetBodyYaw(tc.TurnAngle * wp);
         }
 
         private void FireNotifies(TrackClip tc, float ntRaw)
@@ -230,6 +280,7 @@ namespace ZZZ.Player.StateMachine.States
         public override void Exit()
         {
             _notifyFired = null;
+            Ctx.Controller.ClearWarpTarget();
         }
 
         // ── 에디터 라이브 모니터용 읽기 전용 노출 ──────────────────

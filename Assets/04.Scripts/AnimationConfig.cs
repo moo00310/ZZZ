@@ -47,12 +47,31 @@ namespace ZZZ
         public float Speed = 1f;
 
         [Header("Movement")]
-        public MoveMode MoveMode  = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
-        public float    MoveSpeed = 4f;             // MoveMode.Planar일 때 코드 이동 속도
+        public MoveMode MoveMode     = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
+        public float    MoveSpeed    = 4f;             // MoveMode.Planar일 때 코드 이동 속도
+        public bool     LockRotation = false;          // true면 이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)
 
         [Header("Start Boost — 시작 시 진행방향 초기 이동(루트모션 워밍업 보완)")]
         public float StartBoostSpeed = 0f;   // 클립 시작 순간 속도(0 = 끔). 시간이 지나며 0으로 감쇠
         public float StartBoostTime  = 0.15f; // 부스트가 0으로 감쇠하기까지의 시간(초)
+
+        [Header("Target Tracking — 전방 적에게 루트모션 워프 (RootMotion 전용)")]
+        // 섹션 진입 시 전방 적을 찾아 루트모션 수평 이동을 적 방향으로 재조준한다.
+        // 적이 없으면 보정량 0 → 원본 루트모션 그대로 (적 유무 분기 불필요)
+        public bool  EnableTracking = false;
+        [Range(0f, 1f)] public float TrackWindowStart = 0f;    // 보정 작동 구간 (normalizedTime)
+        [Range(0f, 1f)] public float TrackWindowEnd   = 0.4f;  // 타격 이후엔 끊어야 적을 따라 휙 돌지 않음
+        public float StopDistance = 1.2f;   // 타겟 앞 정지 거리 (관통 방지)
+        public bool  SnapRotation = true;   // 섹션 진입 시 타겟 방향으로 즉시 회전
+
+        [Header("Section Turn — 공격 중 고정 각도 회전 (애니에 없는 회전 보강)")]
+        // 윈도우 동안 bip001(엉덩이)에 TurnAngle만큼 추가 yaw를 얹는다 — 애니 포즈 위에 곱하는 임시 비주얼.
+        // 부호: + 오른쪽(시계방향), - 왼쪽. 본 위 연출이라 섹션 종료 시 0으로 복귀한다.
+        // 루트/카메라/이동 방향은 안 건드린다(순수 연출).
+        public bool  SectionTurn = false;
+        public float TurnAngle   = 180f;                       // 구간 동안 누적 회전할 총 각도(도)
+        [Range(0f, 1f)] public float TurnWindowStart = 0f;     // 회전 작동 구간 (normalizedTime)
+        [Range(0f, 1f)] public float TurnWindowEnd   = 0.4f;
 
         [Header("Links")]   // 이 섹션에서 분기 가능한 다음 섹션들
         public List<ClipLink> Links = new List<ClipLink>();
