@@ -12,15 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
   m_Name: AttackConfig
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
-  TrackName: New Track
+  TrackName: Attack_Normal_01
   LoopTrack: 0
-  ComboResetTime: 1.2
   DoneThreshold: 0
   EntrySection: 
   Clips:
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01
+  - SectionName: Attack_Normal_01
     Clip: {fileID: 7400000, guid: c07363b305b3d9743aef60dc9639886f, type: 2}
-    Speed: 1.2
+    Speed: 0.8
     MoveMode: 2
     MoveSpeed: 4
     LockRotation: 0
@@ -28,7 +27,7 @@ MonoBehaviour:
     StartBoostTime: 0.15
     EnableTracking: 1
     TrackWindowStart: 0
-    TrackWindowEnd: 0.51111114
+    TrackWindowEnd: 0.7638889
     StopDistance: 1.2
     SnapRotation: 0
     SectionTurn: 0
@@ -37,7 +36,7 @@ MonoBehaviour:
     TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
-      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_02
+      TargetSection: Attack_Normal_02
       BlendDuration: 0.01
       Attack: 0
       Direction: 1
@@ -45,7 +44,7 @@ MonoBehaviour:
       WindowStart: 0.7125
       WindowEnd: 1
     - TargetConfig: {fileID: 0}
-      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01_End
+      TargetSection: Attack_Normal_01_End
       BlendDuration: 0.01
       Attack: 5
       Direction: 1
@@ -53,71 +52,9 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_02
-    Clip: {fileID: 7400000, guid: cb5cedefa8cf214438fd2eb8038d6a21, type: 2}
-    Speed: 1.2
-    MoveMode: 2
-    MoveSpeed: 4
-    LockRotation: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.3861111
-    StopDistance: 1.2
-    SnapRotation: 0
-    SectionTurn: 1
-    TurnAngle: 360
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.1777778
-    Links:
-    - TargetConfig: {fileID: 0}
-      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_End
-      BlendDuration: 0.01
-      Attack: 5
-      Direction: 1
-      Timing: 2
-      WindowStart: 0
-      WindowEnd: 1
-    - TargetConfig: {fileID: 0}
-      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_03
-      BlendDuration: 0.01
-      Attack: 0
-      Direction: 1
-      Timing: 0
-      WindowStart: 0.759375
-      WindowEnd: 1
-    Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_03
-    Clip: {fileID: 7400000, guid: 1ee8f405f9351404bb4974fbe09e0670, type: 2}
-    Speed: 1
-    MoveMode: 2
-    MoveSpeed: 4
-    LockRotation: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 1
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    SnapRotation: 1
-    SectionTurn: 1
-    TurnAngle: -360
-    TurnWindowStart: 0.19444445
-    TurnWindowEnd: 0.41388893
-    Links:
-    - TargetConfig: {fileID: 0}
-      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_03_End
-      BlendDuration: 0.01
-      Attack: 5
-      Direction: 1
-      Timing: 2
-      WindowStart: 0.4
-      WindowEnd: 0.85
-    Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01_End
+  - SectionName: Attack_Normal_01_End
     Clip: {fileID: 7400000, guid: 30ce5d6072d6caa47ad1e7e72f7e8d53, type: 2}
-    Speed: 1.8
+    Speed: 1
     MoveMode: 2
     MoveSpeed: 4
     LockRotation: 0
@@ -150,9 +87,44 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_End
+  - SectionName: Attack_Normal_02
+    Clip: {fileID: 7400000, guid: cb5cedefa8cf214438fd2eb8038d6a21, type: 2}
+    Speed: 0.8
+    MoveMode: 2
+    MoveSpeed: 4
+    LockRotation: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 1
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.8055556
+    StopDistance: 1.2
+    SnapRotation: 0
+    SectionTurn: 0
+    TurnAngle: 360
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.1777778
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_03
+      BlendDuration: 0.01
+      Attack: 0
+      Direction: 1
+      Timing: 0
+      WindowStart: 0.759375
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000}
+      TargetSection: Attack_Normal_02_End
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+  - SectionName: Attack_Normal_02_End
     Clip: {fileID: 7400000, guid: 56facf6d56528a74eb4f3a156c7dcb7d, type: 2}
-    Speed: 1.8
+    Speed: 1
     MoveMode: 2
     MoveSpeed: 4
     LockRotation: 0
@@ -176,8 +148,43 @@ MonoBehaviour:
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.1
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_03_End
+  - SectionName: Attack_Normal_03
+    Clip: {fileID: 7400000, guid: 1ee8f405f9351404bb4974fbe09e0670, type: 2}
+    Speed: 0.8
+    MoveMode: 2
+    MoveSpeed: 4
+    LockRotation: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 1
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.5277778
+    StopDistance: 1.2
+    SnapRotation: 0
+    SectionTurn: 0
+    TurnAngle: -360
+    TurnWindowStart: 0.19444445
+    TurnWindowEnd: 0.41388893
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_03_End
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0.4
+      WindowEnd: 0.85
+    Notifies: []
+  - SectionName: Attack_Normal_03_End
     Clip: {fileID: 7400000, guid: c6e3c5e98431d4e4bb6b30d3dcbe4781, type: 2}
     Speed: 1
     MoveMode: 2
@@ -185,7 +192,7 @@ MonoBehaviour:
     LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
-    EnableTracking: 0
+    EnableTracking: 1
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
@@ -201,6 +208,14 @@ MonoBehaviour:
       Attack: 5
       Direction: 1
       Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.1
+      Attack: 5
+      Direction: 1
+      Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []

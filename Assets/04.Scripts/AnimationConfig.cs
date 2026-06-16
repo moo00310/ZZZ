@@ -14,7 +14,6 @@ namespace ZZZ
         public bool LoopTrack = false;        // 트랙 끝까지 재생 후 처음으로 되돌려 무한 반복
 
         [Header("Combo Timing")]
-        public float ComboResetTime = 1.2f;   // 입력 없으면 이 시간 후 복귀
         public float DoneThreshold  = 0f;     // OnEnd 발동 normalizedTime. 0 = 자동(클립 마지막 프레임 = 1 - 1/frames)
 
         [Header("Entry")]
@@ -103,7 +102,7 @@ namespace ZZZ
         // 지정되면 그 config로 갈아끼우고 TargetSection(비면 EntrySection)으로 진입.
         public AnimationConfig TargetConfig;        // null = 현재 config
         public string          TargetSection = "";  // 빈 값 = (현재)복귀 / (타겟)EntrySection
-        public float           BlendDuration = 0.1f;  // 이 전이가 발동할 때 CrossFade 시간(초)
+        public float           BlendDuration = 0.01f;  // 이 전이가 발동할 때 CrossFade 시간(초)
 
         [Header("Condition — 공격/방향 입력 조건 (AND)")]
         [FormerlySerializedAs("Input")]

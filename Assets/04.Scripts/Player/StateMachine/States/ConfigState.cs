@@ -162,6 +162,9 @@ namespace ZZZ.Player.StateMachine.States
             if (tc.Clip == null) { _notifyFired = null; return; }
 
             Ctx.Animator.Play(tc.Clip.name, blend);
+            // 비주얼 재생 속도를 로직 타임라인(SectionNormalizedTime의 Speed)과 일치시킨다.
+            // 안 맞추면 애니는 1배속으로 끝나 freeze되고 로직만 Speed배로 흘러 OnEnd가 늦게/일찍 발동(전환 딜레이).
+            Ctx.Animator.ApplyAnimatorSpeed(tc.Speed);
 
             // 이동 방식 적용
             Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;

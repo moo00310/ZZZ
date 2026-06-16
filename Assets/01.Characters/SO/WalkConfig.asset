@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: New Track
   LoopTrack: 0
-  ComboResetTime: 1.2
   DoneThreshold: 0
   EntrySection: 
   Clips:
@@ -26,6 +25,15 @@ MonoBehaviour:
     LockRotation: 0
     StartBoostSpeed: 3
     StartBoostTime: 1
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Loop
@@ -52,6 +60,15 @@ MonoBehaviour:
     LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_End
@@ -70,6 +87,15 @@ MonoBehaviour:
     LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
@@ -96,6 +122,15 @@ MonoBehaviour:
     LockRotation: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
@@ -117,7 +152,7 @@ MonoBehaviour:
   GlobalLinks:
   - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
     TargetSection: 
-    BlendDuration: 0.1
+    BlendDuration: 0.01
     Attack: 0
     Direction: 0
     Timing: 0

@@ -58,15 +58,17 @@ namespace ZZZ.Player.StateMachine
         }
 
         // ── Play ──────────────────────────────────────────────────
-        public void Play(string stateName, float crossFade = 0.1f)
+        // crossFade는 "초" 단위(고정 시간). CrossFade(normalized)와 달리 다음 클립 길이에
+        // 영향받지 않아 전이 시간이 일정하다. config의 BlendDuration(초)과 단위가 일치.
+        public void Play(string stateName, float crossFade = 0.01f)
         {
-            _animator.CrossFade(stateName, crossFade, 0);
+            _animator.CrossFadeInFixedTime(stateName, crossFade, 0);
         }
 
-        // 지정 레이어에 CrossFade (Additive 레이어 등 layer 0 외의 재생용)
+        // 지정 레이어에 CrossFade (Additive 레이어 등 layer 0 외의 재생용). crossFade는 초 단위.
         public void PlayAdditive(string stateName, int layer, float crossFade = 0.05f)
         {
-            _animator.CrossFade(stateName, crossFade, layer);
+            _animator.CrossFadeInFixedTime(stateName, crossFade, layer);
         }
 
         // 레이어 가중치 제어 (Additive 적용 강도)

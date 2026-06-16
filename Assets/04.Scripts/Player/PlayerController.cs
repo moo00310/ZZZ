@@ -17,6 +17,7 @@ namespace ZZZ.Player
         [SerializeField] private Transform _rootBone;       // 이동량 추출 후 로컬 0으로 리셋
         [SerializeField] private Transform _bip001Bone;     // 메시 드리프트 방지용 XZ 리셋
         [SerializeField] private float     _rootMotionScale = 1f;
+        [SerializeField] private float     _rootSnapThreshold = 1.5f;  // 전이 중 한 프레임 수평 이동이 이 값을 넘으면(앞쪽) 클립 전환 스냅으로 보고 버림
 
         [Header("Gravity")]
         [SerializeField] private float _gravity         = -20f;
@@ -28,6 +29,7 @@ namespace ZZZ.Player
         private float               _verticalVelocity;
         private Vector3             _prevRootPos;
         private bool                _flushRootPosPending;
+        private bool                _wasInTransition;    // 직전 프레임이 전이 중이었는지 (전이 종료 직후 1프레임 스냅 검출용)
         private float               _prevRootNormFrac;   // 직전 프레임 normalizedTime의 소수부 (루프 wrap 검출용)
 
         private Vector2 _moveInput;
@@ -68,6 +70,7 @@ namespace ZZZ.Player
         public bool  IsRootMotionActive => !UseCodeMovement && _rootBone != null;
         public float LastRootDelta      { get; private set; }
 
+        // 섹션 진입 시 호출 — 다음 프레임 baseline을 리셋해 전환 시 점프 방지.
         public void FlushRootPos() => _flushRootPosPending = true;
 
         // ── 타겟 워프 API (ConfigState가 구동) ─────────────────────
@@ -204,13 +207,17 @@ namespace ZZZ.Player
                     _bip001Bone.rotation = Quaternion.AngleAxis(_bodyYaw, Vector3.up) * _bip001Bone.rotation;
             }
 
-            // Root 이동량 추출 → CharacterController에 적용 후 로컬 위치 리셋
-            // 매 프레임 0 기준으로 읽으므로 루프/전환 튀는 현상 없음
+            // Root 이동량 추출 → CharacterController에 적용 후 로컬 위치 리셋.
+            // 루프 wrap은 wrapped로, 클립 전환 스냅은 아래 transitioning 가드로 처리한다.
             if (_rootBone != null && !UseCodeMovement)
             {
                 Vector3 currentPos = _rootBone.localPosition;
 
-                bool inTransition = _animator != null && _animator.IsInTransition(0);
+                // 전이(CrossFade) 중인가 + 전이가 막 끝난 첫 프레임인가.
+                // 스냅은 "블렌드 구간 전체 + 블렌드→순수클립으로 넘어가는 첫 프레임"에 걸쳐 생긴다.
+                bool inTransition  = _animator != null && _animator.IsInTransition(0);
+                bool transitioning = inTransition || _wasInTransition;
+                _wasInTransition   = inTransition;
 
                 // 루프 클립이 끝(≈1)에서 처음(≈0)으로 되감기면 baked 루트 위치가 뒤로 점프한다.
                 // normalizedTime 소수부가 줄어든 프레임 = wrap → 그 프레임 델타는 버린다.
@@ -223,7 +230,8 @@ namespace ZZZ.Player
                     _prevRootNormFrac = frac;
                 }
 
-                if (_flushRootPosPending || inTransition || wrapped)
+                // 섹션 진입 첫 프레임만 baseline을 잡고(점프 방지), 루프 wrap 프레임은 버린다.
+                if (_flushRootPosPending || wrapped)
                 {
                     _prevRootPos         = currentPos;
                     _flushRootPosPending = false;
@@ -234,6 +242,19 @@ namespace ZZZ.Player
                 _rootBone.localPosition = Vector3.zero;
 
                 Vector3 move = transform.TransformDirection(deltaLocal) * _rootMotionScale;
+
+                // 전이 구간(+종료 직후 1프레임)에는 두 클립 루트가 섞여, 클립 전환 순간 루트가
+                // 튀는 "스냅"이 생긴다. 스냅은 항상 진행 방향의 "반대(뒤)"로 향하고, 정상 런지/걷기는
+                // "앞"으로 향한다 → 방향으로 스냅을 가른다(크기 무관하므로 walk의 작은 스냅도 잡힘).
+                // 추가로, 앞쪽으로 비정상적으로 큰 점프(드문 forward 스냅)는 크기로 한 번 더 거른다.
+                // 고정 프레임이 아니라 전이 구간 자체를 기준 삼아 블렌드 길이에 상관없이 덮는다.
+                if (transitioning)
+                {
+                    Vector3 flat = new Vector3(move.x, 0f, move.z);
+                    bool backward = Vector3.Dot(flat, transform.forward) < 0f;
+                    if (backward || flat.magnitude > _rootSnapThreshold) { move.x = 0f; move.z = 0f; }
+                }
+
                 WarpRootMotion(ref move);
                 move.y = _verticalVelocity * Time.deltaTime;
                 _cc.Move(move);
@@ -256,9 +277,13 @@ namespace ZZZ.Player
             float dist = to.magnitude;
             if (dist < 0.001f) return;
 
-            Vector3 dir    = to / dist;
-            float   remain = Mathf.Max(0f, dist - _warpStopDistance);
-            float   step   = Mathf.Min(new Vector3(move.x, 0f, move.z).magnitude, remain);
+            // 이미 StopDistance 안쪽이면 재조준/클램프 없이 원본 루트모션을 그대로 통과시킨다.
+            // (코앞 공격에서 remain=0이라 lunge가 통째로 0이 되던 문제 방지 — 라운지 보존)
+            float remain = dist - _warpStopDistance;
+            if (remain <= 0f) return;
+
+            Vector3 dir  = to / dist;
+            float   step = Mathf.Min(new Vector3(move.x, 0f, move.z).magnitude, remain);
             move.x = dir.x * step;
             move.z = dir.z * step;
         }
