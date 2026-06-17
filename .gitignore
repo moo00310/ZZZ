@@ -1,5 +1,7 @@
 # Large model assets (FBX, textures) - manage separately
 Assets/00.Model/
+# 100MB 초과로 GitHub push 거부됨 (히스토리에서 제거함)
+Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx
 
 # Unity generated
 [Ll]ibrary/
