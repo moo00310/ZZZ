@@ -17,7 +17,18 @@
       "Bash(grep -nE 'm_Name: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01$' Assets/01.Characters/Burnice/Animations/Avatar_Female_Size02_Burnice_Controller.controller)",
       "Bash(ls -A Core)",
       "Bash(rmdir Core)",
-      "Bash(rm -f Core.meta)"
+      "Bash(rm -f Core.meta)",
+      "PowerShell(git push 2>&1)",
+      "PowerShell(Write-Output \"---FILE ON DISK?---\"; if \\(Test-Path \"Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx\"\\) { \\(Get-Item \"Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx\"\\).Length/1MB } else { \"not on disk\" }; Write-Output \"---IN HEAD TREE?---\"; git ls-tree -r HEAD --name-only | Select-String \"Avatar_Female_Size02_Burnice.fbx\"; Write-Output \"---OTHER BIG FILES IN HISTORY \\(HEAD tree >50MB\\)---\"; git ls-tree -r -l HEAD | Where-Object { \\($_ -split '\\\\s+'\\)[3] -as [long] -gt 50MB })",
+      "PowerShell(git branch backup-before-purge HEAD; Write-Output \"backup created at: $\\(git rev-parse --short backup-before-purge\\)\"; Write-Output \"---filter-repo available?---\"; git filter-repo --version 2>$null; if \\(-not $?\\) { \"git-filter-repo NOT available\" })",
+      "PowerShell($env:FILTER_BRANCH_SQUELCH_WARNING=1; git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch \"Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx\"' -- origin/main..HEAD)",
+      "PowerShell(git stash push -- .claude/settings.json; Write-Output \"---now run filter-branch---\"; $env:FILTER_BRANCH_SQUELCH_WARNING=1; git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch \"Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx\"' -- origin/main..HEAD)",
+      "PowerShell(git stash pop; Write-Output \"---verify FBX gone from history---\"; git log --oneline --all -- \"Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx\"; if \\($?\\) { \"\\(empty above = removed\\)\" }; Write-Output \"---any blob >100MB in unpushed range?---\"; git rev-list origin/main..HEAD --objects | ForEach-Object { $h=\\($_ -split ' '\\)[0]; $sz=git cat-file -s $h 2>$null; if \\($sz -as [long] -gt 100MB\\) { \"$\\([math]::Round\\($sz/1MB,1\\)\\)MB $_\" } }; Write-Output \"---done check---\")",
+      "PowerShell(Write-Output \"---working tree vs stashed version---\"; git diff stash@{0} -- .claude/settings.json; Write-Output \"---END---\")",
+      "PowerShell(git --% diff stash@{0} -- .claude/settings.json)",
+      "PowerShell(git stash drop)",
+      "PowerShell(git push --dry-run 2>&1)",
+      "PowerShell(git push; Write-Output \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }
