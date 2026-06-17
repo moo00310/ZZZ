@@ -5,12 +5,22 @@ namespace ZZZ.Player
 {
     using ZZZ;   // MoveDir
 
+    // 플레이어의 현재 이동/회전 모드 스냅샷 — 개별 bool에서 매 프레임 파생(CurrentFlags).
+    // 한 줄 로그/인스펙터/HUD 표시용. 상태 변경은 여전히 개별 bool로 한다(여기에 쓰지 않음).
+    [System.Flags]
+    public enum PlayerStateFlags
+    {
+        None           = 0,
+        CodeMovement   = 1 << 0,   // UseCodeMovement (코드 이동)
+        RootMotion     = 1 << 1,   // IsRootMotionActive (루트모션 구동 중)
+        RotationLocked = 1 << 2,   // !AllowRotation (회전 잠금)
+        WarpActive     = 1 << 3,   // WarpWindowActive (타겟 워프 윈도우)
+    }
+
     [RequireComponent(typeof(CharacterController))]
     public class PlayerController : MonoBehaviour
     {
         [Header("Locomotion")]
-        [SerializeField] private float _moveSpeed     = 5f;
-        [SerializeField] private float _sprintSpeed   = 7f;
         [SerializeField] private float _rotationSpeed = 15f;
 
         [Header("Root Motion")]
@@ -33,8 +43,6 @@ namespace ZZZ.Player
         private float               _prevRootNormFrac;   // 직전 프레임 normalizedTime의 소수부 (루프 wrap 검출용)
 
         private Vector2 _moveInput;
-        private bool    _isSprinting;
-        private float   _currentSpeed;
         private Vector3 _moveDirection;
 
         // 시작 부스트 (클립 시작 시 진행 방향으로 짧게 가속 → 루트모션 워밍업 보완)
@@ -50,8 +58,8 @@ namespace ZZZ.Player
         public bool UseCodeMovement { get; set; } = true;
         public bool AllowRotation   { get; set; } = true;   // false면 이동 입력이 있어도 캐릭터 회전 안 함 (피격/경직 등)
 
-        public float   CurrentSpeed  => _currentSpeed;
-        public bool    IsSprinting   => _isSprinting;
+        // 실제 수평 이동 속도 (루트모션 포함) — 애니메이터 블렌드/HUD 표시용
+        public float   CurrentSpeed  => new Vector3(_cc.velocity.x, 0f, _cc.velocity.z).magnitude;
         public Vector3 MoveDirection => _moveDirection;
 
         // 원시 WASD 입력 기준 방향 (W=Forward) — 콤보 Link 조건 판정용
@@ -69,6 +77,20 @@ namespace ZZZ.Player
         // 라이브 모니터용
         public bool  IsRootMotionActive => !UseCodeMovement && _rootBone != null;
         public float LastRootDelta      { get; private set; }
+
+        // 개별 bool에서 파생된 모드 스냅샷 — 디버그/로그 표시용 (상태 변경엔 쓰지 않음)
+        public PlayerStateFlags CurrentFlags
+        {
+            get
+            {
+                PlayerStateFlags f = PlayerStateFlags.None;
+                if (UseCodeMovement)    f |= PlayerStateFlags.CodeMovement;
+                if (IsRootMotionActive) f |= PlayerStateFlags.RootMotion;
+                if (!AllowRotation)     f |= PlayerStateFlags.RotationLocked;
+                if (WarpWindowActive)   f |= PlayerStateFlags.WarpActive;
+                return f;
+            }
+        }
 
         // 섹션 진입 시 호출 — 다음 프레임 baseline을 리셋해 전환 시 점프 방지.
         public void FlushRootPos() => _flushRootPosPending = true;
@@ -160,13 +182,11 @@ namespace ZZZ.Player
         }
 
         private void OnMove(InputValue value)   => _moveInput   = value.Get<Vector2>();
-        private void OnSprint(InputValue value) => _isSprinting = value.isPressed;
 
         private void Move()
         {
             if (_moveInput.sqrMagnitude < k_moveThreshold)
             {
-                _currentSpeed  = 0f;
                 _moveDirection = Vector3.zero;
             }
             else
@@ -178,13 +198,9 @@ namespace ZZZ.Player
                 camForward.Normalize();
                 camRight.Normalize();
 
+                // 입력 방향(카메라 기준)만 계산 — 실제 이동은 루트모션이 담당.
+                // 이 방향은 회전/타겟 워프/부스트/콤보 방향 판정에 쓰인다.
                 _moveDirection = (camForward * _moveInput.y + camRight * _moveInput.x).normalized;
-
-                float speed = _isSprinting ? _sprintSpeed : _moveSpeed;
-                _currentSpeed = speed;
-
-                if (UseCodeMovement)
-                    _cc.Move(_moveDirection * (speed * Time.deltaTime));
 
                 if (AllowRotation)
                     RotateToward(_moveDirection, _rotationSpeed);

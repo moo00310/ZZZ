@@ -19,6 +19,12 @@ namespace ZZZ.Player.StateMachine
         // (어떤 config를 쓸지는 재생할 섹션 이름으로 자동 검색 — FindConfigWithSection)
         [SerializeField] private List<AnimationConfig> _configs = new List<AnimationConfig>();
 
+        [Header("Dodge — 어떤 config에서든 회피 입력 시 강제 진입 (push)")]
+        // 회피 config는 _configs에 드롭만 하면 됨. 섹션 이름 규약(접두어+방향)으로 검색해 진입한다.
+        [SerializeField] private string _dodgePrefix     = "Evade_";  // 섹션 접두어 (Evade_Front 등)
+        [SerializeField, Range(0f, 0.2f)] private float _dodgeBlend = 0.05f;
+        [SerializeField, Range(0f, 1f)]   private float _dodgeReinterrupt = 0.3f;  // 회피 중 재입력 무시 임계
+
         [Header("Hit")]
         // 이미 피격 중일 때, 현재 반응 진행도가 이 값을 넘어야 새 피격이 재시작된다 (A. 재진입 가드).
         // 너무 낮으면 연타 시 frame0에서 덜덜 떨림, 너무 높으면 반응성 둔화.
@@ -35,7 +41,7 @@ namespace ZZZ.Player.StateMachine
         // hit이 아닌 상태에서 새로 맞으면 0으로 리셋됨.
         private int _comboHitCount;
 
-        private StateMachine       _machine;
+        private ConfigState        _state;   // 단일 config 러너 — 전이는 config가 관리
         private PlayerStateContext _ctx;
 
         // ── 입력 버퍼 ──────────────────────────────────────────────
@@ -46,6 +52,20 @@ namespace ZZZ.Player.StateMachine
         public ComboInput BufferedInput => _bufferedInput;
         public void ConsumeInput() => _bufferedTime = -10f;
 
+        // 무적 — i-frame 윈도우 동안 ConfigState가 매 프레임 세팅. TriggerHit가 이 값을 보고 무시.
+        public bool Invulnerable { get; set; }
+
+        // ── 퍼펙트 회피 윈도우 ─────────────────────────────────────
+        // 적이 "공격 적중 직전" 이 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 회피 모션).
+        // 적 공격 시스템이 생기면 공격 액티브 직전에 OpenIncomingAttack(window)를 호출하면 된다.
+        private float _incomingAttackUntil = -1f;
+        public bool IncomingAttackActive => Time.time <= _incomingAttackUntil;
+        public void OpenIncomingAttack(float window) => _incomingAttackUntil = Time.time + window;
+
+        // 테스트용 — 예고된 적 공격 시뮬레이션(K). 윈도우를 열고 끝나면 공격 적중.
+        [SerializeField] private float _testTelegraphWindow = 0.4f;
+        private float _testPendingHitAt = -1f;
+
         private void Awake()
         {
             var controller = GetComponent<PlayerController>();
@@ -54,15 +74,11 @@ namespace ZZZ.Player.StateMachine
 
             _ctx = new PlayerStateContext(controller, animator, cc, transform);
 
-            _machine = new StateMachine();
-            _machine.AddState(new ConfigState(_ctx, this, _startConfig));
-            _machine.AddState(new EnhanceComboState(_ctx, this));
-            _machine.AddState(new RushState(_ctx, this));
-            _machine.AddState(new SpecialState(_ctx, this));
+            _state = new ConfigState(_ctx, this, _startConfig);
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
-        private void Start() => _machine.ChangeState<ConfigState>();
+        private void Start() => _state.Enter();
 
         private void Update()
         {
@@ -72,14 +88,25 @@ namespace ZZZ.Player.StateMachine
             {
                 if (kb.hKey.wasPressedThisFrame) TriggerHit("Back");
                 if (kb.jKey.wasPressedThisFrame) TriggerHit("Front");
+
+                // K = 예고된 적 공격 — 윈도우를 열고 끝에 적중. 그 사이 회피하면 퍼펙트.
+                if (kb.kKey.wasPressedThisFrame)
+                {
+                    OpenIncomingAttack(_testTelegraphWindow);
+                    _testPendingHitAt = Time.time + _testTelegraphWindow;
+                }
             }
 
-            _machine.Update();
+            if (_testPendingHitAt > 0f && Time.time >= _testPendingHitAt)
+            {
+                _testPendingHitAt = -1f;
+                TriggerHit("Front");   // 적중 (i-frame 중이면 자동 무시 = 회피 성공)
+            }
+
+            // 회피는 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
+            if (HasBufferedInput && _bufferedInput == ComboInput.Dodge) TriggerDodge();
+            _state.Update();
         }
-
-        private void FixedUpdate() => _machine.FixedUpdate();
-
-        public void ChangeState<T>() where T : IState => _machine.ChangeState<T>();
 
         // 충돌 검출에서 호출 — 공격자 위치로 Front/Back 판정 후 진입.
         public void TriggerHitFrom(Vector3 attackerPos)
@@ -93,10 +120,10 @@ namespace ZZZ.Player.StateMachine
         //   direction : 반응 방향("Front"/"Back") → 섹션 이름에 사용
         //   A. 재진입 가드 — 이미 피격 중이고 진행도가 임계값 미만이면 무시(연타 stunlock/프리즈 방지)
         //   escalation — 연속타 카운트로 강도 승격: 1타=L, 2타+=H
-        // (Rush/Special 등 하드코딩 State 중에는 무시 — 데모상 피격은 걷기 중 발생)
         public void TriggerHit(string direction = "Back")
         {
-            if (!(_machine.CurrentState is ConfigState cs)) return;
+            if (Invulnerable) return;   // 회피 i-frame 중이면 피격 무시
+            var cs = _state;
 
             // 등록된 config 중 이번 피격 섹션(L/H 둘 다 같은 config에 있음)을 가진 것을 찾는다.
             AnimationConfig hitConfig = FindConfigWithSection($"Hit_L_{direction}")
@@ -121,6 +148,42 @@ namespace ZZZ.Player.StateMachine
             cs.InterruptWith(hitConfig, $"Hit_{strength}_{direction}", _hitEntryBlend);
         }
 
+        // 회피 진입 (push) — 버퍼에 Dodge가 있으면 호출. Hit과 같은 방식:
+        // 입력 상태로 섹션 이름(접두어+방향)을 만들고 _configs에서 검색해 강제 진입한다.
+        private void TriggerDodge()
+        {
+            string section = _dodgePrefix + DodgeSuffix();
+            var cfg = FindConfigWithSection(section);
+            if (cfg == null)
+            {
+                Debug.LogWarning($"[Dodge] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", this);
+                return;
+            }
+
+            // 재진입 가드 — 이미 회피 중이고 진행도가 낮으면 무시(연타 프리즈 방지)
+            if (_state.CurrentConfig == cfg && _state.CurrentNormalizedTime < _dodgeReinterrupt)
+                return;
+
+            ConsumeInput();
+            _state.InterruptWith(cfg, section, _dodgeBlend);
+        }
+
+        // 회피 섹션 선택:
+        //   무입력/아래        → Back  (회전 없이 백스텝)
+        //   방향(W/A/D) 일반   → Front (진입 시 FaceInputOnEnter로 입력 방향 회전)
+        //   방향 + 퍼펙트 타이밍 → Left/Right (좌우 회피 모션 — 입력 좌=Left, 그 외=Right)
+        private string DodgeSuffix()
+        {
+            MoveDir d = CurrentMoveDir;
+            bool directional = d == MoveDir.Forward || d == MoveDir.Left || d == MoveDir.Right;
+            if (!directional) return "Back";
+
+            if (IncomingAttackActive)               // 적 공격 윈도우 안 → 퍼펙트
+                return d == MoveDir.Left ? "Left" : "Right";   // W(정면)은 Right로
+
+            return "Front";
+        }
+
         // 등록된 config(시작 config + Configs 리스트)에서 해당 섹션을 가진 첫 config 반환 (없으면 null)
         private AnimationConfig FindConfigWithSection(string section)
         {
@@ -130,20 +193,15 @@ namespace ZZZ.Player.StateMachine
             return null;
         }
 
-        public string CurrentStateName => _machine.CurrentState?.GetType().Name ?? "-";
-
-        // ── 에디터 라이브 모니터용 (현재 State가 ConfigState일 때만 유효) ──
-        private ConfigState ActiveConfigState => _machine.CurrentState as ConfigState;
-        public AnimationConfig CurrentConfig         => ActiveConfigState?.CurrentConfig;
-        public int             CurrentClipIndex      => ActiveConfigState?.ActiveIndex ?? -1;
-        public string          CurrentSection        => ActiveConfigState?.ActiveSection;
-        public float           CurrentNormalizedTime => ActiveConfigState?.CurrentNormalizedTime ?? 0f;
-        public MoveDir         CurrentMoveDir         => ActiveConfigState?.CurrentMoveDir ?? MoveDir.Any;
+        // ── 에디터/HUD 라이브 모니터용 ──
+        public AnimationConfig CurrentConfig         => _state?.CurrentConfig;
+        public int             CurrentClipIndex      => _state?.ActiveIndex ?? -1;
+        public string          CurrentSection        => _state?.ActiveSection;
+        public float           CurrentNormalizedTime => _state?.CurrentNormalizedTime ?? 0f;
+        public MoveDir         CurrentMoveDir         => _state?.CurrentMoveDir ?? MoveDir.Any;
 
         // ── 입력 콜백 (PlayerInput SendMessages) ──────────────────
         private void OnAttack(InputValue value)  { if (value.isPressed) BufferInput(ComboInput.Normal); }
-        private void OnEnhanced(InputValue value) { if (value.isPressed) BufferInput(ComboInput.Enhanced); }
-        private void OnSpecial(InputValue value)  { if (value.isPressed) BufferInput(ComboInput.Special); }
         private void OnDodge(InputValue value)    { if (value.isPressed) BufferInput(ComboInput.Dodge); }
 
         private void BufferInput(ComboInput input)

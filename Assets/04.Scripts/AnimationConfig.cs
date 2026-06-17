@@ -47,8 +47,10 @@ namespace ZZZ
 
         [Header("Movement")]
         public MoveMode MoveMode     = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
-        public float    MoveSpeed    = 4f;             // MoveMode.Planar일 때 코드 이동 속도
         public bool     LockRotation = false;          // true면 이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)
+        // 진입 순간 현재 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). LockRotation과 함께 쓰면
+        // "진입 때 한 번 조준 → 휘두름 중 고정"이 된다. 입력이 있으면 SnapRotation(적 방향)보다 우선.
+        public bool     FaceInputOnEnter = false;
 
         [Header("Start Boost — 시작 시 진행방향 초기 이동(루트모션 워밍업 보완)")]
         public float StartBoostSpeed = 0f;   // 클립 시작 순간 속도(0 = 끔). 시간이 지나며 0으로 감쇠
@@ -77,18 +79,23 @@ namespace ZZZ
 
         public List<TrackNotify> Notifies = new List<TrackNotify>();
 
+        [Header("Modules — 섹션 기능 (i-frame 등). 있는 것만 실행 (폴리모픽)")]
+        [SerializeReference] public List<SectionModule> Modules = new List<SectionModule>();
+
         public bool UseRootMotion => MoveMode == MoveMode.RootMotion;
 
         // 루프 여부는 클립 임포트 설정(Loop Time)에서 가져온다 — config가 따로 관리하지 않음(표시용)
         public bool IsLooping => Clip != null && Clip.isLooping;
     }
 
-    // 클립 재생 중 캐릭터 이동 방식
+    // 클립 재생 중 캐릭터 이동 방식.
+    // None/Planar = 루트모션 안 씀(중력만 코드 적용). RootMotion = 루트본 이동량을 적용.
+    // (Planar는 과거 코드 이동용이었으나 현재 미사용 — 직렬화 호환 위해 값 유지)
     public enum MoveMode
     {
         None,        // 제자리 (이동 없음)
-        Planar,      // 입력 방향으로 코드 이동 (MoveSpeed) — 걷기/달리기 루프
-        RootMotion   // 루트본 이동량 적용 — 공격/대시
+        Planar,      // (구) 코드 이동 — 현재 None과 동일하게 취급
+        RootMotion   // 루트본 이동량 적용 — 걷기/공격/대시
     }
 
     // 섹션 간 전이 정의.

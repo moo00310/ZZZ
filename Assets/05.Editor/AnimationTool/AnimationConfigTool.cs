@@ -1662,6 +1662,58 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUILayout.LabelField("우클릭 → Notify 추가",  EditorStyles.centeredGreyMiniLabel);
         }
 
+        // 섹션 모듈 리스트 (i-frame 등 폴리모픽). 있는 모듈만 표시/편집.
+        private void DrawModules(TrackClip tc)
+        {
+            DrawSeparator();
+            EditorGUILayout.LabelField($"Modules  ({tc.Modules.Count})", EditorStyles.boldLabel);
+
+            int removeAt = -1;
+            for (int i = 0; i < tc.Modules.Count; i++)
+            {
+                var m = tc.Modules[i];
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(m != null ? m.DisplayName : "(null)", GUILayout.Width(170));
+                if (GUILayout.Button("−", GUILayout.Width(24))) removeAt = i;
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUI.BeginChangeCheck();
+                if (m is IFrameModule ifm)
+                {
+                    float s = ifm.Start, e = ifm.End;
+                    EditorGUILayout.MinMaxSlider(
+                        new GUIContent($"   Window  {s:F2}~{e:F2}", "무적이 작동하는 normalizedTime 구간"),
+                        ref s, ref e, 0f, 1f);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(_config, "Edit Module");
+                        ifm.Start = Mathf.Clamp01(Mathf.Min(s, e));
+                        ifm.End   = Mathf.Clamp01(Mathf.Max(s, e));
+                        EditorUtility.SetDirty(_config);
+                    }
+                }
+                else EditorGUI.EndChangeCheck();
+            }
+
+            if (removeAt >= 0)
+            {
+                Undo.RecordObject(_config, "Remove Module");
+                tc.Modules.RemoveAt(removeAt);
+                EditorUtility.SetDirty(_config);
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Add:", GUILayout.Width(34));
+            using (new EditorGUI.DisabledScope(tc.Modules.Exists(x => x is IFrameModule)))
+                if (GUILayout.Button("I-Frame", GUILayout.Width(80)))
+                {
+                    Undo.RecordObject(_config, "Add Module");
+                    tc.Modules.Add(new IFrameModule());
+                    EditorUtility.SetDirty(_config);
+                }
+            EditorGUILayout.EndHorizontal();
+        }
+
         private void DrawClipInspector(TrackClip tc, int idx)
         {
             EditorGUILayout.LabelField($"Clip  {idx + 1}", EditorStyles.boldLabel);
@@ -1672,12 +1724,12 @@ namespace ZZZ.Editor.AnimationTool
             var   clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", tc.Clip, typeof(AnimationClip), false);
             float spd  = EditorGUILayout.FloatField("Speed",       tc.Speed);
             var   mode = (MoveMode)EditorGUILayout.EnumPopup("Move Mode", tc.MoveMode);
-            float mspd = tc.MoveSpeed;
-            if (mode == MoveMode.Planar)
-                mspd = EditorGUILayout.FloatField("  Move Speed", tc.MoveSpeed);
             bool lockRot = EditorGUILayout.Toggle(
                 new GUIContent("Lock Rotation", "이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)"),
                 tc.LockRotation);
+            bool faceInput = EditorGUILayout.Toggle(
+                new GUIContent("Face Input On Enter", "진입 순간 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). Lock Rotation과 함께 쓰면 진입 때 한 번 조준 후 고정"),
+                tc.FaceInputOnEnter);
 
             // ── 고급 (접기) — Boost / Target Tracking / Section Turn ──
             // 값은 항상 현재값으로 초기화 → 접혀서 UI를 안 그려도 저장 로직이 그대로 유지됨
@@ -1739,8 +1791,9 @@ namespace ZZZ.Editor.AnimationTool
                 tc.SectionName = sect;
                 tc.Clip = clip;
                 tc.Speed = Mathf.Max(0.01f, spd);
-                tc.MoveMode = mode; tc.MoveSpeed = Mathf.Max(0f, mspd);
+                tc.MoveMode = mode;
                 tc.LockRotation = lockRot;
+                tc.FaceInputOnEnter = faceInput;
                 tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
                 tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
                 tc.EnableTracking   = track;
@@ -1754,6 +1807,8 @@ namespace ZZZ.Editor.AnimationTool
                 tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(swS, swE));
                 EditorUtility.SetDirty(_config);
             }
+
+            DrawModules(tc);
 
             // Loop은 클립 임포트 설정(Loop Time)에서 자동 표시 — 편집 불가
             using (new EditorGUI.DisabledScope(true))
@@ -1800,25 +1855,19 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     var foldStyle = new GUIStyle(EditorStyles.boldLabel)
                     { normal = { textColor = isSel ? Color.white : new Color(0.82f, 0.82f, 0.82f) } };
-                    if (GUILayout.Button($"{(expanded ? "▼" : "▶")} {i}", foldStyle, GUILayout.Width(26)))
+                    if (GUILayout.Button($"{(expanded ? "▼" : "▶")} {i + 1}.", foldStyle, GUILayout.Width(34)))
                         _selectedLink = isSel ? -1 : i;
                 }
-                else GUILayout.Label($"{i}", EditorStyles.boldLabel, GUILayout.Width(16));
+                else GUILayout.Label($"{i + 1}.", EditorStyles.boldLabel, GUILayout.Width(24));
 
-                // 조건 칩 (카테고리별 색 고정) — Attack=파랑 / Direction=초록 / When=주황 계열.
-                // None/Any/기본 타이밍은 생략해 짧게 유지.
-                if (link.Attack != ComboInput.None)
-                    DrawChip(link.Attack.ToString(), k_chipAttack);
-                if (link.Direction != MoveDir.Any)
-                    DrawChip(link.Direction.ToString(), k_chipDir);
-                if (link.Timing == LinkTiming.OnWindowMiss)
-                    DrawChip("miss", k_chipWhenMiss);
-                else if (link.Timing == LinkTiming.OnEnd)
-                    DrawChip("end", k_chipWhen);
-                if (link.Attack == ComboInput.None && link.Direction == MoveDir.Any
-                    && link.Timing == LinkTiming.WhenMatched)
-                    DrawChip("무조건", new Color(0.5f, 0.5f, 0.5f));
+                // 윗줄: 대상 이름(강조) + 순서/삭제 버튼(오른쪽 끝)
+                GUILayout.Label("→ " +
+                    (string.IsNullOrEmpty(link.TargetSection) ? "End/복귀" : Short(link.TargetSection)),
+                    new GUIStyle(EditorStyles.boldLabel)
+                    { fontSize = 13, clipping = TextClipping.Clip,
+                      normal = { textColor = isSel ? Color.white : LinkColor(link) } });
 
+                GUILayout.FlexibleSpace();
                 using (new EditorGUI.DisabledScope(i == 0))
                     if (GUILayout.Button("▲", GUILayout.Width(20)))
                     {
@@ -1843,15 +1892,22 @@ namespace ZZZ.Editor.AnimationTool
                 }
                 EditorGUILayout.EndHorizontal();
 
-                EditorGUILayout.BeginHorizontal();                
-
-                // 대상 이름 (강조, 남은 공간 채우고 길면 클립)
-                GUILayout.Label("→ " +
-                    (string.IsNullOrEmpty(link.TargetSection) ? "End/복귀" : Short(link.TargetSection)),
-                    new GUIStyle(EditorStyles.miniBoldLabel)
-                    { normal = { textColor = isSel ? Color.white : LinkColor(link) },
-                      clipping = TextClipping.Clip });
-
+                // 아랫줄: 조건 칩 (카테고리별 색) — 번호 폭만큼 들여쓰기.
+                // Attack=파랑 / Direction=초록 / When=주황. None/Any/기본 타이밍은 생략.
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(34f);
+                if (link.Attack != ComboInput.None)
+                    DrawChip(link.Attack.ToString(), k_chipAttack);
+                if (link.Direction != MoveDir.Any)
+                    DrawChip(link.Direction.ToString(), k_chipDir);
+                if (link.Timing == LinkTiming.OnWindowMiss)
+                    DrawChip("miss", k_chipWhenMiss);
+                else if (link.Timing == LinkTiming.OnEnd)
+                    DrawChip("end", k_chipWhen);
+                if (link.Attack == ComboInput.None && link.Direction == MoveDir.Any
+                    && link.Timing == LinkTiming.WhenMatched)
+                    DrawChip("무조건", new Color(0.5f, 0.5f, 0.5f));
+                GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
 
                 if (expanded)
@@ -1867,10 +1923,10 @@ namespace ZZZ.Editor.AnimationTool
                         string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
-                    var attack = (ComboInput)EditorGUILayout.EnumPopup("Attack",    link.Attack);
-                    var dir    = (MoveDir)EditorGUILayout.EnumPopup(   "Direction", link.Direction);
-                    var timing = (LinkTiming)EditorGUILayout.EnumPopup(
-                        new GUIContent("When", TimingHelp(link.Timing)), link.Timing);
+                    var attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, link.Attack);
+                    var dir    = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, link.Direction);
+                    var timing = (LinkTiming)ColoredEnum(
+                        new GUIContent("When", TimingHelp(link.Timing)), k_chipWhen, link.Timing);
 
                     float ws = link.WindowStart, we = link.WindowEnd;
                     if (timing != LinkTiming.OnEnd)   // OnEnd는 윈도우 불필요
@@ -1917,6 +1973,17 @@ namespace ZZZ.Editor.AnimationTool
             GUI.Label(r, text, new GUIStyle(EditorStyles.miniLabel)
             { alignment = TextAnchor.MiddleCenter, fontSize = 9,
               normal = { textColor = lum > 0.6f ? Color.black : Color.white } });
+        }
+
+        // 색 라벨 + EnumPopup — 칩과 같은 카테고리 색으로 라벨을 칠해 본문에서도 구분 쉽게
+        private static Enum ColoredEnum(GUIContent label, Color col, Enum value)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(label, new GUIStyle(EditorStyles.label)
+            { normal = { textColor = col } }, GUILayout.Width(EditorGUIUtility.labelWidth));
+            Enum result = EditorGUILayout.EnumPopup(value);
+            EditorGUILayout.EndHorizontal();
+            return result;
         }
 
         // 링크 순서 swap (▲▼). 포커스 인덱스도 같이 따라가게 보정.

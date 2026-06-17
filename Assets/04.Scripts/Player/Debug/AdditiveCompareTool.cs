@@ -89,7 +89,6 @@ namespace ZZZ.Player.Debugging
             if (_isolated)
             {
                 Suspend(GetComponent<PlayerStateMachine>());
-                Suspend(GetComponent<PlayerAnimatorController>());
                 Suspend(GetComponent<PlayerController>());
                 _animator.CrossFade(_baseState, 0.1f, 0);   // base를 Idle로 고정
             }

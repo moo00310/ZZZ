@@ -1,0 +1,137 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
+  m_Name: EvadeConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
+  TrackName: New Track
+  LoopTrack: 0
+  DoneThreshold: 0
+  EntrySection: 
+  Clips:
+  - SectionName: Evade_Front
+    Clip: {fileID: 7400000, guid: 8fc302b0720d0a642ba8038689310ef3, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      Attack: 1
+      Direction: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+    Modules:
+    - rid: 7723410972547481664
+  - SectionName: Evade_Back
+    Clip: {fileID: 7400000, guid: d59ae790c9cb36641a6fbbac5b841be8, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links: []
+    Notifies: []
+    Modules: []
+  - SectionName: Evade_Back_02
+    Clip: {fileID: 7400000, guid: 76db4ce169bf92c4f92c8a8d3f66619d, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links: []
+    Notifies: []
+    Modules: []
+  - SectionName: Evade_Left
+    Clip: {fileID: 7400000, guid: 4a5c3bb2420242b438e9b127ec31ac14, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links: []
+    Notifies: []
+    Modules: []
+  - SectionName: Evade_Right
+    Clip: {fileID: 7400000, guid: c45363acce05a0a4cb023da528db78fc, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links: []
+    Notifies: []
+    Modules: []
+  GlobalLinks: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 7723410972547481664
+      type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.057044663
+        End: 0.55

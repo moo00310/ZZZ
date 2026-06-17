@@ -11,8 +11,6 @@ namespace ZZZ.Player.StateMachine
         public Transform             Transform      { get; }
 
         // 입력 상태 (PlayerController에서 업데이트)
-        public float   MoveSpeed     => Controller.CurrentSpeed;
-        public bool    IsSprinting   => Controller.IsSprinting;
         public bool    IsGrounded    => CC.isGrounded;
         public Vector3 MoveDirection => Controller.MoveDirection;
 

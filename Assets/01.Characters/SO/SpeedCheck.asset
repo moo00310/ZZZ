@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: New Track
   LoopTrack: 1
-  ComboResetTime: 1.2
   DoneThreshold: 0
   EntrySection: 
   Clips:
-  - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01
-    Clip: {fileID: 7400000, guid: c07363b305b3d9743aef60dc9639886f, type: 2}
-    Speed: 0.8
-    MoveMode: 0
+  - SectionName: Test
+    Clip: {fileID: 7400000, guid: d58d50c638d09094d80e7fb9f0dfaf2c, type: 2}
+    Speed: 1
+    MoveMode: 2
     MoveSpeed: 4
     LockRotation: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     EnableTracking: 0
@@ -35,6 +35,9 @@ MonoBehaviour:
     TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
+    IFrames: 0
+    IFrameStart: 0.1
+    IFrameEnd: 0.55
     Links: []
     Notifies: []
   GlobalLinks: []

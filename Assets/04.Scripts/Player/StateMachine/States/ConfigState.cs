@@ -4,12 +4,15 @@ using ZZZ;
 
 namespace ZZZ.Player.StateMachine.States
 {
-    // AnimationConfig(Clips + Links)를 파싱해 구동하는 범용 상태.
+    // AnimationConfig(Clips + Links)를 파싱해 구동하는 단일 러너.
     // 링크가 다른 config를 가리키면 현재 config를 갈아끼운다.
-    // 모든 State(걷기/콤보/대시 등)를 이 한 클래스 + config로 표현한다.
-    public class ConfigState : StateBase
+    // 모든 동작(걷기/콤보/회피/피격 등)을 이 한 클래스 + config로 표현한다 — 전이는 전부 config가 관리.
+    public class ConfigState
     {
-        private readonly AnimationConfig _homeConfig;   // 진입/복귀 기본 config
+        private readonly PlayerStateContext Ctx;
+        private readonly PlayerStateMachine Machine;
+        private readonly AnimationConfig    _homeConfig;   // 진입/복귀 기본 config
+        private readonly SectionContext     _sc;           // 섹션 모듈에 넘기는 핸들 묶음
 
         private AnimationConfig _config;   // 현재 구동 중 config
         private int             _active;   // 현재 클립 인덱스
@@ -18,12 +21,14 @@ namespace ZZZ.Player.StateMachine.States
 
         public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine,
             AnimationConfig homeConfig)
-            : base(ctx, machine)
         {
+            Ctx         = ctx;
+            Machine     = machine;
             _homeConfig = homeConfig;
+            _sc         = new SectionContext { Ctx = ctx, Machine = machine };
         }
 
-        public override void Enter()
+        public void Enter()
         {
             SwitchConfig(_homeConfig, null, 0f);
             Machine.ConsumeInput();
@@ -51,7 +56,7 @@ namespace ZZZ.Player.StateMachine.States
             PlayActive(blend);
         }
 
-        public override void Update()
+        public void Update()
         {
             if (_config == null) return;
             if (_active < 0 || _active >= _config.Clips.Count) return;
@@ -66,6 +71,7 @@ namespace ZZZ.Player.StateMachine.States
             FireNotifies(tc, ntRaw);
             UpdateWarpWindow(tc, ntRaw);
             UpdateSectionTurn(tc, ntRaw);
+            TickModules(tc, ntRaw);
 
             MoveDir moveDir = Ctx.Controller.CurrentMoveDir;
 
@@ -157,6 +163,7 @@ namespace ZZZ.Player.StateMachine.States
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             Ctx.Controller.SetBodyYaw(0f);   // 직전 섹션의 연출 회전 해제 → 원래 facing 복귀
+            Machine.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
 
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
@@ -171,6 +178,20 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Controller.AllowRotation   = !tc.LockRotation;
             if (tc.MoveMode == MoveMode.RootMotion) Ctx.Controller.FlushRootPos();
 
+            // 진입 스냅 — 이동 입력이 있으면 그쪽으로 즉시 회전 후(LockRotation이면) 고정.
+            // 콤보가 새 섹션으로 진입하는 순간이 곧 "콤보 사이" 재조준 지점이 된다.
+            // 입력이 있으면 아래 적 방향 스냅(SnapRotation)보다 우선한다.
+            bool facedInput = false;
+            if (tc.FaceInputOnEnter)
+            {
+                Vector3 inputDir = Ctx.Controller.MoveDirection;   // 카메라 기준 WASD 방향
+                if (inputDir.sqrMagnitude > 0.0001f)
+                {
+                    Ctx.Controller.FaceToward(inputDir);
+                    facedInput = true;
+                }
+            }
+
             // 타겟 워프 — 전방 적이 있으면 루트모션을 적 방향으로 보정 (없으면 원본 그대로)
             // 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
             Ctx.Controller.ClearWarpTarget();
@@ -181,13 +202,18 @@ namespace ZZZ.Player.StateMachine.States
                 if (target != null)
                 {
                     Ctx.Controller.SetWarpTarget(target, tc.StopDistance);
-                    if (tc.SnapRotation)
+                    if (tc.SnapRotation && !facedInput)
                         Ctx.Controller.FaceToward(target.position - Ctx.Transform.position);
                 }
             }
 
             // 시작 부스트 (0이면 내부에서 해제) — 매 섹션 진입마다 갱신
             Ctx.Controller.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
+
+            // 섹션 모듈 진입 (i-frame 등) — Warp가 참조할 수 있게 입력 조준 여부 전달
+            _sc.FacedInputThisEnter = facedInput;
+            for (int i = 0; i < tc.Modules.Count; i++)
+                tc.Modules[i]?.OnEnter(tc, _sc);
 
             _notifyFired = new bool[tc.Notifies.Count];
         }
@@ -219,6 +245,14 @@ namespace ZZZ.Player.StateMachine.States
             float winLen = Mathf.Max(1e-4f, tc.TurnWindowEnd - tc.TurnWindowStart);
             float wp     = Mathf.Clamp01((p - tc.TurnWindowStart) / winLen);   // 윈도우 내 진행도 0~1
             Ctx.Controller.SetBodyYaw(tc.TurnAngle * wp);
+        }
+
+        // 섹션 모듈 매 프레임 구동 (i-frame 등). 있는 모듈만 실행.
+        private void TickModules(TrackClip tc, float ntRaw)
+        {
+            var mods = tc.Modules;
+            for (int i = 0; i < mods.Count; i++)
+                mods[i]?.Tick(tc, ntRaw, _sc);
         }
 
         private void FireNotifies(TrackClip tc, float ntRaw)
@@ -280,10 +314,12 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
-        public override void Exit()
+        // 현재는 항상 활성이라 호출되지 않지만, 무적 누수 방지를 위한 정리 진입점으로 남겨둔다.
+        public void Exit()
         {
             _notifyFired = null;
             Ctx.Controller.ClearWarpTarget();
+            Machine.Invulnerable = false;
         }
 
         // ── 에디터 라이브 모니터용 읽기 전용 노출 ──────────────────

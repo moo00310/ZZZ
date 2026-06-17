@@ -14,7 +14,10 @@
       "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\AnimationToolWindow.cs.meta\" -Force -ErrorAction SilentlyContinue)",
       "Bash(Remove-Item \"e:\\\\Unity\\\\project\\\\Assets\\\\05.Editor\\\\AnimationTool\\\\StateMachineEditorWindow.cs\" -Force)",
       "Bash(grep -nE 'm_Name: \\(Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01|Avatar_Female_Size02_Burnice_Ani_Walk_Loop\\)$|m_Motion:' Assets/01.Characters/Burnice/Animations/Avatar_Female_Size02_Burnice_Controller.controller)",
-      "Bash(grep -nE 'm_Name: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01$' Assets/01.Characters/Burnice/Animations/Avatar_Female_Size02_Burnice_Controller.controller)"
+      "Bash(grep -nE 'm_Name: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_01$' Assets/01.Characters/Burnice/Animations/Avatar_Female_Size02_Burnice_Controller.controller)",
+      "Bash(ls -A Core)",
+      "Bash(rmdir Core)",
+      "Bash(rm -f Core.meta)"
     ]
   }
 }
