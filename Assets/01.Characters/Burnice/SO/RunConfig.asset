@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
+  m_Name: RunConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
+  TrackName: New Track
+  LoopTrack: 0
+  DoneThreshold: 0
+  EntrySection: 
+  Clips:
+  - SectionName: Run_Loop
+    Clip: {fileID: 7400000, guid: 297c2e6a515444a4ab22e4c2ab1c9b91, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Run_End
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+    Modules: []
+  - SectionName: Run_End
+    Clip: {fileID: 7400000, guid: 0405b8783ad94a14f9b0ca197cddae96, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    SnapRotation: 1
+    SectionTurn: 0
+    TurnAngle: 180
+    TurnWindowStart: 0
+    TurnWindowEnd: 0.4
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+    Modules: []
+  GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []

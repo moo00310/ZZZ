@@ -19,11 +19,14 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
 [ Input ]
     │  (PlayerInput SendMessages → 입력 버퍼링)
     ▼
-[ PlayerStateMachine ]        ← MonoBehaviour, 루트 진입점
-    │   · 입력 버퍼 (Normal / Dodge)
-    │   · 피격/회피 트리거 (TriggerHit / TriggerDodge)
-    │   · 무적(Invulnerable)·퍼펙트 회피 윈도우 보유
-    │   · 섹션 이름으로 config 자동 검색 (FindConfigWithSection)
+[ PlayerStateMachine ]        ← MonoBehaviour, 얇은 코디네이터(조립 + facade)
+    │   · 협력 객체 조립: InputBuffer / HitTrigger / DodgeTrigger / ConfigRegistry
+    │   · 무적(Invulnerable)·퍼펙트 회피 윈도우 보유 + facade 노출
+    │   ├── InputBuffer      입력 버퍼 (Normal / Dodge)
+    │   ├── HitTrigger       피격 트리거 (재진입 가드 + L/H 승격)
+    │   ├── DodgeTrigger     회피 트리거 (push, 방향→섹션 선택)
+    │   └── ConfigRegistry   섹션 이름으로 config 자동 검색 (FindWithSection)
+    │   (테스트용 H/J/K 키는 PlayerTestTriggers 컴포넌트로 분리)
     │
     │  단일 ConfigState 보유 → Enter() / Update() 직접 호출
     ▼
@@ -168,6 +171,7 @@ Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않
 - **제자리에서도 스르륵 밀려남(드리프트 누적)** → 매 프레임 `root` 본을 로컬 0으로 리셋해 이동값이 쌓이지 않게 함
 - **루프 클립이 끝→처음 되감기는 순간 순간이동** → 되감김(normalizedTime wrap) 프레임의 거대 델타는 버림
 - **동작 전환(CrossFade) 시 점프** → 전환 중 남은 델타를 flush (`FlushRootPos`)
+- **전이 중 두 클립 루트가 섞여 생기는 "스냅"** → 전이 구간(+종료 직후 1프레임)의 root 본 위치는 두 클립 포즈의 가중 평균이라 그 프레임 델타는 실제 이동이 아니다. 전이 동안 **수평 이동을 통째로 버린다**(블렌드 ≤0.05s라 짧고, 종료 후 baseline 재설정으로 깨끗이 재개). 과거엔 "스냅은 뒤로 향한다"고 보고 방향으로만 걸렀으나, 스냅 방향은 "직전 클립 이동의 반대"라 백스텝 뒤 전이에서 앞으로 새어나갔다(전방 회피→달리기 튐 / 후방 회피 연타 시 시작 위치 워프).
 - **몸통만 따로 새는 현상(메시 드리프트, 보이는 몸 ≠ 실제 위치)** → `Bip001`의 XZ(수평)만 리셋, Y(높이)는 유지
 - **동작 초반 이동이 약해 굼떠 보임** → 시작 부스트(`StartBoostSpeed`/`StartBoostTime`)로 워밍업 보완
 
@@ -213,19 +217,19 @@ SectionModule (추상)
 ## 회피 (Dodge / Evade)
 
 회피는 "어떤 config에서든" 입력 즉시 강제 진입하는 push 방식이다.
-([PlayerStateMachine.TriggerDodge](../Assets/04.Scripts/Player/StateMachine/PlayerStateMachine.cs))
+([DodgeTrigger](../Assets/04.Scripts/Player/StateMachine/Triggers/DodgeTrigger.cs))
 
 ```
 Dodge 입력 버퍼됨
     │  (링크 평가 전에 검사 → 콤보보다 우선, 공격 중 캔슬 가능)
     ▼
-DodgeSuffix()  — 입력 상태로 섹션 방향 결정
+DodgeTrigger.Suffix()  — 입력 상태로 섹션 방향 결정
     ├── 무입력/아래            → Evade_Back   (회전 없이 백스텝)
     ├── 방향(W/A/D) 일반        → Evade_Front  (FaceInputOnEnter로 입력 방향 회전)
     └── 방향 + 퍼펙트 윈도우    → Evade_Left / Evade_Right  (좌우 회피)
     │
     ▼
-FindConfigWithSection("Evade_" + suffix)  — 섹션 이름 규약으로 config 검색
+ConfigRegistry.FindWithSection("Evade_" + suffix)  — 섹션 이름 규약으로 config 검색
     │  · 재진입 가드: 이미 회피 중 + 진행도 < _dodgeReinterrupt 면 무시 (연타 프리즈 방지)
     ▼
 ConfigState.InterruptWith(cfg, section, _dodgeBlend)
@@ -234,26 +238,26 @@ ConfigState.InterruptWith(cfg, section, _dodgeBlend)
 
 ### 퍼펙트 회피 윈도우
 적이 "공격 적중 직전" `OpenIncomingAttack(window)`로 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 모션).
-현재는 `K` 키로 적 공격을 시뮬레이션한다(윈도우를 열고 끝에 `TriggerHit` 적중 — i-frame 중이면 자동 무시).
+현재는 `PlayerTestTriggers`의 `K` 키로 적 공격을 시뮬레이션한다(윈도우를 열고 끝에 `TriggerHit` 적중 — i-frame 중이면 자동 무시).
 실제 적 공격 시스템이 생기면 공격 액티브 직전에 `OpenIncomingAttack`를 호출하면 된다.
 
 ### 문제와 해결
 
 - **회피 도중엔 맞지 않아야 함** → `IFrameModule`로 회피 시작~중반 구간에 무적(i-frame) 부여, 이 사이 피격은 무시
 - **연타로 회피 재입력 시 프리즈** → 이미 회피 중 + 진행도 < `_dodgeReinterrupt`면 새 회피 무시 (재진입 가드)
-- **🚧 남은 버그** → 회피 중 캐릭터가 튀는 문제 ([루트모션](#루트모션-직접-구현) 튐과 같은 계열, 추적 중)
+- **회피 전이 중 캐릭터가 튀는 문제(전방 회피→달리기 튐 / 후방 회피 연타 워프)** → 전이 구간 root 델타는 두 클립 블렌딩 아티팩트라 신뢰 불가 → 전이 중 수평 이동을 통째로 버려 해결 ([루트모션](#루트모션-직접-구현) "스냅" 항목 참조)
 
 ---
 
 ## 피격 (외부 이벤트 진입)
 
 ```
-충돌 검출 → PlayerStateMachine.TriggerHitFrom(attackerPos)
-    │  공격자 위치로 Front/Back 판정 (또는 테스트키 H=Back / J=Front)
+충돌 검출 → PlayerStateMachine.TriggerHitFrom → HitTrigger.TriggerFrom(attackerPos)
+    │  공격자 위치로 Front/Back 판정 (또는 PlayerTestTriggers의 H=Back / J=Front)
     ▼
-TriggerHit(direction)
+HitTrigger.Trigger(direction)
     ├── Invulnerable(회피 i-frame)이면 무시
-    ├── FindConfigWithSection("Hit_L_{dir}" ?? "Hit_H_{dir}") 로 hit config 검색
+    ├── ConfigRegistry.FindWithSection("Hit_L_{dir}" ?? "Hit_H_{dir}") 로 hit config 검색
     ├── 재진입 가드 : 진행도 < _hitReinterruptThreshold 면 새 피격 무시 (연타 stunlock 방지)
     └── escalation  : 연속타 카운트로 강도 교대 (홀수타=L / 짝수타=H)
     ▼

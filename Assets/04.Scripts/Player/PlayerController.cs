@@ -27,7 +27,6 @@ namespace ZZZ.Player
         [SerializeField] private Transform _rootBone;       // 이동량 추출 후 로컬 0으로 리셋
         [SerializeField] private Transform _bip001Bone;     // 메시 드리프트 방지용 XZ 리셋
         [SerializeField] private float     _rootMotionScale = 1f;
-        [SerializeField] private float     _rootSnapThreshold = 1.5f;  // 전이 중 한 프레임 수평 이동이 이 값을 넘으면(앞쪽) 클립 전환 스냅으로 보고 버림
 
         [Header("Gravity")]
         [SerializeField] private float _gravity         = -20f;
@@ -259,16 +258,19 @@ namespace ZZZ.Player
 
                 Vector3 move = transform.TransformDirection(deltaLocal) * _rootMotionScale;
 
-                // 전이 구간(+종료 직후 1프레임)에는 두 클립 루트가 섞여, 클립 전환 순간 루트가
-                // 튀는 "스냅"이 생긴다. 스냅은 항상 진행 방향의 "반대(뒤)"로 향하고, 정상 런지/걷기는
-                // "앞"으로 향한다 → 방향으로 스냅을 가른다(크기 무관하므로 walk의 작은 스냅도 잡힘).
-                // 추가로, 앞쪽으로 비정상적으로 큰 점프(드문 forward 스냅)는 크기로 한 번 더 거른다.
-                // 고정 프레임이 아니라 전이 구간 자체를 기준 삼아 블렌드 길이에 상관없이 덮는다.
+                // 전이 구간(+종료 직후 1프레임)에는 root 본이 두 클립 포즈의 가중 평균이라,
+                // 그 프레임 델타는 실제 이동이 아니라 블렌딩 아티팩트("스냅")다.
+                // 과거엔 "스냅은 항상 뒤로 향한다"고 보고 방향으로 걸렀지만, 스냅 방향은
+                // 실제로 "직전 클립 이동의 반대"다 (currentPos가 옛 변위 → 새 클립 시작 ~0으로 이완).
+                // → 직전 클립이 뒤로 갔으면(백스텝) 스냅이 앞으로 향해 전방 가드를 빠져나갔다:
+                //   · 전방 Evade→Run_Loop 블렌드 중 앞으로 튐
+                //   · 후방 Evade 연타 시 시작 위치로 워프
+                // 전이 구간 수평 이동은 통째로 버린다. 블렌드(≤0.05s)는 짧고, 전이 종료 후
+                // baseline을 다시 잡아(flush/wrap) 깨끗한 루트모션이 재개된다.
                 if (transitioning)
                 {
-                    Vector3 flat = new Vector3(move.x, 0f, move.z);
-                    bool backward = Vector3.Dot(flat, transform.forward) < 0f;
-                    if (backward || flat.magnitude > _rootSnapThreshold) { move.x = 0f; move.z = 0f; }
+                    move.x = 0f;
+                    move.z = 0f;
                 }
 
                 WarpRootMotion(ref move);
