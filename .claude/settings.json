@@ -36,7 +36,8 @@
       "PowerShell(git pull --rebase origin main 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\"; Write-Output \"---status---\"; git status --short)",
       "PowerShell(git stash push -- .claude/settings.json; Write-Output \"---rebase---\"; git pull --rebase origin main 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\"; Write-Output \"---status---\"; git status --short)",
       "PowerShell(git checkout --theirs README.md; git add README.md; Write-Output \"---README first line check---\"; git show :README.md 2>$null | Select-Object -First 3; Write-Output \"---continue rebase---\"; $env:GIT_EDITOR='true'; git rebase --continue 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\")",
-      "PowerShell(git add -A; Write-Output \"---staged now---\"; git diff --cached --name-only; Write-Output \"---continue with explicit editor---\"; git -c core.editor=true -c sequence.editor=true rebase --continue 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\")"
+      "PowerShell(git add -A; Write-Output \"---staged now---\"; git diff --cached --name-only; Write-Output \"---continue with explicit editor---\"; git -c core.editor=true -c sequence.editor=true rebase --continue 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(git status -sb; Write-Output \"---push---\"; git push 2>&1 | Out-String; Write-Output \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }
