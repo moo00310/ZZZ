@@ -146,8 +146,9 @@ nt = _clipTime * Speed / clip.length
 
 > 값 1은 과거 `Planar`(코드 이동) 자리였으나 폐기. `RootMotion=2` 직렬화 호환을 위해 enum에서 1은 비워 둔다.
 > 걷기·달리기도 코드 이동이 아니라 **RootMotion**으로 처리한다.
-> `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`,
-> `AllowRotation = !LockRotation`을 토글한다.
+> `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`을 토글하고,
+> `AllowRotation`은 매 프레임 `LockRotation`+`LockWindow`(normalizedTime 구간)로 제어한다
+> (`UpdateRotationWindows`). 잠금 해제 후 회전은 `_rotationEaseTime` 동안 이즈인된다.
 
 ### 루트모션 (직접 구현)
 
@@ -200,43 +201,59 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아 **
 
 ### 섹션 턴 (SectionTurn) — 루트 회전 추출
 
-턴 애니(예: 180° 뒤돌기)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야 턴 이후
-이동/다음 섹션이 새 방향으로 이어진다. `SectionTurn`을 켠 섹션에서만 작동.
+턴 애니(예: 180° 뒤돌기, TurnBack)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야
+턴 이후 이동/다음 섹션(run_loop)이 새 방향으로 이어진다. `SectionTurn`을 켠 섹션에서만 작동.
 
-**리그 전제**
-- 3ds Max Biped. 위치·회전이 `Bip001`(골반)에 구워져 있고, 별도 `Root` 본은 깨끗한 yaw를 가졌지만
-  메시를 구동하지 않는 형제 leaf 노드다.
+**리그 전제 (이 기능의 모든 난이도의 근원)**
+- **회전이 `Bip001`(골반)에 구워져** 있다. 별도 `Root` 본은 깨끗한 yaw 커브를 갖지만
+  자식이 없는 형제 leaf라 메시를 구동하지 않는다.
 - 그래서 **회전 측정은 `Root` 본, 메시 보정은 `Bip001`** 로 분리한다.
-  인스펙터의 PlayerController → Root Motion → **Root Bone** 슬롯에 Root를 할당해야 한다.
 
 **메커니즘** ([PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`)
 
 | 단계 | 처리 |
 |------|------|
-| 회전 추출 | `Root` 본 yaw 델타를 `transform`(월드 up)에 누적 적용 (`_rootYawComp`) |
-| 메시 카운터 | `_rootYawComp`만큼 `Bip001`을 월드 공간에서 되돌림 → 메시 이중 회전(≈360) 방지 |
-| 위치 보정 | 이동 변환에서 `-_rootYawComp` 적용 → 애니 위치곡선의 회전과 transform 회전 이중 적용 방지 |
+| 트리거 | `MoveDir.Reverse`(진행 반대키, `dot(forward,입력)<-0.707`) → 턴 섹션 전이 (`ConfigState.IsReverseInput`) |
+| 회전 추출 | `Root` 본 yaw(up축 twist 분해로 측정) 델타를 `transform`에 누적 (`_rootYawComp`) |
+| 메시 카운터 | `_rootYawComp`만큼 `Bip001`을 월드에서 되돌림 → 메시 이중 회전(≈360) 방지 (메시는 애니 원본) |
+| 위치 보정 | 이동 변환에서 `-_rootYawComp` → 애니 위치곡선 회전 + transform 회전 이중 적용 방지(거꾸로/사선) |
+| 전이 가드 | 진입/CrossFade 프레임은 baseline만 갱신(블렌드 오염 방지), 재진입은 `FlushRootRotation`으로 누적 리셋 |
 
-> 핵심 개념은 **Unity의 root motion과 동일** — 메시는 애니 원본 그대로 재생(자연 sway 유지),
-> `transform`만 루트(Root yaw)를 추적한다. `Bip001` 자체를 측정하지 않으므로 골반 노이즈 wobble이 없다.
+> 측정에 `Root`를 쓰는 이유: `Bip001`(골반)은 기울고 sway가 심해 forward 투영·twist 둘 다 노이즈가
+> 커서 transform이 흔들리고 각도도 안 맞는다. `Root`는 깨끗해 정확·무흔들림.
 
-**문제와 해결**
+**겪은 문제와 해결 (디버깅 순서)**
 
-| 증상 | 왜 생기나 | 해결 |
-|------|-----------|------|
-| 메시가 ≈360°로 과회전 | transform과 Bip001이 둘 다 돌아 이중 적용 | transform에 넣은 누적 yaw(`_rootYawComp`)만큼 Bip001을 월드에서 되돌림 |
-| 턴 후 달리기가 거꾸로/사선 | 애니 위치곡선에 이미 회전이 들었는데 transform도 돌아 이중 | 위치 변환에서 `-_rootYawComp`를 빼 섹션 시작 회전 기준으로 |
-| 회전이 떨림(wobble) | Bip001(골반) yaw를 측정해 카운터 → 기울어진 본+sway가 노이즈 | Bip001 측정 폐기, transform에 넣은 Root yaw만큼만 되돌림 |
-| 재진입 시 이동 틀어짐 | 진입 CrossFade 동안 Root가 두 클립 블렌드라 값 오염 | 전이(`transitioning`) 프레임은 추출 건너뛰고 baseline만 갱신 |
-| 턴→턴 재진입 시 어긋남 | `_rootYawComp`가 리셋 안 돼 카운터 과다 | 섹션 진입마다 `FlushRootRotation`으로 baseline+누적 리셋 |
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| 메시 ≈360° 과회전 | transform·Bip001 둘 다 돌아 이중 | `_rootYawComp`만큼 Bip001 카운터 |
+| 턴 후 거꾸로/사선 | 위치곡선에 회전 들었는데 transform도 돌아 이중 | 위치 변환에 `-_rootYawComp` |
+| 회전 wobble | 골반(Bip001) yaw 측정 노이즈 | 측정원을 깨끗한 Root로 |
+| 재진입 이동 틀어짐 | 진입 블렌드 동안 Root 값 오염 누적 | 전이 프레임 추출 스킵, baseline만 |
+| 턴→턴 재진입 어긋남 | `_rootYawComp` 리셋 안 됨 | 진입마다 `FlushRootRotation` |
+| **턴→run 전이 휘청** | 턴 힙(+180)·run 힙(+0)이 ~180 달라 CrossFade가 slerp로 비선형 휘청 | **하드컷 + 카운터 즉시 해제** (아래) |
 
-**트리거** — 진행 반대 방향키(`MoveDir.Reverse`)로 턴 섹션에 전이.
-`dot(forward, 입력) < -0.707`(>135°)로 판정 (`ConfigState.IsReverseInput`).
-입력 회전 잠금(`LockRotation`)도 `LockWindow`(normalizedTime 구간)로 부분 적용 가능 — 잠금 해제 후
-회전은 `_rotationEaseTime` 동안 이즈인되어 "툭" 튀지 않는다.
+**현재 구현 (결론) — 턴→run은 하드컷**
 
-> **미구현** — 턴→run 나갈 때 카운터를 전이 진행도에 맞춰 페이드아웃(전환 팝 방지),
-> `TurnWindow` 구간 한정 추출, 누적 ±180 클램프는 아직 안 넣음.
+> 회전은 **Root에서 추출 → transform**, 메시 이중회전은 **Bip001 카운터**로 지우고, 턴→run 전이는
+> **하드컷(턴→run 링크 `BlendDuration = 0`) + 카운터 즉시 해제**로 처리한다.
+> **결과: facing이 전 구간 연속**, 캐릭터는 의도대로 180 돌아 새 방향으로 달린다.
+
+**왜 블렌드가 아니라 하드컷인가** — 턴 클립의 힙은 +180 돌아간 포즈, run 클립의 힙은 정면(+0)으로
+~180° 다르다. 둘을 CrossFade로 섞으면 골반 yaw가 **slerp로 비선형 휘청**인다(로그 실측: bipWorldY
+187→319→113). 이걸 코드로 펴려면 골반 yaw를 매 프레임 정확히 빼야 하는데, 기울어진 골반은 측정
+노이즈가 커서 불가능(transform·메시 흔들림). **→ 블렌드를 버리는 것(하드컷)이 코드로 낼 수 있는
+가장 깨끗한 결과**라 이걸 택했다. 블렌드가 없으니 골반이 1프레임에 +180→+0으로 전환되고, 양쪽
+프레임 모두 `mesh = transform facing`이라 연속이 된다.
+
+**감수한 비용** — 전이 1프레임에 **사지 stride 로컬 포즈만** 컷된다. facing·이동은 멀쩡하고, 턴이
+달리는 포즈로 끝나면 이 컷은 거의 안 보인다. (구간 회전잠금 `LockWindow`, 잠금 해제 후
+`_rotationEaseTime` 이즈인도 함께 동작.)
+
+**더 매끄럽게 하려면 (선택 — 애니/리그)** — 근본 원인이 "턴이 골반에 구워진 것"이라, 아래 중 하나면
+**일반 블렌드가 그냥 부드러워지고 위 카운터/하드컷 우회 자체가 거의 불필요**해진다:
+- ① 턴 회전을 `Root` 노드(루트모션)에 굽기 → 골반 항상 정면 → 턴끝 골반 = run 골반 → 블렌드 무휘청 (정석)
+- ② 턴 클립 끝 포즈 = Run_Loop 시작 포즈로 맞추기 → slerp 폭 축소 → 블렌드 가능
 
 ---
 
@@ -386,8 +403,6 @@ Assets/04.Scripts/
             └── IFrameModule.cs       무적 구간(i-frame)
 ```
 
-> 과거의 `StateMachine/Core/`(IState·StateBase·StateMachine)와
-> `States/`의 하드코딩 State(EnhanceCombo·Rush·Special)는 모두 제거되었다.
 
 ---
 
