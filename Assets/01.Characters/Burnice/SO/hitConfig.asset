@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: New Track
   LoopTrack: 0
-  ComboResetTime: 1.2
   DoneThreshold: 0
   EntrySection: 
   Clips:
@@ -22,8 +21,9 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 6c14d662b6b803042a3178858cc108fb, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     EnableTracking: 0
@@ -57,12 +57,14 @@ MonoBehaviour:
       NormalizedTime: 0
       EventName: OnHitShake
       EffectPrefab: {fileID: 0}
+    Modules: []
   - SectionName: Hit_H_Back
     Clip: {fileID: 7400000, guid: ba999ce2a680cf8409ee1d1f3368892d, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
     EnableTracking: 0
@@ -96,12 +98,14 @@ MonoBehaviour:
       NormalizedTime: 0
       EventName: OnHitShake
       EffectPrefab: {fileID: 0}
+    Modules: []
   - SectionName: Hit_L_Front
     Clip: {fileID: 7400000, guid: f2e8bdfb092a2fd4391f3f38bc466341, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
     EnableTracking: 0
@@ -135,12 +139,14 @@ MonoBehaviour:
       NormalizedTime: 0
       EventName: OnHitShake
       EffectPrefab: {fileID: 0}
+    Modules: []
   - SectionName: Hit_L_Back
     Clip: {fileID: 7400000, guid: 8dac3ab9aaa0f7a4398cf960d665a514, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
     EnableTracking: 0
@@ -171,7 +177,11 @@ MonoBehaviour:
       WindowEnd: 1
     Notifies:
     - Type: 3
-      NormalizedTime: 0
+      NormalizedTime: 0.016628027
       EventName: OnHitShake
       EffectPrefab: {fileID: 0}
+    Modules: []
   GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []

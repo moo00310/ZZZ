@@ -21,8 +21,9 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 998467612ae011044a4551f08410d8d8, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 1
+    FaceInputOnEnter: 0
     StartBoostSpeed: 3
     StartBoostTime: 1
     EnableTracking: 0
@@ -31,9 +32,6 @@ MonoBehaviour:
     StopDistance: 1.2
     SnapRotation: 1
     SectionTurn: 0
-    TurnAngle: 180
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Loop
@@ -52,12 +50,14 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 0.9999999
     Notifies: []
+    Modules: []
   - SectionName: Walk_Loop
     Clip: {fileID: 7400000, guid: 5a57912a993dfd64d99f6c5bb14e6fdf, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 1
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     EnableTracking: 0
@@ -66,9 +66,6 @@ MonoBehaviour:
     StopDistance: 1.2
     SnapRotation: 1
     SectionTurn: 0
-    TurnAngle: 180
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_End
@@ -79,12 +76,14 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Walk_End
     Clip: {fileID: 7400000, guid: b712f6bd8b134364a9a9993702e0a4fd, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     EnableTracking: 0
@@ -93,9 +92,6 @@ MonoBehaviour:
     StopDistance: 1.2
     SnapRotation: 1
     SectionTurn: 0
-    TurnAngle: 180
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
@@ -114,12 +110,14 @@ MonoBehaviour:
       WindowStart: 0.4
       WindowEnd: 0.85
     Notifies: []
+    Modules: []
   - SectionName: Walk_Start_End
     Clip: {fileID: 7400000, guid: 4524b9c7ba8c244498476f93a3cdd63f, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 0
+    FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
     EnableTracking: 0
@@ -128,9 +126,6 @@ MonoBehaviour:
     StopDistance: 1.2
     SnapRotation: 1
     SectionTurn: 0
-    TurnAngle: 180
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Walk_Start
@@ -149,6 +144,7 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   GlobalLinks:
   - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
     TargetSection: 
@@ -158,3 +154,6 @@ MonoBehaviour:
     Timing: 0
     WindowStart: 0
     WindowEnd: 1
+  references:
+    version: 2
+    RefIds: []

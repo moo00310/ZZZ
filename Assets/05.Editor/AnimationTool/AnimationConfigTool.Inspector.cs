@@ -114,12 +114,11 @@ namespace ZZZ.Editor.AnimationTool
             if (_target != null && _target.GetComponentInChildren<ZZZ.Player.PlayerController>() != null)
                 EditorGUILayout.LabelField("PlayerController에서 자동 감지됨", EditorStyles.miniLabel);
 
-            _rootBone   = (Transform)EditorGUILayout.ObjectField("Root Bone",  _rootBone,   typeof(Transform), true);
             _bip001Bone = (Transform)EditorGUILayout.ObjectField("Bip001 Bone", _bip001Bone, typeof(Transform), true);
             _rootMotionScale = EditorGUILayout.FloatField("RM Scale", _rootMotionScale);
 
             EditorGUILayout.HelpBox(
-                "클립 Move Mode = RootMotion이면\n루트본 이동량이 GameObject에 적용됩니다.",
+                "클립 Move Mode = RootMotion이면\nBip001 이동량이 GameObject에 적용됩니다.",
                 MessageType.None);
 
             DrawSeparator();
@@ -192,9 +191,21 @@ namespace ZZZ.Editor.AnimationTool
             bool lockRot = EditorGUILayout.Toggle(
                 new GUIContent("Lock Rotation", "이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)"),
                 tc.LockRotation);
+            float lockWS = tc.LockWindowStart, lockWE = tc.LockWindowEnd;
+            if (lockRot)
+                EditorGUILayout.MinMaxSlider(
+                    new GUIContent($"  Lock Window  {lockWS:F2}~{lockWE:F2}", "회전을 잠그는 normalizedTime 구간. End<=Start면 섹션 전체"),
+                    ref lockWS, ref lockWE, 0f, 1f);
             bool faceInput = EditorGUILayout.Toggle(
                 new GUIContent("Face Input On Enter", "진입 순간 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). Lock Rotation과 함께 쓰면 진입 때 한 번 조준 후 고정"),
                 tc.FaceInputOnEnter);
+
+            // 루프 전진 평속화 — RootMotion 루프 섹션 전용 (걷기/달리기). 비루프/비RootMotion엔 영향 없음.
+            bool smoothLoop = tc.SmoothLoopSpeed;
+            if (mode == MoveMode.RootMotion)
+                smoothLoop = EditorGUILayout.Toggle(
+                    new GUIContent("Smooth Loop Speed", "루프 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균속도로 제거. 끄면 원본 보폭감(프레임별 가감속) 유지하되 틱이 보일 수 있음. 비루프 클립엔 영향 없음"),
+                    tc.SmoothLoopSpeed);
 
             // ── 고급 (접기) — Boost / Target Tracking / Section Turn ──
             // 값은 항상 현재값으로 초기화 → 접혀서 UI를 안 그려도 저장 로직이 그대로 유지됨
@@ -202,7 +213,7 @@ namespace ZZZ.Editor.AnimationTool
             bool  track    = tc.EnableTracking,   snap   = tc.SnapRotation;
             float twS = tc.TrackWindowStart, twE = tc.TrackWindowEnd, stopD = tc.StopDistance;
             bool  secTurn  = tc.SectionTurn;
-            float turnAng  = tc.TurnAngle, swS = tc.TurnWindowStart, swE = tc.TurnWindowEnd;
+            float turnWS   = tc.TurnWindowStart, turnWE = tc.TurnWindowEnd;
 
             // 접혀 있어도 어떤 고급 옵션이 켜져 있는지 라벨로 표시
             string advLabel = "고급";
@@ -235,16 +246,15 @@ namespace ZZZ.Editor.AnimationTool
                     }
                 }
 
-                secTurn = EditorGUILayout.Toggle(
-                    new GUIContent("Section Turn", "윈도우 동안 bip001(몸통)을 정해진 각도만큼 회전 — 섹션 종료 시 복귀 (루트/카메라 영향 없음)"),
-                    tc.SectionTurn);
-                if (secTurn)
+                if (mode == MoveMode.RootMotion)
                 {
-                    turnAng = EditorGUILayout.FloatField(
-                        new GUIContent("  Turn Angle", "구간 동안 누적 회전할 총 각도(도). + 오른쪽 / - 왼쪽"), tc.TurnAngle);
-                    EditorGUILayout.MinMaxSlider(
-                        new GUIContent($"  Window  {swS:F2}~{swE:F2}", "회전이 작동하는 normalizedTime 구간"),
-                        ref swS, ref swE, 0f, 1f);
+                    secTurn = EditorGUILayout.Toggle(
+                        new GUIContent("Section Turn (Root)", "클립에 구워진 턴 회전을 Bip001 yaw 델타로 추출해 transform에 적용. 각도는 애니가 결정. 켤 때 Lock Rotation도 함께 둘 것"),
+                        tc.SectionTurn);
+                    if (secTurn)
+                        EditorGUILayout.MinMaxSlider(
+                            new GUIContent($"  Turn Window  {turnWS:F2}~{turnWE:F2}", "yaw 델타를 추출하는 normalizedTime 구간. End<=Start면 섹션 전체. 구간 밖에선 추출만 멈추고 회전은 유지"),
+                            ref turnWS, ref turnWE, 0f, 1f);
                 }
             }
 
@@ -258,7 +268,10 @@ namespace ZZZ.Editor.AnimationTool
                 tc.Speed = Mathf.Max(0.01f, spd);
                 tc.MoveMode = mode;
                 tc.LockRotation = lockRot;
+                tc.LockWindowStart = Mathf.Clamp01(Mathf.Min(lockWS, lockWE));
+                tc.LockWindowEnd   = Mathf.Clamp01(Mathf.Max(lockWS, lockWE));
                 tc.FaceInputOnEnter = faceInput;
+                tc.SmoothLoopSpeed = smoothLoop;
                 tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
                 tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
                 tc.EnableTracking   = track;
@@ -267,9 +280,8 @@ namespace ZZZ.Editor.AnimationTool
                 tc.StopDistance     = Mathf.Max(0f, stopD);
                 tc.SnapRotation     = snap;
                 tc.SectionTurn     = secTurn;
-                tc.TurnAngle       = turnAng;
-                tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(swS, swE));
-                tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(swS, swE));
+                tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(turnWS, turnWE));
+                tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(turnWS, turnWE));
                 EditorUtility.SetDirty(_config);
             }
 

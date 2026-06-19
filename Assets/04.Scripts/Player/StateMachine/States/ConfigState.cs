@@ -70,7 +70,7 @@ namespace ZZZ.Player.StateMachine.States
 
             FireNotifies(tc, ntRaw);
             UpdateWarpWindow(tc, ntRaw);
-            UpdateSectionTurn(tc, ntRaw);
+            UpdateRotationWindows(tc, ntRaw);
             TickModules(tc, ntRaw);
 
             MoveDir moveDir = Ctx.Controller.CurrentMoveDir;
@@ -162,7 +162,6 @@ namespace ZZZ.Player.StateMachine.States
         private void PlayActive(float blend)
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
-            Ctx.Controller.SetBodyYaw(0f);   // 직전 섹션의 연출 회전 해제 → 원래 facing 복귀
             Machine.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
 
             var tc = _config.Clips[_active];
@@ -175,7 +174,11 @@ namespace ZZZ.Player.StateMachine.States
 
             // 이동 방식 적용
             Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
-            Ctx.Controller.AllowRotation   = !tc.LockRotation;
+            Ctx.Controller.SmoothLoopSpeed = tc.SmoothLoopSpeed;   // 루프 전진 평속화 (틱 제거) — 섹션별 토글
+            Ctx.Controller.ExtractRootRotation = tc.SectionTurn;   // 턴 섹션이면 Root yaw를 transform에 적용
+            if (tc.SectionTurn) Ctx.Controller.FlushRootRotation();   // 진입(재진입 포함) 시 회전 추출 baseline/누적 리셋
+            // 회전 윈도우 초기값 (Update 전 1프레임 일관성) — 이후 매 프레임 UpdateRotationWindows가 갱신
+            UpdateRotationWindows(tc, 0f);
             if (tc.MoveMode == MoveMode.RootMotion) Ctx.Controller.FlushRootPos();
 
             // 진입 스냅 — 이동 입력이 있으면 그쪽으로 즉시 회전 후(LockRotation이면) 고정.
@@ -233,18 +236,18 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Controller.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
         }
 
-        // 공격 연출용 회전 — 윈도우 진행도에 비례한 절대 yaw를 bip001에 얹는다.
-        // 매 프레임 절대값으로 세팅(애니 포즈 위 오프셋이라 누적 불필요). 윈도우 이후엔
-        // TurnAngle을 유지하다가 섹션 종료 시 PlayActive에서 0으로 복귀.
-        private void UpdateSectionTurn(TrackClip tc, float ntRaw)
+        // 입력 회전 잠금(LockRotation)을 normalizedTime 구간에서만 작동시킨다. End<=Start면 섹션 전체.
+        private void UpdateRotationWindows(TrackClip tc, float ntRaw)
         {
-            if (!tc.SectionTurn) return;
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : Mathf.Clamp01(ntRaw);
-            if (p < tc.TurnWindowStart) return;
 
-            float winLen = Mathf.Max(1e-4f, tc.TurnWindowEnd - tc.TurnWindowStart);
-            float wp     = Mathf.Clamp01((p - tc.TurnWindowStart) / winLen);   // 윈도우 내 진행도 0~1
-            Ctx.Controller.SetBodyYaw(tc.TurnAngle * wp);
+            if (tc.LockRotation)
+            {
+                bool windowed = tc.LockWindowEnd > tc.LockWindowStart;
+                bool locked   = !windowed || (p >= tc.LockWindowStart && p <= tc.LockWindowEnd);
+                Ctx.Controller.AllowRotation = !locked;
+            }
+            else Ctx.Controller.AllowRotation = true;
         }
 
         // 섹션 모듈 매 프레임 구동 (i-frame 등). 있는 모듈만 실행.
@@ -290,7 +293,20 @@ namespace ZZZ.Player.StateMachine.States
         // ── 조건 매칭 ──────────────────────────────────────────────
         // 링크의 공격+방향 조건이 현재 입력 상태와 모두 맞는지
         private bool ConditionMatches(ClipLink link, MoveDir moveDir)
-            => AttackMatches(link.Attack) && MoveMatches(link.Direction, moveDir);
+        {
+            // Reverse는 카메라 절대 방향이 아니라 현재 facing과의 관계 → dot으로 별도 판정
+            if (link.Direction == MoveDir.Reverse)
+                return AttackMatches(link.Attack) && IsReverseInput();
+            return AttackMatches(link.Attack) && MoveMatches(link.Direction, moveDir);
+        }
+
+        // 입력이 현재 진행(facing) 방향의 반대쪽(>135도)인가 — 180 턴 전이 조건
+        private bool IsReverseInput()
+        {
+            Vector3 inputDir = Ctx.Controller.MoveDirection;   // 카메라 기준 월드 입력 방향
+            if (inputDir.sqrMagnitude < 0.0001f) return false; // 입력 없으면 반대 아님
+            return Vector3.Dot(Ctx.Transform.forward, inputDir) < -0.707f;
+        }
 
         // 공격 입력 조건 (버퍼된 입력 기준)
         private bool AttackMatches(ComboInput required)

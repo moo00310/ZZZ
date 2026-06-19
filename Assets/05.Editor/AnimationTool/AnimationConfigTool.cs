@@ -76,8 +76,7 @@ namespace ZZZ.Editor.AnimationTool
         private int  _reorderTargetIdx = -1;
 
         // ── 루트 모션 (PlayerController와 동일한 본 기반 방식) ─────
-        private Transform _rootBone;            // 이동량 추출 본
-        private Transform _bip001Bone;          // 메시 드리프트 방지용 XZ 리셋 본
+        private Transform _bip001Bone;          // 이동량 추출 본 — 수평(X·Z) 델타 추출, 메시는 X·Z 0 리셋 / Y 유지
         private float     _rootMotionScale = 1f;
 
         private RootMotionTracker _rmTracker;   // 루트본 로컬 델타 누적기 (순수 계산 — 단위 테스트 대상)

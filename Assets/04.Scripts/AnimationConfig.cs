@@ -48,6 +48,12 @@ namespace ZZZ
         [Header("Movement")]
         public MoveMode MoveMode     = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
         public bool     LockRotation = false;          // true면 이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)
+        // LockRotation 작동 구간 (normalizedTime). End<=Start면 섹션 전체 잠금(기존 동작).
+        [Range(0f, 1f)] public float LockWindowStart = 0f;
+        [Range(0f, 1f)] public float LockWindowEnd   = 1f;
+        // (루프 RootMotion 전용) 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균 전진속도로 제거.
+        // 기본 끔 — 루프 섹션(걷기/달리기)에서만 켤 것. 비루프/비RootMotion 클립은 무시됨.
+        public bool     SmoothLoopSpeed = false;
         // 진입 순간 현재 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). LockRotation과 함께 쓰면
         // "진입 때 한 번 조준 → 휘두름 중 고정"이 된다. 입력이 있으면 SnapRotation(적 방향)보다 우선.
         public bool     FaceInputOnEnter = false;
@@ -65,14 +71,16 @@ namespace ZZZ
         public float StopDistance = 1.2f;   // 타겟 앞 정지 거리 (관통 방지)
         public bool  SnapRotation = true;   // 섹션 진입 시 타겟 방향으로 즉시 회전
 
-        [Header("Section Turn — 공격 중 고정 각도 회전 (애니에 없는 회전 보강)")]
-        // 윈도우 동안 bip001(엉덩이)에 TurnAngle만큼 추가 yaw를 얹는다 — 애니 포즈 위에 곱하는 임시 비주얼.
-        // 부호: + 오른쪽(시계방향), - 왼쪽. 본 위 연출이라 섹션 종료 시 0으로 복귀한다.
-        // 루트/카메라/이동 방향은 안 건드린다(순수 연출).
+        [Header("Section Turn — 구워진 턴 회전을 transform으로 추출 (RootMotion 전용)")]
+        // 클립에 구워진 회전(턴)을 Bip001 yaw 델타로 매 프레임 뽑아 transform에 적용한다.
+        // 메시 본 yaw는 섹션 시작 기준으로 카운터-회전해 이중 회전(360처럼 보임)을 막는다 →
+        // 회전 출처가 transform 하나로 통일되어, 턴 이후 전진 루트모션이 새 facing으로 나간다.
+        // 켤 때 LockRotation=true도 같이 둘 것 (입력 기반 회전과 충돌 방지).
         public bool  SectionTurn = false;
-        public float TurnAngle   = 180f;                       // 구간 동안 누적 회전할 총 각도(도)
-        [Range(0f, 1f)] public float TurnWindowStart = 0f;     // 회전 작동 구간 (normalizedTime)
-        [Range(0f, 1f)] public float TurnWindowEnd   = 0.4f;
+        // yaw 델타를 추출하는 구간 (normalizedTime). End<=Start면 섹션 전체.
+        // 구간 밖에서도 이미 추출한 회전의 카운터/이동보정은 유지(팝 방지) — 추출만 멈춘다.
+        [Range(0f, 1f)] public float TurnWindowStart = 0f;
+        [Range(0f, 1f)] public float TurnWindowEnd   = 1f;
 
         [Header("Links")]   // 이 섹션에서 분기 가능한 다음 섹션들
         public List<ClipLink> Links = new List<ClipLink>();
@@ -89,13 +97,12 @@ namespace ZZZ
     }
 
     // 클립 재생 중 캐릭터 이동 방식.
-    // None/Planar = 루트모션 안 씀(중력만 코드 적용). RootMotion = 루트본 이동량을 적용.
-    // (Planar는 과거 코드 이동용이었으나 현재 미사용 — 직렬화 호환 위해 값 유지)
+    // None = 루트모션 안 씀(중력만 코드 적용). RootMotion = Bip001 본 이동량을 적용.
+    // 값 1은 과거 Planar(코드 이동) 자리 — 폐기했지만 RootMotion=2 직렬화 호환 위해 비워 둔다.
     public enum MoveMode
     {
-        None,        // 제자리 (이동 없음)
-        Planar,      // (구) 코드 이동 — 현재 None과 동일하게 취급
-        RootMotion   // 루트본 이동량 적용 — 걷기/공격/대시
+        None       = 0,   // 제자리 (이동 없음, 중력만)
+        RootMotion = 2    // 본(Bip001) 이동량 적용 — 걷기/달리기/공격/대시
     }
 
     // 섹션 간 전이 정의.
@@ -150,7 +157,11 @@ namespace ZZZ
         Forward,    // W
         Back,       // S
         Left,       // A
-        Right       // D
+        Right,      // D
+        // 관계형 — 카메라 절대 방향이 아니라 "현재 진행(facing) 방향의 반대"로 입력.
+        // 절대 enum끼리 비교(MoveMatches)로는 못 잡아 ConfigState에서 dot으로 특수 처리한다.
+        // 런 루프 중 반대키 입력 → 180 턴 전이용.
+        Reverse
     }
 
     [Serializable]

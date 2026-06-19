@@ -46,7 +46,7 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
     │
     └── 이동/회전 ─────────────┐
                                ▼
-                   [ PlayerController ]      ← 루트모션(본 델타) · 워프 · 부스트 · bodyYaw
+                   [ PlayerController ]      ← 루트모션(위치=Bip001 / 회전=Root yaw) · 워프 · 부스트
 ```
 
 > **상태 머신 프레임워크가 따로 없다.** `PlayerStateMachine`이 `ConfigState` 인스턴스 **하나**를
@@ -68,11 +68,12 @@ AnimationConfig
 ├── Clips : List<TrackClip>     ← 섹션(클립) 목록
 │     ├── SectionName            섹션 식별자
 │     ├── Clip / Speed
-│     ├── MoveMode               None / Planar(폐기) / RootMotion
-│     ├── LockRotation / FaceInputOnEnter
+│     ├── MoveMode               None / RootMotion
+│     ├── LockRotation / LockWindow / FaceInputOnEnter   입력 회전 잠금(구간 지정 가능) / 진입 시 입력 방향 스냅
+│     ├── SmoothLoopSpeed          루프 전진 평속화(틱 제거) — RootMotion 루프 전용, 기본 꺼짐
 │     ├── StartBoostSpeed / StartBoostTime     루트모션 워밍업 보완
 │     ├── EnableTracking / TrackWindow / StopDistance / SnapRotation   적 워프
-│     ├── SectionTurn / TurnAngle / TurnWindow  공격 중 연출 회전
+│     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
 │     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 이벤트/이펙트
 │     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 폴리모픽)
@@ -141,10 +142,10 @@ nt = _clipTime * Speed / clip.length
 | MoveMode | 설명 |
 |----------|------|
 | `None` | 제자리 (루트모션 안 씀, 중력만 코드 적용) — Idle, 경직 |
-| `Planar` | **(폐기)** 과거 코드 이동용. 현재 `None`과 동일 취급 (직렬화 호환 위해 값만 유지) |
-| `RootMotion` | 루트본 이동량을 추출해 적용 — 걷기/달리기/공격/대시/회피 |
+| `RootMotion` | `Bip001` 본의 수평 이동량을 추출해 적용 — 걷기/달리기/공격/대시/회피 |
 
-> 걷기·달리기도 이제 코드 이동(Planar)이 아니라 **RootMotion**으로 처리한다.
+> 값 1은 과거 `Planar`(코드 이동) 자리였으나 폐기. `RootMotion=2` 직렬화 호환을 위해 enum에서 1은 비워 둔다.
+> 걷기·달리기도 코드 이동이 아니라 **RootMotion**으로 처리한다.
 > `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`,
 > `AllowRotation = !LockRotation`을 토글한다.
 
@@ -153,27 +154,34 @@ nt = _clipTime * Speed / clip.length
 Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않고,
 [PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`에서 직접 이동을 추출해 적용한다.
 
-**구현 방식 — 두 본을 분리해 계산**
+**구현 방식 — `Bip001` 본에서 수평 이동 추출**
 
-이 캐릭터의 클립에는 이동 정보를 담은 본이 **두 개** 들어있다.
+이 캐릭터의 클립은 전진·좌우 스웨이·상하 바운스가 전부 `Bip001` 본에 구워져 있다
+(`Root` 노드엔 위치 커브가 없어 이동 추출에 쓰지 않는다).
 
-| 본 | 역할 |
+| 축 | 처리 |
 |----|------|
-| `Bip001` | 캐릭터 기준(로컬) 움직임 |
-| `root`   | 월드 기준 실제 이동량 |
+| X·Z (수평) | 프레임 간 델타를 뽑아 `CharacterController.Move`로 실제 이동에 사용 |
+| Y (수직 바운스) | 메시에 그대로 남겨 달리기 상하 리듬 유지 (캐릭터 본체 Y는 중력이 담당) |
 
-1. **추출** — `root` 본에서 월드 기준 이동량(델타)을 뽑는다.
-2. **상쇄** — `Bip001`이 가진 로컬 움직임은 취소한다(이동이 이중으로 더해져 과하게/엉뚱하게 움직이는 것 방지).
-3. **적용** — 그렇게 얻은 순수 이동량만 `CharacterController.Move`로 월드 모델에 먹인다.
+1. **추출** — `Bip001`의 로컬 위치 프레임 델타에서 수평(X·Z)만 뽑아 월드로 변환(`transform.TransformDirection`) 후 `_rootMotionScale` 적용.
+2. **상쇄** — 같은 프레임에 `Bip001`의 X·Z를 로컬 0으로 리셋(메시 드리프트/발 미끄러짐 방지). Y는 유지.
+3. **적용** — 순수 수평 이동량만 `CharacterController.Move`로 먹이고, 수직은 중력(`_verticalVelocity`)으로 따로 적용.
 
-**문제와 해결** — 직접 추출 방식이라 온갖 "튐"이 생겼고, 매 프레임 하나씩 정리해 막았다.
+**문제와 해결** — 본에서 직접 이동을 뽑다 보니 여러 "튐"이 생겼다. 각각 어떻게 막았는지.
 
-- **제자리에서도 스르륵 밀려남(드리프트 누적)** → 매 프레임 `root` 본을 로컬 0으로 리셋해 이동값이 쌓이지 않게 함
-- **루프 클립이 끝→처음 되감기는 순간 순간이동** → 되감김(normalizedTime wrap) 프레임의 거대 델타는 버림
-- **동작 전환(CrossFade) 시 점프** → 전환 중 남은 델타를 flush (`FlushRootPos`)
-- **전이 중 두 클립 루트가 섞여 생기는 "스냅"** → 전이 구간(+종료 직후 1프레임)의 root 본 위치는 두 클립 포즈의 가중 평균이라 그 프레임 델타는 실제 이동이 아니다. 전이 동안 **수평 이동을 통째로 버린다**(블렌드 ≤0.05s라 짧고, 종료 후 baseline 재설정으로 깨끗이 재개). 과거엔 "스냅은 뒤로 향한다"고 보고 방향으로만 걸렀으나, 스냅 방향은 "직전 클립 이동의 반대"라 백스텝 뒤 전이에서 앞으로 새어나갔다(전방 회피→달리기 튐 / 후방 회피 연타 시 시작 위치 워프).
-- **몸통만 따로 새는 현상(메시 드리프트, 보이는 몸 ≠ 실제 위치)** → `Bip001`의 XZ(수평)만 리셋, Y(높이)는 유지
-- **동작 초반 이동이 약해 굼떠 보임** → 시작 부스트(`StartBoostSpeed`/`StartBoostTime`)로 워밍업 보완
+> 용어: **되감기**=루프가 끝나 처음으로 돌아가는 순간 · **기준점**=이동량을 재는 직전 프레임 위치 · **블렌드(전환)**=동작이 바뀔 때 두 클립이 잠깐 섞이는 구간.
+
+| 증상 | 왜 생기나 | 해결 |
+|------|-----------|------|
+| 가만히 있어도 캐릭터가 스르륵 밀림 / 몸(메시)만 따로 떠서 실제 위치와 어긋남 | 애니에 담긴 이동값이 매 프레임 쌓임 | 매 프레임 `Bip001`의 수평(X·Z)을 0으로 되돌려 누적을 끊음. 높이(Y)는 남겨 상하 바운스 유지 |
+| 루프가 처음으로 돌아가는 순간 순간이동 | 되감기 프레임엔 위치가 확 뒤로 점프함 | 그 한 프레임의 이동은 버림(0 처리) |
+| 루프마다 본체가 잠깐 멈칫("틱틱") | 전진 커브가 끝에서 1프레임 멈췄다 되감김 → 다리는 도는데 본체만 안 나감 (포즈·회전은 시작=끝이라 매끄러움) | 루프 클립은 한 바퀴 **평균 전진속도**(`_loopVelLocal`)를 재서 다음 바퀴부터 일정하게 전진. 멈칫 없고, 평균이라 안 빨라지고, 회전·다리는 원본이라 보폭 유지. 공격 등 비루프는 원본 그대로. **섹션(TrackClip)별 `SmoothLoopSpeed` 토글** — 애니 섹션 툴에서 RootMotion 섹션에 체크박스로 on/off (끄면 원본 보폭감 유지, 틱 보임). `ConfigState`가 섹션 진입 시 `Controller.SmoothLoopSpeed`로 전달 |
+| 동작이 바뀔 때 캐릭터가 점프 | 새 동작에 들어가도 직전 기준점이 남아있음 | 진입 순간 기준점을 새로 잡음 (`FlushRootPos`) |
+| 동작 전환(블렌드) 중 앞/뒤로 튐 | 블렌드 구간엔 두 클립 포즈가 섞여 "가짜 이동"이 나옴 | 블렌드 구간(+직후 1프레임)의 수평 이동은 통째로 버림 (≤0.05s라 짧고, 끝나면 기준점 다시 잡아 재개) |
+| 동작 초반이 굼떠 보임 | 루트모션이 시작 순간엔 이동량이 약함 | 시작 부스트로 초반 가속 보강 (`StartBoostSpeed`/`StartBoostTime`) |
+
+> 평균 전진속도 방식의 트레이드오프: 보폭 안의 미세한 가감속(디딜 때 느리고 찰 때 빠른 것)이 평탄해져 발이 살짝 미끄러질 수 있으나, 달리기 속도에선 대개 안 보인다.
 
 ---
 
@@ -190,10 +198,45 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아 **
 - `TrackWindow`(Start~End) 구간에서만 워프 작동 → 타격 이후엔 끊어 적을 따라 휙 도는 것 방지
 - 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
 
-### 섹션 턴 (SectionTurn)
-애니에 없는 회전(예: 180° 돌려치기)을 보강. 윈도우 진행도에 비례한 절대 yaw를
-`bip001`(엉덩이)에 얹는다 — **애니 포즈 위 임시 비주얼 오프셋**이라 누적 없이 매 프레임 절대값으로 세팅.
-섹션 종료 시 `PlayActive`에서 0으로 복귀(루트/카메라/이동 방향은 안 건드림).
+### 섹션 턴 (SectionTurn) — 루트 회전 추출
+
+턴 애니(예: 180° 뒤돌기)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야 턴 이후
+이동/다음 섹션이 새 방향으로 이어진다. `SectionTurn`을 켠 섹션에서만 작동.
+
+**리그 전제**
+- 3ds Max Biped. 위치·회전이 `Bip001`(골반)에 구워져 있고, 별도 `Root` 본은 깨끗한 yaw를 가졌지만
+  메시를 구동하지 않는 형제 leaf 노드다.
+- 그래서 **회전 측정은 `Root` 본, 메시 보정은 `Bip001`** 로 분리한다.
+  인스펙터의 PlayerController → Root Motion → **Root Bone** 슬롯에 Root를 할당해야 한다.
+
+**메커니즘** ([PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`)
+
+| 단계 | 처리 |
+|------|------|
+| 회전 추출 | `Root` 본 yaw 델타를 `transform`(월드 up)에 누적 적용 (`_rootYawComp`) |
+| 메시 카운터 | `_rootYawComp`만큼 `Bip001`을 월드 공간에서 되돌림 → 메시 이중 회전(≈360) 방지 |
+| 위치 보정 | 이동 변환에서 `-_rootYawComp` 적용 → 애니 위치곡선의 회전과 transform 회전 이중 적용 방지 |
+
+> 핵심 개념은 **Unity의 root motion과 동일** — 메시는 애니 원본 그대로 재생(자연 sway 유지),
+> `transform`만 루트(Root yaw)를 추적한다. `Bip001` 자체를 측정하지 않으므로 골반 노이즈 wobble이 없다.
+
+**문제와 해결**
+
+| 증상 | 왜 생기나 | 해결 |
+|------|-----------|------|
+| 메시가 ≈360°로 과회전 | transform과 Bip001이 둘 다 돌아 이중 적용 | transform에 넣은 누적 yaw(`_rootYawComp`)만큼 Bip001을 월드에서 되돌림 |
+| 턴 후 달리기가 거꾸로/사선 | 애니 위치곡선에 이미 회전이 들었는데 transform도 돌아 이중 | 위치 변환에서 `-_rootYawComp`를 빼 섹션 시작 회전 기준으로 |
+| 회전이 떨림(wobble) | Bip001(골반) yaw를 측정해 카운터 → 기울어진 본+sway가 노이즈 | Bip001 측정 폐기, transform에 넣은 Root yaw만큼만 되돌림 |
+| 재진입 시 이동 틀어짐 | 진입 CrossFade 동안 Root가 두 클립 블렌드라 값 오염 | 전이(`transitioning`) 프레임은 추출 건너뛰고 baseline만 갱신 |
+| 턴→턴 재진입 시 어긋남 | `_rootYawComp`가 리셋 안 돼 카운터 과다 | 섹션 진입마다 `FlushRootRotation`으로 baseline+누적 리셋 |
+
+**트리거** — 진행 반대 방향키(`MoveDir.Reverse`)로 턴 섹션에 전이.
+`dot(forward, 입력) < -0.707`(>135°)로 판정 (`ConfigState.IsReverseInput`).
+입력 회전 잠금(`LockRotation`)도 `LockWindow`(normalizedTime 구간)로 부분 적용 가능 — 잠금 해제 후
+회전은 `_rotationEaseTime` 동안 이즈인되어 "툭" 튀지 않는다.
+
+> **미구현** — 턴→run 나갈 때 카운터를 전이 진행도에 맞춰 페이드아웃(전환 팝 방지),
+> `TurnWindow` 구간 한정 추출, 누적 ±180 클램프는 아직 안 넣음.
 
 ---
 
@@ -245,7 +288,7 @@ ConfigState.InterruptWith(cfg, section, _dodgeBlend)
 
 - **회피 도중엔 맞지 않아야 함** → `IFrameModule`로 회피 시작~중반 구간에 무적(i-frame) 부여, 이 사이 피격은 무시
 - **연타로 회피 재입력 시 프리즈** → 이미 회피 중 + 진행도 < `_dodgeReinterrupt`면 새 회피 무시 (재진입 가드)
-- **회피 전이 중 캐릭터가 튀는 문제(전방 회피→달리기 튐 / 후방 회피 연타 워프)** → 전이 구간 root 델타는 두 클립 블렌딩 아티팩트라 신뢰 불가 → 전이 중 수평 이동을 통째로 버려 해결 ([루트모션](#루트모션-직접-구현) "스냅" 항목 참조)
+- **회피 전이 중 캐릭터가 튀는 문제(전방 회피→달리기 튐 / 후방 회피 연타 워프)** → 전이 구간 루트모션 델타는 두 클립 블렌딩 아티팩트라 신뢰 불가 → 전이 중 수평 이동을 통째로 버려 해결 ([루트모션](#루트모션-직접-구현) "스냅" 항목 참조)
 
 ---
 
@@ -321,7 +364,7 @@ Assets/04.Scripts/
 ├── AnimationConfig.cs               ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
 │
 └── Player/
-    ├── PlayerController.cs           이동, 입력 수신, 루트모션(본 델타), 워프, bodyYaw
+    ├── PlayerController.cs           이동, 입력 수신, 루트모션(위치=Bip001 / 회전=Root yaw 추출), 워프
     ├── PlayerStateHUD.cs             현재 config/섹션/입력 디버그 HUD
     ├── TPSCameraController.cs        TPS 카메라
     │

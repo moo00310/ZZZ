@@ -22,10 +22,14 @@ namespace ZZZ.Player
     {
         [Header("Locomotion")]
         [SerializeField] private float _rotationSpeed = 15f;
+        // 회전 잠금(LockRotation) 해제 후 회전 속도를 0→최대로 올리는 이즈인 시간(초). 0이면 즉시(이즈 없음).
+        [SerializeField] private float _rotationEaseTime = 0.2f;
 
         [Header("Root Motion")]
-        [SerializeField] private Transform _rootBone;       // 이동량 추출 후 로컬 0으로 리셋
-        [SerializeField] private Transform _bip001Bone;     // 메시 드리프트 방지용 XZ 리셋
+        // 위치 루트모션 추출원: 수평(X,Z) 델타→CC 이동, 메시는 X·Z 0 리셋 / Y(수직 바운스) 유지.
+        [SerializeField] private Transform _bip001Bone;
+        // 회전(턴) yaw 추출원 — Root 본. 여기 yaw 델타를 transform에 적용한다.
+        [SerializeField] private Transform _rootBone;
         [SerializeField] private float     _rootMotionScale = 1f;
 
         [Header("Gravity")]
@@ -37,12 +41,20 @@ namespace ZZZ.Player
         private Camera              _mainCamera;
         private float               _verticalVelocity;
         private Vector3             _prevRootPos;
+        private Vector3             _loopVelLocal;       // 측정된 루프 전진 속도(로컬, units/s) — 0이면 아직 미측정
+        private Vector3             _loopAccumLocal;     // 현재 루프 동안 누적한 수평 전진 델타(로컬)
+        private float               _loopAccumTime;      // 현재 루프 동안 누적 시간(초)
         private bool                _flushRootPosPending;
         private bool                _wasInTransition;    // 직전 프레임이 전이 중이었는지 (전이 종료 직후 1프레임 스냅 검출용)
         private float               _prevRootNormFrac;   // 직전 프레임 normalizedTime의 소수부 (루프 wrap 검출용)
+        private float               _prevRootYaw;        // 직전 프레임 Root 본 yaw(도) — transform 적용용
+        private float               _rootYawComp;        // 섹션 시작 이후 transform에 적용한 누적 Root yaw(도) — 메시 카운터/위치 보정용
+        private bool                _flushRootRotPending; // 섹션 진입 시 회전 추출 baseline/누적 리셋 대기
+        private bool                _wasExtracting;      // 직전 프레임에 추출 중이었는지 (진입 baseline 검출용)
 
         private Vector2 _moveInput;
         private Vector3 _moveDirection;
+        private float   _rotationEase;   // 회전 이즈인 0~1 — 잠금 중 0, 해제 후 _rotationEaseTime 동안 1로 램프
 
         // 시작 부스트 (클립 시작 시 진행 방향으로 짧게 가속 → 루트모션 워밍업 보완)
         private float _boostSpeed;
@@ -56,6 +68,8 @@ namespace ZZZ.Player
 
         public bool UseCodeMovement { get; set; } = true;
         public bool AllowRotation   { get; set; } = true;   // false면 이동 입력이 있어도 캐릭터 회전 안 함 (피격/경직 등)
+        public bool SmoothLoopSpeed { get; set; } = false;  // 루프 전진 평속화 (틱 제거). 기본 끔 — 섹션(TrackClip)별로 ConfigState가 설정
+        public bool ExtractRootRotation { get; set; } = false;  // 이 섹션에서 Root 본 yaw를 transform에 적용 (턴 섹션). ConfigState가 설정
 
         // 실제 수평 이동 속도 (루트모션 포함) — 애니메이터 블렌드/HUD 표시용
         public float   CurrentSpeed  => new Vector3(_cc.velocity.x, 0f, _cc.velocity.z).magnitude;
@@ -74,7 +88,7 @@ namespace ZZZ.Player
         }
 
         // 라이브 모니터용
-        public bool  IsRootMotionActive => !UseCodeMovement && _rootBone != null;
+        public bool  IsRootMotionActive => !UseCodeMovement && _bip001Bone != null;
         public float LastRootDelta      { get; private set; }
 
         // 개별 bool에서 파생된 모드 스냅샷 — 디버그/로그 표시용 (상태 변경엔 쓰지 않음)
@@ -93,6 +107,9 @@ namespace ZZZ.Player
 
         // 섹션 진입 시 호출 — 다음 프레임 baseline을 리셋해 전환 시 점프 방지.
         public void FlushRootPos() => _flushRootPosPending = true;
+        // 섹션 진입(재진입 포함) 시 호출 — 회전 추출 baseline/누적을 리셋. 턴→턴 재진입에서 _rootYawComp가
+        // 안 리셋돼 카운터가 과하게 빼던 문제 방지.
+        public void FlushRootRotation() => _flushRootRotPending = true;
 
         // ── 타겟 워프 API (ConfigState가 구동) ─────────────────────
         public ZZZ.Combat.EnemySensor EnemySensor => _enemySensor;
@@ -118,11 +135,6 @@ namespace ZZZ.Player
             if (worldDir.sqrMagnitude < 0.0001f) return;
             transform.rotation = Quaternion.LookRotation(worldDir);
         }
-
-        // 공격 연출용 추가 yaw(도) — bip001에 애니 포즈 위로 얹는다. ConfigState가 구동하며
-        // 섹션 종료 시 0으로 복귀(임시 비주얼). 루트/카메라/이동 방향은 건드리지 않는다.
-        private float _bodyYaw;
-        public void SetBodyYaw(float degrees) => _bodyYaw = degrees;
 
         private const float k_moveThreshold = 0.01f;
 
@@ -184,6 +196,15 @@ namespace ZZZ.Player
 
         private void Move()
         {
+            // 회전 이즈인 — 잠금(LockRotation) 동안 회전 각속도가 0이다가 해제 순간 Slerp가
+            // 최대 각속도로 튀는 것("툭")을 막는다. 해제 후 _rotationEaseTime 동안 0→1로 램프.
+            // 잠금이 없으면 항상 1이라 일반 보행 회전감은 그대로.
+            _rotationEase = AllowRotation
+                ? (_rotationEaseTime > 0f
+                    ? Mathf.MoveTowards(_rotationEase, 1f, Time.deltaTime / _rotationEaseTime)
+                    : 1f)
+                : 0f;
+
             if (_moveInput.sqrMagnitude < k_moveThreshold)
             {
                 _moveDirection = Vector3.zero;
@@ -202,39 +223,62 @@ namespace ZZZ.Player
                 _moveDirection = (camForward * _moveInput.y + camRight * _moveInput.x).normalized;
 
                 if (AllowRotation)
-                    RotateToward(_moveDirection, _rotationSpeed);
+                    RotateToward(_moveDirection, _rotationSpeed * _rotationEase);
             }
         }
 
         private void LateUpdate()
         {
-            // Bip001 XZ 리셋 — Y는 유지 (메시 수직 움직임 보존)
-            if (_bip001Bone != null)
-            {
-                Vector3 local = _bip001Bone.localPosition;
-                local.x = 0f;
-                local.z = 0f;
-                _bip001Bone.localPosition = local;
+            if (_bip001Bone == null) { LastRootDelta = 0f; return; }
 
-                // 공격 연출용 추가 yaw — 애니 포즈(클립 회전) 위에 엉덩이 피벗으로 얹는다.
-                // Animator가 매 프레임 클립 값으로 덮으므로 누적되지 않고 오프셋만 더해진다.
-                if (Mathf.Abs(_bodyYaw) > 1e-4f)
-                    _bip001Bone.rotation = Quaternion.AngleAxis(_bodyYaw, Vector3.up) * _bip001Bone.rotation;
+            // 전이(CrossFade) 중인가 + 전이가 막 끝난 첫 프레임인가. 회전·위치 양쪽이 같은 가드를 쓴다.
+            bool inTransition  = _animator != null && _animator.IsInTransition(0);
+            bool transitioning = inTransition || _wasInTransition;
+            _wasInTransition   = inTransition;
+
+            // ── 회전: Root yaw를 transform에 적용 + 메시에서는 그만큼 되돌림 ──
+            // Root 본의 깨끗한 yaw를 transform이 흡수한다(이동/다음 섹션 facing용).
+            // 그 회전이 메시(Bip001 이하)에도 적용돼 이중(≈360)으로 돌지 않도록, transform에 넣은
+            // 누적 Root yaw(_rootYawComp)만큼 Bip001을 월드 공간에서 되돌린다.
+            // → 메시는 애니 원본 그대로 재생(자연스러운 sway 유지, 우리가 만든 떨림 없음).
+            // 진입/전이(transitioning) 프레임은 Root 값이 두 클립 블렌드라 오염 → baseline만 갱신하고
+            // 추출은 건너뛴다(안 그러면 블렌드 변화가 _rootYawComp에 쌓여 재진입 시 이동이 틀어짐).
+            if (ExtractRootRotation && _rootBone != null)
+            {
+                float rootCur = YawOf(_rootBone.localRotation);
+                bool enter = !_wasExtracting || _flushRootRotPending;   // 섹션 진입(다른 섹션에서 OR 같은 턴 재진입)
+                if (enter || transitioning)
+                {
+                    _prevRootYaw = rootCur;       // baseline 재설정 (블렌드 오염값 누적 방지)
+                    if (enter) _rootYawComp = 0f; // 진입 시에만 누적 리셋 (재진입 360 누적/카운터 과다 방지)
+                }
+                else
+                {
+                    float rootDelta = Mathf.DeltaAngle(_prevRootYaw, rootCur);
+                    _rootYawComp += rootDelta;
+                    _prevRootYaw  = rootCur;
+                    if (Mathf.Abs(rootDelta) > 1e-5f)
+                        transform.rotation = Quaternion.AngleAxis(rootDelta, Vector3.up) * transform.rotation;
+                }
+                _wasExtracting       = true;
+                _flushRootRotPending = false;
+
+                if (Mathf.Abs(_rootYawComp) > 1e-5f)
+                    _bip001Bone.rotation = Quaternion.AngleAxis(-_rootYawComp, Vector3.up) * _bip001Bone.rotation;
             }
+            else { _wasExtracting = false; _flushRootRotPending = false; }
 
-            // Root 이동량 추출 → CharacterController에 적용 후 로컬 위치 리셋.
-            // 루프 wrap은 wrapped로, 클립 전환 스냅은 아래 transitioning 가드로 처리한다.
-            if (_rootBone != null && !UseCodeMovement)
+            // 이동/스웨이/바운스가 전부 Bip001 노드에 구워져 있다(별도 Root 노드엔 position 커브 없음).
+            // 수평(X,Z) 델타를 뽑아 CharacterController로 캐릭터를 실제로 전진시키고,
+            // 메시에선 X·Z를 0으로 죽여 드리프트/발 미끄러짐을 막되 Y(수직 바운스)는 살려 둔다.
+            Vector3 currentPos = _bip001Bone.localPosition;
+
+            // 루트모션 모드일 때만 수평 델타를 이동으로 사용.
+            // 루프 wrap은 wrapped로, 클립 전환 스냅은 transitioning 가드로 처리한다.
+            if (!UseCodeMovement)
             {
-                Vector3 currentPos = _rootBone.localPosition;
-
-                // 전이(CrossFade) 중인가 + 전이가 막 끝난 첫 프레임인가.
-                // 스냅은 "블렌드 구간 전체 + 블렌드→순수클립으로 넘어가는 첫 프레임"에 걸쳐 생긴다.
-                bool inTransition  = _animator != null && _animator.IsInTransition(0);
-                bool transitioning = inTransition || _wasInTransition;
-                _wasInTransition   = inTransition;
-
-                // 루프 클립이 끝(≈1)에서 처음(≈0)으로 되감기면 baked 루트 위치가 뒤로 점프한다.
+                // (transitioning은 위에서 계산 — 회전·위치 공용)
+                // 루프 클립이 끝(≈1)에서 처음(≈0)으로 되감기면 baked 위치가 뒤로 점프한다.
                 // normalizedTime 소수부가 줄어든 프레임 = wrap → 그 프레임 델타는 버린다.
                 bool wrapped = false;
                 if (_animator != null)
@@ -246,27 +290,73 @@ namespace ZZZ.Player
                 }
 
                 // 섹션 진입 첫 프레임만 baseline을 잡고(점프 방지), 루프 wrap 프레임은 버린다.
+                bool flushing = _flushRootPosPending;
                 if (_flushRootPosPending || wrapped)
                 {
                     _prevRootPos         = currentPos;
                     _flushRootPosPending = false;
                 }
+                if (flushing)   // 새 섹션 진입 → 이전 클립의 루프 측정값 폐기
+                {
+                    _loopVelLocal   = Vector3.zero;
+                    _loopAccumLocal = Vector3.zero;
+                    _loopAccumTime  = 0f;
+                }
 
-                Vector3 deltaLocal      = currentPos - _prevRootPos;
-                _prevRootPos            = currentPos;
-                _rootBone.localPosition = Vector3.zero;
 
-                Vector3 move = transform.TransformDirection(deltaLocal) * _rootMotionScale;
+                Vector3 rawDelta = currentPos - _prevRootPos;
+                _prevRootPos     = currentPos;
 
-                // 전이 구간(+종료 직후 1프레임)에는 root 본이 두 클립 포즈의 가중 평균이라,
+                // 수평만 이동에 사용 — Y 바운스는 메시에 남기고 캐릭터 수직은 중력이 담당.
+                rawDelta.y = 0f;
+                if (flushing || wrapped) rawDelta = Vector3.zero;   // baseline/되감기 프레임은 위치 점프라 이동 0
+
+                // ── 루프 전진 평속화 (틱 제거) ────────────────────────────
+                // 루프 클립의 전진(Z) 커브는 끝에서 한 프레임 멈췄다(중복 키) 되감긴다 → 다리는 계속
+                // 도는데 본체만 16ms 안 나가 "틱"이 생긴다. 포즈·회전은 이음매가 매끄럽다(시작=끝)이라
+                // 전진 멈칫만 없애면 된다: 한 루프의 평균 전진속도를 재서 다음 루프부터 그 속도로 일정
+                // 전진시킨다. 평균을 그대로 쓰므로 빨라지지 않고, 회전/다리 애니는 손대지 않아 보폭 유지.
+                // 비루프 클립(공격 런지 등)은 원본 델타를 그대로 써 손상 없음.
+                bool isLooping = _animator != null && _animator.GetCurrentAnimatorStateInfo(0).loop;
+                Vector3 deltaLocal;
+                if (SmoothLoopSpeed && isLooping && !transitioning)
+                {
+                    if (!flushing && !wrapped)
+                    {
+                        _loopAccumLocal += rawDelta;
+                        _loopAccumTime  += Time.deltaTime;
+                    }
+                    if (wrapped && _loopAccumTime > 0.01f)   // 한 루프 끝 → 평균속도 갱신
+                    {
+                        _loopVelLocal   = _loopAccumLocal / _loopAccumTime;
+                        _loopAccumLocal = Vector3.zero;
+                        _loopAccumTime  = 0f;
+                    }
+                    deltaLocal = _loopVelLocal.sqrMagnitude > 1e-10f
+                        ? _loopVelLocal * Time.deltaTime   // 측정된 평속으로 일정 전진 (멈칫 없음)
+                        : rawDelta;                        // 첫 루프: 아직 평속 미측정 → 원본
+                }
+                else
+                {
+                    deltaLocal      = rawDelta;
+                    _loopVelLocal   = Vector3.zero;        // 루프 벗어남 → 측정값 폐기
+                    _loopAccumLocal = Vector3.zero;
+                    _loopAccumTime  = 0f;
+                }
+
+                // 턴 섹션에선 애니의 위치 곡선(deltaLocal)에 이미 회전이 들어있는데 transform도
+                // Root yaw만큼 돌아가므로, 그대로 변환하면 회전이 이중 적용돼 거꾸로/사선으로 간다.
+                // → transform에 적용한 누적 Root yaw(_rootYawComp)를 빼서 섹션 시작 회전 기준으로 변환.
+                Vector3 worldDelta = transform.TransformDirection(deltaLocal);
+                if (ExtractRootRotation)
+                    worldDelta = Quaternion.AngleAxis(-_rootYawComp, Vector3.up) * worldDelta;
+                Vector3 move = worldDelta * _rootMotionScale;
+
+                // 전이 구간(+종료 직후 1프레임)에는 본이 두 클립 포즈의 가중 평균이라,
                 // 그 프레임 델타는 실제 이동이 아니라 블렌딩 아티팩트("스냅")다.
-                // 과거엔 "스냅은 항상 뒤로 향한다"고 보고 방향으로 걸렀지만, 스냅 방향은
-                // 실제로 "직전 클립 이동의 반대"다 (currentPos가 옛 변위 → 새 클립 시작 ~0으로 이완).
-                // → 직전 클립이 뒤로 갔으면(백스텝) 스냅이 앞으로 향해 전방 가드를 빠져나갔다:
-                //   · 전방 Evade→Run_Loop 블렌드 중 앞으로 튐
-                //   · 후방 Evade 연타 시 시작 위치로 워프
-                // 전이 구간 수평 이동은 통째로 버린다. 블렌드(≤0.05s)는 짧고, 전이 종료 후
-                // baseline을 다시 잡아(flush/wrap) 깨끗한 루트모션이 재개된다.
+                // 스냅 방향은 "직전 클립 이동의 반대"라 방향 가드로는 못 걸러진다
+                // (후방 Evade→Run 블렌드 중 앞으로 튐 등). 전이 구간 수평 델타는 통째로 버린다.
+                // 블렌드(≤0.05s)는 짧고, 전이 종료 후 baseline을 다시 잡아(flush/wrap) 재개된다.
                 if (transitioning)
                 {
                     move.x = 0f;
@@ -276,12 +366,17 @@ namespace ZZZ.Player
                 WarpRootMotion(ref move);
                 move.y = _verticalVelocity * Time.deltaTime;
                 _cc.Move(move);
-                LastRootDelta = deltaLocal.magnitude * _rootMotionScale;
+                LastRootDelta = new Vector3(deltaLocal.x, 0f, deltaLocal.z).magnitude * _rootMotionScale;
             }
             else
             {
                 LastRootDelta = 0f;
             }
+
+            // 메시 드리프트 방지: 수평(X,Z)은 0으로 죽이고 Y(수직 바운스)는 유지.
+            currentPos.x = 0f;
+            currentPos.z = 0f;
+            _bip001Bone.localPosition = currentPos;
         }
 
         // 루트모션 수평 이동을 타겟 방향으로 재조준하고 StopDistance 앞에서 멈춘다.
@@ -304,6 +399,13 @@ namespace ZZZ.Player
             float   step = Mathf.Min(new Vector3(move.x, 0f, move.z).magnitude, remain);
             move.x = dir.x * step;
             move.z = dir.z * step;
+        }
+
+        // 쿼터니언의 up축 yaw(도) — forward 투영 기준. DeltaAngle 누적에 안정적(eulerAngles 점프 회피).
+        private static float YawOf(Quaternion q)
+        {
+            Vector3 f = q * Vector3.forward;
+            return Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
         }
 
         private void RotateToward(Vector3 direction, float speed)

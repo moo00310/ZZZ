@@ -109,14 +109,15 @@ namespace ZZZ.Editor.AnimationTool
         // PlayerController.LateUpdate와 동일: 루트본 localPosition 델타를 월드 이동으로 변환
         private void ApplyRootMotion(TrackClip tc, int clipIdx, float clipTime, bool advancePlayback)
         {
-            if (!tc.UseRootMotion || _rootBone == null) return;
+            if (!tc.UseRootMotion || _bip001Bone == null) return;
 
             if (advancePlayback)
             {
                 // 순수 델타 판정은 트래커에 위임 (클립 전환/루프 wrap 시 0 반환).
                 // 월드 변환 + 스케일만 여기서 — Transform을 아는 쪽 책임.
                 Vector3 deltaLocal = _rmTracker.NextDelta(
-                    clipIdx, clipTime, _rootBone.localPosition, tc.IsLooping);
+                    clipIdx, clipTime, _bip001Bone.localPosition, tc.IsLooping);
+                deltaLocal.y = 0f;   // 수평만 이동 — Y(수직 바운스)는 메시에 남긴다 (런타임과 동일)
                 _target.transform.position +=
                     _target.transform.TransformDirection(deltaLocal) * _rootMotionScale;
             }
@@ -124,33 +125,27 @@ namespace ZZZ.Editor.AnimationTool
             ResetRootBoneVisual();
         }
 
-        // 비주얼: 루트본 / Bip001 XZ 리셋 → 베이크된 이동량이 메시에 남는 것 방지
+        // 비주얼: Bip001 X·Z 리셋(Y 유지) → 베이크된 수평 이동량이 메시에 남는 것 방지 (런타임과 동일)
         private void ResetRootBoneVisual()
         {
-            if (_rootBone == null) return;
-            _rootBone.localPosition = Vector3.zero;
-            if (_bip001Bone != null)
-            {
-                Vector3 lp = _bip001Bone.localPosition;
-                lp.x = 0f; lp.z = 0f;
-                _bip001Bone.localPosition = lp;
-            }
+            if (_bip001Bone == null) return;
+            Vector3 lp = _bip001Bone.localPosition;
+            lp.x = 0f; lp.z = 0f;
+            _bip001Bone.localPosition = lp;
         }
 
-        // target에 PlayerController가 있으면 _rootBone/_bip001Bone/_rootMotionScale 자동 추출
+        // target에 PlayerController가 있으면 _bip001Bone/_rootMotionScale 자동 추출
         private void AutoDetectRootBones()
         {
-            _rootBone = null; _bip001Bone = null; _rootMotionScale = 1f;
+            _bip001Bone = null; _rootMotionScale = 1f;
             if (_target == null) return;
 
             var pc = _target.GetComponentInChildren<ZZZ.Player.PlayerController>();
             if (pc == null) return;
 
             var so = new SerializedObject(pc);
-            var rb = so.FindProperty("_rootBone");
             var bb = so.FindProperty("_bip001Bone");
             var sc = so.FindProperty("_rootMotionScale");
-            if (rb != null) _rootBone        = rb.objectReferenceValue as Transform;
             if (bb != null) _bip001Bone      = bb.objectReferenceValue as Transform;
             if (sc != null) _rootMotionScale = sc.floatValue;
         }

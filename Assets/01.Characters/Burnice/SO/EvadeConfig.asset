@@ -21,7 +21,8 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 8fc302b0720d0a642ba8038689310ef3, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -35,13 +36,13 @@ MonoBehaviour:
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
-    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
-      TargetSection: Idle1
-      BlendDuration: 0.01
-      Attack: 5
+    - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.1
+      Attack: 0
       Direction: 0
-      Timing: 2
-      WindowStart: 0
+      Timing: 0
+      WindowStart: 0.09171075
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 3dbda1f569a901949867a4bfe0d55700, type: 2}
       TargetSection: Run_Loop
@@ -50,7 +51,23 @@ MonoBehaviour:
       Direction: 2
       Timing: 0
       WindowStart: 0.09286149
-      WindowEnd: 0.14736272
+      WindowEnd: 0.16852674
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.1
+      Attack: 5
+      Direction: 2
+      Timing: 0
+      WindowStart: 0.22574955
+      WindowEnd: 0.99999994
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
     Modules:
     - rid: 7723410972547481664
@@ -58,7 +75,8 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: d59ae790c9cb36641a6fbbac5b841be8, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -71,7 +89,31 @@ MonoBehaviour:
     TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.1
+      Attack: 0
+      Direction: 0
+      Timing: 0
+      WindowStart: 0.31528914
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.1
+      Attack: 5
+      Direction: 2
+      Timing: 0
+      WindowStart: 0.31235227
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
     Modules:
     - rid: 7723410972547481665
@@ -79,7 +121,8 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 76db4ce169bf92c4f92c8a8d3f66619d, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -92,14 +135,39 @@ MonoBehaviour:
     TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.1
+      Attack: 0
+      Direction: 0
+      Timing: 0
+      WindowStart: 0.3072048
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.1
+      Attack: 5
+      Direction: 2
+      Timing: 0
+      WindowStart: 0.3072048
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: 
+      BlendDuration: 0.01
+      Attack: 5
+      Direction: 1
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Evade_Left
     Clip: {fileID: 7400000, guid: 4a5c3bb2420242b438e9b127ec31ac14, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -119,7 +187,8 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: c45363acce05a0a4cb023da528db78fc, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
+    SmoothLoopSpeed: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -143,7 +212,7 @@ MonoBehaviour:
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Start: 0
-        End: 0.38860843
+        End: 0.22155702
     - rid: 7723410972547481665
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

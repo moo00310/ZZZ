@@ -349,8 +349,9 @@ namespace ZZZ.Editor.AnimationTool
                         { normal = { textColor = new Color(0.68f, 0.68f, 0.68f) },
                           clipping = TextClipping.Clip });
 
-                // Section Turn 윈도우 (바 위 밴드)
+                // Section Turn(루트 회전) / Lock Rotation 윈도우 (바 위 밴드)
                 DrawSectionTurnWindow(tc, barX, barW, rowY);
+                DrawLockWindow(tc, barX, barW, rowY);
 
                 // Link 윈도우 밴드 (바 하단)
                 DrawLinkWindows(tc, barX, barW, rowY);
@@ -384,19 +385,33 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
-        // Section Turn 윈도우 표시 — SectionTurn일 때 [TurnWindowStart, End] 구간을
-        // 바 위에 보라 반투명 밴드 + 양끝 경계 마커로 그린다 (회전이 작동하는 normalizedTime 구간).
+        // Section Turn(루트 회전 추출) 윈도우 — [TurnWindowStart, End] 구간을 바 위에 보라 밴드로.
         private void DrawSectionTurnWindow(TrackClip tc, float barX, float barW, float rowY)
         {
             if (!tc.SectionTurn || barW <= 0f) return;
+            DrawWindowBand(tc.TurnWindowStart, tc.TurnWindowEnd, barX, barW, rowY,
+                new Color(0.72f, 0.45f, 1f), "Root Turn");   // 보라 = 회전
+        }
 
-            float aN = Mathf.Clamp01(Mathf.Min(tc.TurnWindowStart, tc.TurnWindowEnd));
-            float bN = Mathf.Clamp01(Mathf.Max(tc.TurnWindowStart, tc.TurnWindowEnd));
+        // Lock Rotation 윈도우 — [LockWindowStart, End] 구간을 바 위에 주황 밴드로.
+        private void DrawLockWindow(TrackClip tc, float barX, float barW, float rowY)
+        {
+            if (!tc.LockRotation || barW <= 0f) return;
+            DrawWindowBand(tc.LockWindowStart, tc.LockWindowEnd, barX, barW, rowY,
+                new Color(1f, 0.6f, 0.2f), "Lock");          // 주황 = 잠금
+        }
+
+        // 바 위 [aN,bN] 구간을 반투명 밴드 + 양끝 경계 + 라벨로 그린다. End<=Start면 바 전체.
+        private void DrawWindowBand(float startN, float endN, float barX, float barW, float rowY,
+            Color col, string label)
+        {
+            bool whole = endN <= startN;
+            float aN = whole ? 0f : Mathf.Clamp01(startN);
+            float bN = whole ? 1f : Mathf.Clamp01(endN);
             float aX = barX + aN * barW;
             float bX = barX + bN * barW;
             float y  = rowY + 6f;
             float h  = ClipH - 12f;
-            var   col = new Color(0.72f, 0.45f, 1f);   // 보라 = 회전
 
             EditorGUI.DrawRect(new Rect(aX, y, Mathf.Max(2f, bX - aX), h),
                 new Color(col.r, col.g, col.b, 0.16f));
@@ -404,7 +419,7 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUI.DrawRect(new Rect(bX - 1f, y, 2f, h), col);   // 끝 경계
 
             if (bX - aX > 34f)
-                GUI.Label(new Rect(aX + 3f, y + 1f, bX - aX - 4f, 11f), $"Turn {tc.TurnAngle:0}°",
+                GUI.Label(new Rect(aX + 3f, y + 1f, bX - aX - 4f, 11f), label,
                     new GUIStyle(EditorStyles.miniLabel)
                     { fontSize = 8, normal = { textColor = col }, clipping = TextClipping.Clip });
         }

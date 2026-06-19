@@ -33,7 +33,13 @@ namespace ZZZ.Player.StateMachine
         public void Trigger()
         {
             // 자원/쿨 게이트 — 충전이 없으면 회피 불가 (resources 없으면 게이트 생략)
-            if (_resources != null && !_resources.CanDash()) return;
+            // 차지 부족 시 버퍼된 dodge를 비운다. 안 그러면 이 입력이 Attack=None 링크
+            // (Run_Loop/Idle 복귀)를 막아 회피 끝에서 멈칫한다 — "입력 없음"과 동일하게 취급해 넘긴다.
+            if (_resources != null && !_resources.CanDash())
+            {
+                _input.Consume();
+                return;
+            }
 
             string section = _prefix + Suffix();
             var cfg = _registry.FindWithSection(section);

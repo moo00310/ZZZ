@@ -18,10 +18,9 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Test
-    Clip: {fileID: 7400000, guid: d58d50c638d09094d80e7fb9f0dfaf2c, type: 2}
+    Clip: {fileID: 7400000, guid: 5a57912a993dfd64d99f6c5bb14e6fdf, type: 2}
     Speed: 1
-    MoveMode: 2
-    MoveSpeed: 4
+    MoveMode: 0
     LockRotation: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
@@ -35,9 +34,10 @@ MonoBehaviour:
     TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
-    IFrames: 0
-    IFrameStart: 0.1
-    IFrameEnd: 0.55
     Links: []
     Notifies: []
+    Modules: []
   GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []

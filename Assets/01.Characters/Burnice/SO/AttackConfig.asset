@@ -21,8 +21,8 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: c07363b305b3d9743aef60dc9639886f, type: 2}
     Speed: 0.6
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 1
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -53,12 +53,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_01_End
     Clip: {fileID: 7400000, guid: 30ce5d6072d6caa47ad1e7e72f7e8d53, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -89,12 +90,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_02
     Clip: {fileID: 7400000, guid: cb5cedefa8cf214438fd2eb8038d6a21, type: 2}
     Speed: 0.6
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 1
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -125,12 +127,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_02_End
     Clip: {fileID: 7400000, guid: 56facf6d56528a74eb4f3a156c7dcb7d, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -161,12 +164,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_03
     Clip: {fileID: 7400000, guid: 1ee8f405f9351404bb4974fbe09e0670, type: 2}
     Speed: 0.6
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 1
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -197,12 +201,13 @@ MonoBehaviour:
       WindowStart: 0.4
       WindowEnd: 0.85
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_03_End
     Clip: {fileID: 7400000, guid: c6e3c5e98431d4e4bb6b30d3dcbe4781, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -233,12 +238,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_04
     Clip: {fileID: 7400000, guid: d58d50c638d09094d80e7fb9f0dfaf2c, type: 2}
     Speed: 0.6
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 1
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -269,12 +275,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_04_End
     Clip: {fileID: 7400000, guid: 039c3b2f9f67ddf459f4b55bc0cf9fd3, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -305,12 +312,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_05
     Clip: {fileID: 7400000, guid: e9a9ac8310f8d7449879e44b215cc9c4, type: 2}
     Speed: 0.6
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 1
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 1
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -341,12 +349,13 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_05_End
     Clip: {fileID: 7400000, guid: 16d10f6abbe44f24499cf65f60d6b50a, type: 2}
     Speed: 1
     MoveMode: 2
-    MoveSpeed: 4
     LockRotation: 0
+    SmoothLoopSpeed: 0
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -377,4 +386,8 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
+    Modules: []
   GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []
