@@ -26,6 +26,11 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 0.2f)] private float _dodgeBlend = 0.05f;
         [SerializeField, Range(0f, 1f)]   private float _dodgeReinterrupt = 0.3f;  // 회피 중 재입력 무시 임계
 
+        [Header("Parry — 어떤 config에서든 패링 입력 시 스탠스 진입 (push)")]
+        [SerializeField] private string _parryPrefix     = "Attack_ParryAid_";  // 섹션 접두어 (Attack_ParryAid_Start 등)
+        [SerializeField, Range(0f, 0.2f)] private float _parryBlend = 0.05f;
+        [SerializeField, Range(0f, 1f)]   private float _parryReinterrupt = 0.3f;  // 스탠스 중 재입력 무시 임계
+
         [Header("Hit")]
         // 이미 피격 중일 때, 현재 반응 진행도가 이 값을 넘어야 새 피격이 재시작된다 (재진입 가드).
         [SerializeField, Range(0f, 1f)] private float _hitReinterruptThreshold = 0.3f;
@@ -40,6 +45,7 @@ namespace ZZZ.Player.StateMachine
         private InputBuffer        _input;
         private HitTrigger         _hit;
         private DodgeTrigger       _dodge;
+        private ParryTrigger       _parry;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
         public bool       HasBufferedInput => _input.HasInput;
@@ -49,12 +55,22 @@ namespace ZZZ.Player.StateMachine
         // 무적 — i-frame 윈도우 동안 IFrameModule이 매 프레임 세팅. HitTrigger가 이 값을 보고 무시.
         public bool Invulnerable { get; set; }
 
-        // ── 퍼펙트 회피 윈도우 ─────────────────────────────────────
+        // 패링 활성 — ParryAid_Start의 활성 구간 동안 ParryModule이 매 프레임 세팅.
+        // HitTrigger가 이 값을 보고 피격 대신 쳐냄(ParryAid_L/H)으로 분기한다.
+        public bool ParryActive { get; set; }
+
+        // ── 퍼펙트 회피 / 패링 윈도우 ──────────────────────────────
         // 적이 "공격 적중 직전" 이 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 회피 모션).
-        // 적 공격 시스템이 생기면 공격 액티브 직전에 OpenIncomingAttack(window)를 호출하면 된다.
+        // 동시에 강도(IncomingStrength)를 실어, 패링 성공 시 쳐냄 반응(ParryAid_L/H)을 결정한다.
+        // 적 공격 시스템이 생기면 공격 액티브 직전에 OpenIncomingAttack(window, strength)를 호출하면 된다.
         private float _incomingAttackUntil = -1f;
-        public bool IncomingAttackActive => Time.time <= _incomingAttackUntil;
-        public void OpenIncomingAttack(float window) => _incomingAttackUntil = Time.time + window;
+        public bool           IncomingAttackActive => Time.time <= _incomingAttackUntil;
+        public AttackStrength IncomingStrength { get; private set; }
+        public void OpenIncomingAttack(float window, AttackStrength strength = AttackStrength.Light)
+        {
+            _incomingAttackUntil = Time.time + window;
+            IncomingStrength     = strength;
+        }
 
         private void Awake()
         {
@@ -69,8 +85,9 @@ namespace ZZZ.Player.StateMachine
             // 협력 객체 조립 — 로직은 각자 담당, 머신은 조립과 구동 순서만 책임진다.
             var registry = new ConfigRegistry(_startConfig, _configs);
             _input = new InputBuffer(_inputBufferWindow);
-            _hit   = new HitTrigger(this, _state, registry, _hitReinterruptThreshold, _hitEntryBlend);
+            _hit   = new HitTrigger(this, _state, registry, _hitReinterruptThreshold, _hitEntryBlend, _parryPrefix);
             _dodge = new DodgeTrigger(this, _state, registry, _input, resources, _dodgePrefix, _dodgeBlend, _dodgeReinterrupt);
+            _parry = new ParryTrigger(this, _state, registry, _input, _parryPrefix, _parryBlend, _parryReinterrupt);
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
@@ -78,14 +95,18 @@ namespace ZZZ.Player.StateMachine
 
         private void Update()
         {
-            // 회피는 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
+            // 회피/패링은 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
+            if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
             _state.Update();
         }
 
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──
         public void TriggerHitFrom(Vector3 attackerPos) => _hit.TriggerFrom(attackerPos, transform);
         public void TriggerHit(string direction = "Back") => _hit.Trigger(direction);
+
+        // 패링 스탠스 강제 진입 facade (테스트 트리거가 호출 — 실제 플레이는 OnParry 입력으로 진입)
+        public void TriggerParry() => _parry.Trigger();
 
         // ── 에디터/HUD 라이브 모니터용 ──
         public AnimationConfig CurrentConfig         => _state?.CurrentConfig;
@@ -98,5 +119,6 @@ namespace ZZZ.Player.StateMachine
         // 입력만 버퍼링 — 실제 콤보 진입은 config의 Input 링크(TargetConfig=콤보)가 처리
         private void OnAttack(InputValue value) { if (value.isPressed) _input.Buffer(ComboInput.Normal); }
         private void OnDodge(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Dodge); }
+        private void OnParry(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Parry); }
     }
 }

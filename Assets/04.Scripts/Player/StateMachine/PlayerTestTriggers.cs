@@ -5,7 +5,9 @@ namespace ZZZ.Player.StateMachine
 {
     // 테스트용 트리거 — 실제 적/공격 시스템이 없는 동안 키보드로 피격/예고공격을 시뮬레이션한다.
     //   H = 등 뒤(Back) 피격,  J = 정면(Front) 피격
-    //   K = 예고된 적 공격 — 윈도우를 열고 끝에 적중. 그 사이 회피하면 퍼펙트(i-frame 중 자동 무시).
+    //   K = 예고된 약공(Light) — 윈도우를 열고 끝에 적중. 그 사이 회피=퍼펙트 / 패링 스탠스 중이면 쳐냄(ParryAid_L).
+    //   L = 예고된 강공(Heavy) — 위와 같으나 패링 시 ParryAid_H로 쳐냄.
+    //   P = 패링 스탠스 진입(ParryAid_Start) — 실제 플레이는 Parry 입력 버튼으로 진입.
     // 프로덕션에서는 이 컴포넌트를 제거하거나 비활성화하면 된다 (PlayerStateMachine은 안 건드림).
     [RequireComponent(typeof(PlayerStateMachine))]
     public class PlayerTestTriggers : MonoBehaviour
@@ -24,19 +26,24 @@ namespace ZZZ.Player.StateMachine
             {
                 if (kb.hKey.wasPressedThisFrame) _machine.TriggerHit("Back");
                 if (kb.jKey.wasPressedThisFrame) _machine.TriggerHit("Front");
+                if (kb.pKey.wasPressedThisFrame) _machine.TriggerParry();
 
-                if (kb.kKey.wasPressedThisFrame)
-                {
-                    _machine.OpenIncomingAttack(_telegraphWindow);
-                    _pendingHitAt = Time.time + _telegraphWindow;
-                }
+                if (kb.kKey.wasPressedThisFrame) TelegraphAttack(AttackStrength.Light);
+                if (kb.lKey.wasPressedThisFrame) TelegraphAttack(AttackStrength.Heavy);
             }
 
             if (_pendingHitAt > 0f && Time.time >= _pendingHitAt)
             {
                 _pendingHitAt = -1f;
-                _machine.TriggerHit("Front");   // 적중 (i-frame 중이면 자동 무시 = 회피 성공)
+                // 적중 — i-frame 중이면 무시(회피 성공) / 패링 활성 중이면 쳐냄(deflect).
+                _machine.TriggerHit("Front");
             }
+        }
+
+        private void TelegraphAttack(AttackStrength strength)
+        {
+            _machine.OpenIncomingAttack(_telegraphWindow, strength);
+            _pendingHitAt = Time.time + _telegraphWindow;
         }
     }
 }

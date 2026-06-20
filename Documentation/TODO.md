@@ -4,6 +4,7 @@
 
 - EvadeConfig 제작 중 / Tool 리팩토링 예정
 - 회피 이동 튐 버그 수정
+- 패링 판정 — 코드 골격 완료(ParryTrigger/ParryModule/HitTrigger deflect 분기). 남은 작업: ① Input "Parry" 액션 바인딩 ② ParryAid config 오써링(Start에 ParryModule, L/H에 Counter 링크)
 
 ## 발견된 버그
 

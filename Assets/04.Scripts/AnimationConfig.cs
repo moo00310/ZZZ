@@ -133,9 +133,12 @@ namespace ZZZ
     // 전이 조건을 언제 평가/발동할지
     public enum LinkTiming
     {
-        WhenMatched,   // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
-        OnWindowMiss,  // 윈도우 끝까지 조건이 충족되지 않고 지나가면 (콤보 캔슬 / 타임아웃)
-        OnEnd          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
+        WhenMatched,    // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
+        OnWindowMiss,   // 윈도우 끝까지 조건이 충족되지 않고 지나가면 (콤보 캔슬 / 타임아웃)
+        OnEnd,          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
+        OnEndIfMatched  // 윈도우 안에서 조건이 '한 번이라도' 충족되면 래치 → 섹션 끝에 발동.
+                        //   WhenMatched=즉시 캔슬, 이건 "섹션 끝까지 재생 후 입력 여부로 분기"(카운터 예약 등).
+                        //   래치 안 되면 발동 안 함 → 뒤에 둔 OnEnd(Attack=None) 등으로 폴백.
     }
 
     public enum ComboInput
@@ -145,7 +148,16 @@ namespace ZZZ
         Special,
         Dodge,
         Any,        // 아무 공격 입력
-        None        // 공격 입력 없음 (※ 직렬화 호환 위해 맨 끝에 추가)
+        None,       // 공격 입력 없음 (※ 직렬화 호환 위해 맨 끝에 추가)
+        Parry       // 패링(방어 어시스트) 입력 — Dodge처럼 push 트리거. ※ 직렬화 호환 위해 None 뒤에 추가
+    }
+
+    // 적 공격의 강도 — 패링 시 어떤 쳐냄 반응(ParryAid_L/H)을 재생할지 결정한다.
+    // 적 공격 시스템이 OpenIncomingAttack에 실어 보낸다 (예고 시점에 선언).
+    public enum AttackStrength
+    {
+        Light,   // 약공 → ParryAid_L
+        Heavy    // 강공 → ParryAid_H
     }
 
     // 이동키 방향 조건

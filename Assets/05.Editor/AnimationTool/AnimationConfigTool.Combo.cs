@@ -109,6 +109,7 @@ namespace ZZZ.Editor.AnimationTool
             _comboActiveClip = entry >= 0 ? entry : 0;
             _comboClipTime   = 0f;
             _rmTracker.Reset();
+            _previewLatched.Clear();
             _blending        = false;
             if (_target != null) _target.transform.position = _targetOriginPos;
             _comboLog += $" → {SectionLabel(_comboActiveClip)}";
@@ -117,11 +118,20 @@ namespace ZZZ.Editor.AnimationTool
         // links를 순서대로 검사해 첫 발동 링크로 점프. 점프했으면 true.
         private bool TryLinksPreview(List<ClipLink> links, TrackClip tc, float nt)
         {
+            float p = tc.IsLooping ? Mathf.Repeat(nt, 1f) : nt;
             foreach (var link in links)
             {
+                // 윈도우 래치형 — 윈도우 안에서 조건 충족 시 래치 → 섹션 끝에 점프 (런타임과 동일 규칙)
+                if (link.Timing == LinkTiming.OnEndIfMatched)
+                {
+                    if (p >= link.WindowStart && p <= link.WindowEnd && ConditionMatches(link))
+                        _previewLatched.Add(link);
+                    if (p >= EndThreshold(tc) && _previewLatched.Contains(link)) { JumpToLink(link); return true; }
+                    continue;
+                }
+
                 if (!ConditionMatches(link)) continue;
 
-                float p = tc.IsLooping ? Mathf.Repeat(nt, 1f) : nt;
                 bool fire = false;
                 switch (link.Timing)
                 {
@@ -183,6 +193,8 @@ namespace ZZZ.Editor.AnimationTool
 
         private void JumpToLink(ClipLink link)
         {
+            _previewLatched.Clear();   // 새 섹션 진입 → 윈도우 래치 리셋
+
             // 블렌드용으로 현재(이전) 클립 먼저 캡처
             var fromTc = _config.Clips[_comboActiveClip];
 

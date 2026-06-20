@@ -233,10 +233,11 @@ namespace ZZZ.Editor.AnimationTool
                     // 출발 지점: WhenMatched/OnWindowMiss=윈도우끝, OnEnd=클립끝
                     float srcN = link.Timing switch
                     {
-                        LinkTiming.WhenMatched  => link.WindowEnd,
-                        LinkTiming.OnWindowMiss => link.WindowEnd,
-                        LinkTiming.OnEnd        => 1f,
-                        _                        => link.WindowEnd,
+                        LinkTiming.WhenMatched    => link.WindowEnd,
+                        LinkTiming.OnWindowMiss   => link.WindowEnd,
+                        LinkTiming.OnEnd          => 1f,
+                        LinkTiming.OnEndIfMatched => 1f,   // 래치는 섹션 끝에 발동
+                        _                          => link.WindowEnd,
                     };
                     float sx = barX + srcN * barW;
                     // 같은 클립의 여러 링크가 겹치지 않게 출발 Y를 살짝 분산
@@ -440,10 +441,11 @@ namespace ZZZ.Editor.AnimationTool
                 float aN, bN;
                 switch (link.Timing)
                 {
-                    case LinkTiming.WhenMatched:   aN = link.WindowStart; bN = link.WindowEnd; break;
-                    case LinkTiming.OnWindowMiss:  aN = link.WindowEnd;   bN = 1f;             break;
-                    case LinkTiming.OnEnd:         aN = 0.92f;            bN = 1f;             break;
-                    default:                       aN = 0f;               bN = 1f;             break;
+                    case LinkTiming.WhenMatched:    aN = link.WindowStart; bN = link.WindowEnd; break;
+                    case LinkTiming.OnWindowMiss:   aN = link.WindowEnd;   bN = 1f;             break;
+                    case LinkTiming.OnEnd:          aN = 0.92f;            bN = 1f;             break;
+                    case LinkTiming.OnEndIfMatched: aN = link.WindowStart; bN = link.WindowEnd; break;  // 입력 감지 윈도우
+                    default:                        aN = 0f;               bN = 1f;             break;
                 }
                 float aX = barX + aN * barW;
                 float bX = barX + bN * barW;

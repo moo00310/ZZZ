@@ -19,6 +19,9 @@ namespace ZZZ.Player.StateMachine.States
         private bool[]          _notifyFired;
         private float           _clipTime; // 현재 섹션 진입 후 경과 시간(초) — 전환마다 0으로 리셋
 
+        // OnEndIfMatched 링크의 윈도우 래치 상태 — 섹션 진입마다 비운다(섹션 스코프).
+        private readonly HashSet<ClipLink> _latched = new HashSet<ClipLink>();
+
         public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine,
             AnimationConfig homeConfig)
         {
@@ -83,12 +86,20 @@ namespace ZZZ.Player.StateMachine.States
         // links를 순서대로 평가해 첫 발동 링크를 타고 전이한다. 전이했으면 true.
         private bool TryLinks(List<ClipLink> links, TrackClip tc, float ntRaw, MoveDir moveDir)
         {
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
             foreach (var link in links)
             {
+                // OnEndIfMatched: 조건을 '발동 시점'이 아니라 '윈도우 구간'에서 보고 래치한다.
+                // 그래서 top의 ConditionMatches 게이트를 거치지 않고 따로 처리(끝에선 입력이 이미 사라짐).
+                if (link.Timing == LinkTiming.OnEndIfMatched)
+                {
+                    if (TryLatchLink(link, tc, p, moveDir)) return true;
+                    continue;
+                }
+
                 // 조건(공격+방향)이 안 맞으면 어떤 타이밍이든 발동 안 함
                 if (!ConditionMatches(link, moveDir)) continue;
 
-                float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
                 bool fire = false;
                 switch (link.Timing)
                 {
@@ -115,6 +126,27 @@ namespace ZZZ.Player.StateMachine.States
                     TakeLink(link);
                     return true;
                 }
+            }
+            return false;
+        }
+
+        // OnEndIfMatched 처리 — 윈도우[Start,End] 안에서 조건이 충족되면 래치(입력은 즉시 소비해
+        // 같은 입력이 다른 링크를 오발동시키지 않게 함). 섹션 끝(EndThreshold)에서 래치돼 있으면 전이.
+        // 래치는 섹션 진입마다 리셋(_latched). 반환 true = 전이함.
+        private bool TryLatchLink(ClipLink link, TrackClip tc, float p, MoveDir moveDir)
+        {
+            if (!_latched.Contains(link)
+                && p >= link.WindowStart && p <= link.WindowEnd
+                && ConditionMatches(link, moveDir))
+            {
+                _latched.Add(link);
+                if (link.Attack != ComboInput.None) Machine.ConsumeInput();
+            }
+
+            if (p >= EndThreshold(tc) && _latched.Contains(link))
+            {
+                TakeLink(link);
+                return true;
             }
             return false;
         }
@@ -162,7 +194,9 @@ namespace ZZZ.Player.StateMachine.States
         private void PlayActive(float blend)
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
+            _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
             Machine.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
+            Machine.ParryActive  = false;    // 섹션 진입 시 패링 해제 — parry 모듈이 윈도우 동안만 다시 켠다
 
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
@@ -336,6 +370,7 @@ namespace ZZZ.Player.StateMachine.States
             _notifyFired = null;
             Ctx.Controller.ClearWarpTarget();
             Machine.Invulnerable = false;
+            Machine.ParryActive  = false;
         }
 
         // ── 에디터 라이브 모니터용 읽기 전용 노출 ──────────────────

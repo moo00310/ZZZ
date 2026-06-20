@@ -25,9 +25,12 @@ namespace ZZZ.Editor.AnimationTool
         private bool   _comboMode;        // true = 링크 흐름 재생
         private int    _comboActiveClip;  // 현재 재생 중 클립 인덱스
         private float  _comboClipTime;    // 현재 클립 로컬 시간(초, 스피드 적용 후)
-        private bool[]  _heldInput = new bool[5]; // 토글로 눌러둔 입력 (ComboInput 인덱스)
+        private bool[]  _heldInput = new bool[7]; // 토글로 눌러둔 입력 (ComboInput 인덱스 — None/Parry 포함 크기)
         private MoveDir _simMoveDir = MoveDir.Neutral;  // 시뮬레이션 이동 방향
         private string  _comboLog = "";   // 전이 흐름 로그
+        // OnEndIfMatched 링크의 윈도우 래치 (프리뷰용) — 섹션 전이마다 비운다
+        private readonly System.Collections.Generic.HashSet<ClipLink> _previewLatched
+            = new System.Collections.Generic.HashSet<ClipLink>();
 
         // ── Transition 블렌딩 (CrossFade 시뮬레이션) ──────────────
         private bool          _blending;

@@ -43,7 +43,7 @@ namespace ZZZ.Player
             float lineH = 18f;
             float pad   = 8f;
             // 줄 수에 맞춰 박스 높이 동적 계산
-            int lines = 13;
+            int lines = 14;
             var rect  = new Rect(_origin.x, _origin.y, _width, lines * lineH + pad * 2f);
             GUI.Box(rect, GUIContent.none);
 
@@ -64,7 +64,12 @@ namespace ZZZ.Player
                 LabelColored("I-Frame", _stateMachine.Invulnerable ? "INVULN" : "-",
                     _stateMachine.Invulnerable ? Color.yellow : Color.grey);
 
-                LabelColored("Atk Window", _stateMachine.IncomingAttackActive ? "PERFECT!" : "-",
+                LabelColored("Parry", _stateMachine.ParryActive ? "ACTIVE" : "-",
+                    _stateMachine.ParryActive ? new Color(0.4f, 0.8f, 1f) : Color.grey);
+
+                string atk = _stateMachine.IncomingAttackActive
+                    ? $"PERFECT! ({_stateMachine.IncomingStrength})" : "-";
+                LabelColored("Atk Window", atk,
                     _stateMachine.IncomingAttackActive ? new Color(1f, 0.4f, 0.7f) : Color.grey);
             }
 
