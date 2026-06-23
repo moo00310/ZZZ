@@ -76,7 +76,7 @@ namespace ZZZ.Editor.AnimationTool
                     bufStyle, GUILayout.Width(150));
             }
 
-            // Follow: 런타임 config 자동 추적 (ON이면 전환 시 창도 따라감)
+            // Follow: 런타임 config 자동 추적 (ON이면 전환 시 창도 따라가고, 플레이헤드/활성 행으로 자동 스크롤)
             var prevBg = GUI.backgroundColor;
             if (_liveFollow) GUI.backgroundColor = new Color(0.4f, 0.9f, 0.45f);
             _liveFollow = GUILayout.Toggle(_liveFollow, "Follow", "Button", GUILayout.Width(60));

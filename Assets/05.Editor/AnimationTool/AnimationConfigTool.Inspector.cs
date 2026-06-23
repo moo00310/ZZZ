@@ -202,15 +202,23 @@ namespace ZZZ.Editor.AnimationTool
 
             // 루프 전진 평속화 — RootMotion 루프 섹션 전용 (걷기/달리기). 비루프/비RootMotion엔 영향 없음.
             bool smoothLoop = tc.SmoothLoopSpeed;
+            float backScale = tc.BackMotionScale;
             if (mode == MoveMode.RootMotion)
+            {
                 smoothLoop = EditorGUILayout.Toggle(
                     new GUIContent("Smooth Loop Speed", "루프 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균속도로 제거. 끄면 원본 보폭감(프레임별 가감속) 유지하되 틱이 보일 수 있음. 비루프 클립엔 영향 없음"),
                     tc.SmoothLoopSpeed);
+                backScale = EditorGUILayout.FloatField(
+                    new GUIContent("Back Motion Scale", "후진(캐릭터 기준 -Z) 루트모션만 이 배율로 증폭. 전진/측면 불변. 1=원본, 1.2=뒤로 빠지는 모션 20% 강조(스텝백·recoil 강조)"),
+                    tc.BackMotionScale);
+            }
 
             // ── 고급 (접기) — Boost / Target Tracking / Section Turn ──
             // 값은 항상 현재값으로 초기화 → 접혀서 UI를 안 그려도 저장 로직이 그대로 유지됨
             float boostSpd = tc.StartBoostSpeed,  boostT = tc.StartBoostTime;
             bool  track    = tc.EnableTracking,   snap   = tc.SnapRotation;
+            bool  warpFace = tc.WarpFaceTarget;
+            float warpTurn = tc.WarpTurnSpeed;
             float twS = tc.TrackWindowStart, twE = tc.TrackWindowEnd, stopD = tc.StopDistance;
             bool  secTurn  = tc.SectionTurn;
             float turnWS   = tc.TurnWindowStart, turnWE = tc.TurnWindowEnd;
@@ -243,6 +251,11 @@ namespace ZZZ.Editor.AnimationTool
                             new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지)"), tc.StopDistance);
                         snap = EditorGUILayout.Toggle(
                             new GUIContent("  Snap Rotation", "섹션 진입 시 타겟 방향으로 즉시 회전"), tc.SnapRotation);
+                        warpFace = EditorGUILayout.Toggle(
+                            new GUIContent("  Face Target (Lock-on)", "워프 윈도우 동안 매 프레임 타겟을 향해 회전. Snap(진입 1회)과 달리 적이 움직여도 계속 따라붙음"), tc.WarpFaceTarget);
+                        if (warpFace)
+                            warpTurn = EditorGUILayout.FloatField(
+                                new GUIContent("    Turn Speed(°/s)", "락온 회전 각속도. 0=즉시(스냅처럼)"), tc.WarpTurnSpeed);
                     }
                 }
 
@@ -272,6 +285,7 @@ namespace ZZZ.Editor.AnimationTool
                 tc.LockWindowEnd   = Mathf.Clamp01(Mathf.Max(lockWS, lockWE));
                 tc.FaceInputOnEnter = faceInput;
                 tc.SmoothLoopSpeed = smoothLoop;
+                tc.BackMotionScale = Mathf.Max(0f, backScale);
                 tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
                 tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
                 tc.EnableTracking   = track;
@@ -279,6 +293,8 @@ namespace ZZZ.Editor.AnimationTool
                 tc.TrackWindowEnd   = Mathf.Clamp01(Mathf.Max(twS, twE));
                 tc.StopDistance     = Mathf.Max(0f, stopD);
                 tc.SnapRotation     = snap;
+                tc.WarpFaceTarget   = warpFace;
+                tc.WarpTurnSpeed    = Mathf.Max(0f, warpTurn);
                 tc.SectionTurn     = secTurn;
                 tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(turnWS, turnWE));
                 tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(turnWS, turnWE));

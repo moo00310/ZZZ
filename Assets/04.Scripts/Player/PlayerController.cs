@@ -64,12 +64,15 @@ namespace ZZZ.Player
         // 타겟 워프 — 공격 루트모션을 적 방향으로 재조준 (ConfigState가 설정)
         private Transform _warpTarget;
         private float     _warpStopDistance;
+        private bool      _warpFaceTarget;     // 윈도우 동안 매 프레임 타겟 향해 회전(락온)
+        private float     _warpTurnSpeed;      // 락온 회전 각속도(도/초). 0 = 즉시
         private ZZZ.Combat.EnemySensor _enemySensor;
 
         public bool UseCodeMovement { get; set; } = true;
         public bool AllowRotation   { get; set; } = true;   // false면 이동 입력이 있어도 캐릭터 회전 안 함 (피격/경직 등)
         public bool SmoothLoopSpeed { get; set; } = false;  // 루프 전진 평속화 (틱 제거). 기본 끔 — 섹션(TrackClip)별로 ConfigState가 설정
         public bool ExtractRootRotation { get; set; } = false;  // 이 섹션에서 Root 본 yaw를 transform에 적용 (턴 섹션). ConfigState가 설정
+        public float BackMotionScale { get; set; } = 1f;        // 후진(-Z) 루트모션 증폭 배율. 섹션(TrackClip)별로 ConfigState가 설정
 
         // 실제 수평 이동 속도 (루트모션 포함) — 애니메이터 블렌드/HUD 표시용
         public float   CurrentSpeed  => new Vector3(_cc.velocity.x, 0f, _cc.velocity.z).magnitude;
@@ -115,16 +118,20 @@ namespace ZZZ.Player
         public ZZZ.Combat.EnemySensor EnemySensor => _enemySensor;
         public bool WarpWindowActive { get; set; }   // 트래킹 윈도우 안인지 — ConfigState가 매 프레임 갱신
 
-        public void SetWarpTarget(Transform target, float stopDistance)
+        public void SetWarpTarget(Transform target, float stopDistance,
+            bool faceTarget = false, float turnSpeed = 720f)
         {
             _warpTarget       = target;
             _warpStopDistance = stopDistance;
+            _warpFaceTarget   = faceTarget;
+            _warpTurnSpeed    = turnSpeed;
             WarpWindowActive  = false;
         }
 
         public void ClearWarpTarget()
         {
             _warpTarget      = null;
+            _warpFaceTarget  = false;
             WarpWindowActive = false;
         }
 
@@ -150,7 +157,26 @@ namespace ZZZ.Player
         {
             ApplyGravity();
             Move();
+            UpdateWarpFacing();
             ApplyStartBoost();
+        }
+
+        // 락온 facing — 워프 윈도우 동안 매 프레임 타겟을 향해 transform을 회전한다.
+        // SnapRotation(진입 1회)과 달리 적이 움직여도 계속 따라붙는다. 입력 회전 잠금(LockRotation)과
+        // 무관하게 워프가 회전 권한을 갖는다. 단, 섹션 턴(ExtractRootRotation)이 회전을 소유하면 양보.
+        private void UpdateWarpFacing()
+        {
+            if (!_warpFaceTarget || _warpTarget == null || !WarpWindowActive) return;
+            if (ExtractRootRotation) return;
+
+            Vector3 to = _warpTarget.position - transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude < 0.0001f) return;
+
+            Quaternion target = Quaternion.LookRotation(to);
+            transform.rotation = _warpTurnSpeed > 0f
+                ? Quaternion.RotateTowards(transform.rotation, target, _warpTurnSpeed * Time.deltaTime)
+                : target;
         }
 
         // 클립 시작 시 진행 방향으로 짧게 이동 보강 (ConfigState가 섹션 진입 때 호출)
@@ -296,6 +322,11 @@ namespace ZZZ.Player
             {
                 Vector3 deltaLocal = ComputeRootDeltaLocal(currentPos, transitioning);
 
+                // 후진 루트모션 증폭 — 캐릭터 기준 뒤로(-Z) 가는 성분만 배율 적용(전진/측면 불변).
+                // 스텝백·recoil 모션을 강조하고 싶을 때 섹션별로 BackMotionScale을 키운다.
+                if (BackMotionScale != 1f && deltaLocal.z < 0f)
+                    deltaLocal.z *= BackMotionScale;
+
                 // 턴 섹션에선 deltaLocal에 이미 회전이 들어있는데 transform도 Root yaw만큼 돌아가므로,
                 // 그대로 변환하면 이중 적용돼 거꾸로/사선으로 간다 → 누적 Root yaw를 빼 섹션 시작 회전 기준으로.
                 Vector3 worldDelta = transform.TransformDirection(deltaLocal);
@@ -395,13 +426,19 @@ namespace ZZZ.Player
             float dist = to.magnitude;
             if (dist < 0.001f) return;
 
+            Vector3 dir   = to / dist;
+            Vector3 horiz = new Vector3(move.x, 0f, move.z);
+
+            // 타겟에서 멀어지는(뒤로 빠지는) 모션은 재조준하지 않고 원본 그대로 통과 → 스텝백·recoil 보존.
+            // (BackMotionScale로 키운 후진 모션이 워프에 빨려 타겟 쪽으로 뒤집히던 문제 방지)
+            if (Vector3.Dot(horiz, dir) <= 0f) return;
+
             // 이미 StopDistance 안쪽이면 재조준/클램프 없이 원본 루트모션을 그대로 통과시킨다.
             // (코앞 공격에서 remain=0이라 lunge가 통째로 0이 되던 문제 방지 — 라운지 보존)
             float remain = dist - _warpStopDistance;
             if (remain <= 0f) return;
 
-            Vector3 dir  = to / dist;
-            float   step = Mathf.Min(new Vector3(move.x, 0f, move.z).magnitude, remain);
+            float step = Mathf.Min(horiz.magnitude, remain);
             move.x = dir.x * step;
             move.z = dir.z * step;
         }

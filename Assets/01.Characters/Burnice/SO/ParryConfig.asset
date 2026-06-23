@@ -120,7 +120,7 @@ MonoBehaviour:
       Attack: 5
       Direction: 2
       Timing: 0
-      WindowStart: 0.3578732
+      WindowStart: 0.56805265
       WindowEnd: 1
     Notifies: []
     Modules: []

@@ -41,7 +41,8 @@
       "Bash(awk 'NR>=27795 && NR<=27820' \"Assets/01.Characters/Burnice/Animations/Anim/Avatar_Female_Size02_Burnice_Ani_Run_Loop.anim\")",
       "Bash(awk 'NR>=27795 && /path: / {print NR\": \"$0}' \"Assets/01.Characters/Burnice/Animations/Anim/Avatar_Female_Size02_Burnice_Ani_Run_Loop.anim\")",
       "Bash(grep -an \"m_Name: Bip001$\\\\|m_Name: Root$\\\\|m_Name: Bip001 Footsteps$\\\\|m_Name: Bip001 Pelvis$\\\\|m_Name: Avatar_Female\" Assets/99.Scenes/SampleScene.unity)",
-      "Bash(awk '/--- !u!4 &7548444414743823799/{f=1} f{print} f&&/m_Father/{exit}' Assets/99.Scenes/SampleScene.unity)"
+      "Bash(awk '/--- !u!4 &7548444414743823799/{f=1} f{print} f&&/m_Father/{exit}' Assets/99.Scenes/SampleScene.unity)",
+      "Bash(git log *)"
     ]
   }
 }

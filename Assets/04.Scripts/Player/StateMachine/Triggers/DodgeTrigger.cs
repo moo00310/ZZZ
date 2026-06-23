@@ -59,19 +59,21 @@ namespace ZZZ.Player.StateMachine
         }
 
         // 회피 섹션 선택:
-        //   무입력/아래        → Back  (회전 없이 백스텝)
-        //   방향(W/A/D) 일반   → Front (진입 시 FaceInputOnEnter로 입력 방향 회전)
+        //   무입력(Neutral)     → Back  (제자리 백스텝, 회전 없음)
+        //   방향(W/A/S/D) 일반  → Front (진입 스냅으로 입력 방향 재조준 후 전진 — Back 입력도 그쪽으로 돌아 전진)
         //   방향 + 퍼펙트 타이밍 → Left/Right (좌우 회피 모션 — 입력 좌=Left, 그 외=Right)
         private string Suffix()
         {
             MoveDir d = _state.CurrentMoveDir;
-            bool directional = d == MoveDir.Forward || d == MoveDir.Left || d == MoveDir.Right;
-            if (!directional)
-                // 연속 백스텝 — 직전이 Back이면 Back_02로 교대(단조로움 방지). Back_02/그 외 → Back.
+
+            // 입력이 없을 때만 제자리 백스텝 — 직전이 Back이면 Back_02로 교대(단조로움 방지).
+            if (d == MoveDir.Neutral)
                 return _state.ActiveSection == _prefix + "Back" ? "Back_02" : "Back";
 
+            // 방향 입력은 뒤(↓)를 포함해 모두 입력 방향으로 재조준 후 전진 회피.
+            // → 카메라 뒤를 보던 중 ↓ 입력 시 그쪽으로 돌아 전진한다(백스텝으로 빠지지 않음).
             if (_machine.IncomingAttackActive)             // 적 공격 윈도우 안 → 퍼펙트
-                return d == MoveDir.Left ? "Left" : "Right";   // W(정면)은 Right로
+                return d == MoveDir.Left ? "Left" : "Right";
 
             return "Front";
         }

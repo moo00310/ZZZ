@@ -209,6 +209,7 @@ namespace ZZZ.Player.StateMachine.States
             // 이동 방식 적용
             Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
             Ctx.Controller.SmoothLoopSpeed = tc.SmoothLoopSpeed;   // 루프 전진 평속화 (틱 제거) — 섹션별 토글
+            Ctx.Controller.BackMotionScale = tc.BackMotionScale;   // 후진(-Z) 루트모션 증폭 — 섹션별 배율
             Ctx.Controller.ExtractRootRotation = tc.SectionTurn;   // 턴 섹션이면 Root yaw를 transform에 적용
             if (tc.SectionTurn) Ctx.Controller.FlushRootRotation();   // 진입(재진입 포함) 시 회전 추출 baseline/누적 리셋
             // 회전 윈도우 초기값 (Update 전 1프레임 일관성) — 이후 매 프레임 UpdateRotationWindows가 갱신
@@ -238,7 +239,8 @@ namespace ZZZ.Player.StateMachine.States
                 var target = sensor != null ? sensor.FindTarget() : null;
                 if (target != null)
                 {
-                    Ctx.Controller.SetWarpTarget(target, tc.StopDistance);
+                    Ctx.Controller.SetWarpTarget(target, tc.StopDistance,
+                        tc.WarpFaceTarget, tc.WarpTurnSpeed);
                     if (tc.SnapRotation && !facedInput)
                         Ctx.Controller.FaceToward(target.position - Ctx.Transform.position);
                 }

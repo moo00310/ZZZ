@@ -54,6 +54,9 @@ namespace ZZZ
         // (루프 RootMotion 전용) 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균 전진속도로 제거.
         // 기본 끔 — 루프 섹션(걷기/달리기)에서만 켤 것. 비루프/비RootMotion 클립은 무시됨.
         public bool     SmoothLoopSpeed = false;
+        // (RootMotion 전용) 후진 루트모션 증폭 — 캐릭터 기준 뒤로(-Z) 가는 성분만 이 배율로 곱한다.
+        // 전진/측면은 그대로. 1 = 원본, 1.2 = 뒤로 빠지는 모션 20% 강조(스텝백·recoil 강조용). 0이어도 1 취급.
+        public float    BackMotionScale = 1f;
         // 진입 순간 현재 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). LockRotation과 함께 쓰면
         // "진입 때 한 번 조준 → 휘두름 중 고정"이 된다. 입력이 있으면 SnapRotation(적 방향)보다 우선.
         public bool     FaceInputOnEnter = false;
@@ -70,6 +73,10 @@ namespace ZZZ
         [Range(0f, 1f)] public float TrackWindowEnd   = 0.4f;  // 타격 이후엔 끊어야 적을 따라 휙 돌지 않음
         public float StopDistance = 1.2f;   // 타겟 앞 정지 거리 (관통 방지)
         public bool  SnapRotation = true;   // 섹션 진입 시 타겟 방향으로 즉시 회전
+        // 워프 윈도우 동안 매 프레임 타겟을 향해 transform을 회전(락온). SnapRotation은 진입 1회뿐이라
+        // 적이 움직이면 빗나가는데, 이건 윈도우 내내 facing을 따라붙인다. LockRotation과 무관(워프 별도 권한).
+        public bool  WarpFaceTarget = false;
+        public float WarpTurnSpeed  = 720f;  // 락온 회전 각속도(도/초). 0 = 즉시(스냅처럼)
 
         [Header("Section Turn — 구워진 턴 회전을 transform으로 추출 (RootMotion 전용)")]
         // 클립에 구워진 회전(턴)을 Bip001 yaw 델타로 매 프레임 뽑아 transform에 적용한다.

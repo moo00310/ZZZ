@@ -32,6 +32,9 @@ namespace ZZZ.Editor.AnimationTool
             }
             _scrollY = Mathf.Clamp(_scrollY, 0f, maxScrollY);   // 클립 수 변동/리사이즈 대응
 
+            // 라이브 모드: Follow가 켜져 있으면 런타임 플레이헤드/활성 행을 따라 스크롤
+            FollowLivePlayhead(area.width - LabelW, viewRowsH, maxScrollY);
+
             // ── 눈금자 ────────────────────────────────────────────
             var rulerBg = new Rect(0, area.y, area.width, RulerH);
             EditorGUI.DrawRect(rulerBg, new Color(0.21f, 0.21f, 0.21f));
@@ -156,6 +159,34 @@ namespace ZZZ.Editor.AnimationTool
             _scrollX = Mathf.Max(0f, GUI.HorizontalScrollbar(
                 hbarRect, _scrollX, Mathf.Min(viewW, contentW), 0f, contentW));
         }
+        // 라이브 프리뷰 중 런타임 플레이헤드/활성 행이 항상 뷰 중앙에 오도록 스크롤을 따라가게 한다.
+        // Follow 토글과 연동 — 런타임 config를 따라가는 동안 가로(플레이헤드)·세로(활성 클립 행)를
+        // 매 프레임 중앙 정렬한다. 양끝은 Clamp되어 콘텐츠 밖으로 넘어가지 않는다.
+        private void FollowLivePlayhead(float viewW, float viewRowsH, float maxScrollY)
+        {
+            if (!_liveFollow || !EditorApplication.isPlaying) return;
+            if (_liveConfig != _config || _liveClipIdx < 0 || _liveClipIdx >= _config.Clips.Count) return;
+
+            var ltc = _config.Clips[_liveClipIdx];
+
+            // ── 가로: 플레이헤드를 뷰 중앙에 ──
+            if (ltc.Clip != null && viewW > 0f)
+            {
+                float lStartT = GetClipStartTime(_liveClipIdx);
+                float lDur    = ltc.Clip.length / Mathf.Max(0.01f, ltc.Speed);
+                float lNt     = ltc.IsLooping ? Mathf.Repeat(_liveNt, 1f) : Mathf.Clamp01(_liveNt);
+                float phX     = (lStartT + lNt * lDur) * _pxPerSec;   // 트랙 원점 기준 X
+
+                float contentW   = GetTotalDuration() * _pxPerSec + 40f;
+                float maxScrollX = Mathf.Max(0f, contentW - viewW);
+                _scrollX = Mathf.Clamp(phX - viewW * 0.5f, 0f, maxScrollX);
+            }
+
+            // ── 세로: 활성 클립 행을 뷰 중앙에 ──
+            float rowMid = _liveClipIdx * (ClipH + ClipGap) + ClipH * 0.5f;
+            _scrollY = Mathf.Clamp(rowMid - viewRowsH * 0.5f, 0f, maxScrollY);
+        }
+
         private static void DrawPlayheadHandle(float x, float topY, float size, Color col)
         {
             // 아래를 향하는 삼각형
