@@ -77,8 +77,15 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 진행 중인 작업과 로드맵은 [TODO.md](Documentation/TODO.md) 참고.
 
+**주요 목표 — 모바일 빌드 & 최적화**
+PC 데모에 그치지 않고 **Android 실기 빌드 + 안정적 프레임(목표 30/60fps)** 을 목표로 한다.
+모바일이라는 명확한 성능 기준을 두고 — *측정(Profiler) → 병목 확인 → 최적화* 순으로:
+
+- **메모리 관리** — Addressables로 무거운 스킬 VFX·캐릭터 프리팹을 필요할 때 비동기 로드, 안 쓰면 해제
+- **렌더 최적화** — 툰 셰이더 모바일 대응(half precision), SRP Batcher / GPU Instancing, 텍스처 압축(ASTC)
+
 ---
 
 ## 🧱 기술 스택
 
-`Unity` · `URP` · `C#` · `Custom Editor (IMGUI)` · `ScriptableObject 데이터 설계` · `직접 구현한 루트모션`
+`Unity` · `URP` · `C#` · `Custom Editor (IMGUI)` · `ScriptableObject 데이터 설계` · `직접 구현한 루트모션` · `Android 빌드` · `Addressables`
