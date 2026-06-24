@@ -130,13 +130,23 @@ namespace ZZZ.Editor.AnimationTool
                     continue;
                 }
 
+                // OnRelease: 윈도우 안에서 이 링크 Attack 키가 '떼진'(토글 off) 상태면 발동.
+                // 런타임은 릴리스 신호를 보지만, 프리뷰는 홀드 토글 모델이라 '안 눌림'으로 근사한다
+                // (차지 토글을 켜 둔 채 재생하다 끄면 발사). press 게이트는 우회.
+                if (link.Timing == LinkTiming.OnRelease)
+                {
+                    if (p >= link.WindowStart && p <= link.WindowEnd
+                        && !AttackMatches(link.Attack) && MoveMatches(link.Direction))
+                    { JumpToLink(link); return true; }
+                    continue;
+                }
+
                 if (!ConditionMatches(link)) continue;
 
                 bool fire = false;
                 switch (link.Timing)
                 {
                     case LinkTiming.WhenMatched:  fire = p >= link.WindowStart && p <= link.WindowEnd; break;
-                    case LinkTiming.OnWindowMiss: fire = p > link.WindowEnd;                            break;
                     case LinkTiming.OnEnd:        fire = p >= EndThreshold(tc);                         break;
                 }
 

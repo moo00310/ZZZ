@@ -74,6 +74,14 @@ namespace ZZZ.Editor.AnimationTool
                 { normal = { textColor = _liveHasBuffered ? InputColor(_liveBuffered) : Color.gray } };
                 GUILayout.Label($"Buffered: {(_liveHasBuffered ? _liveBuffered.ToString() : "-")}",
                     bufStyle, GUILayout.Width(150));
+
+                // Held: 지금 눌려 있는 키 (OnRelease 차지 디버그용). Buffered는 1프레임만 떴다 소비돼
+                // 안 보이지만, Held는 누르고 있는 내내 켜져 있다 떼면 꺼진다.
+                bool enhanceHeld = _liveMachine.IsInputHeld(ComboInput.Attack_Normal_Enhance);
+                var heldStyle = new GUIStyle(EditorStyles.miniLabel)
+                { normal = { textColor = enhanceHeld ? InputColor(ComboInput.Attack_Normal_Enhance) : Color.gray } };
+                GUILayout.Label($"Held: {(enhanceHeld ? "Attack_Normal_Enhance" : "-")}",
+                    heldStyle, GUILayout.Width(200));
             }
 
             // Follow: 런타임 config 자동 추적 (ON이면 전환 시 창도 따라가고, 플레이헤드/활성 행으로 자동 스크롤)

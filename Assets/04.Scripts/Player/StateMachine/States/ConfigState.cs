@@ -97,6 +97,14 @@ namespace ZZZ.Player.StateMachine.States
                     continue;
                 }
 
+                // OnRelease: 이 링크 Attack 키를 뗀 순간 발동(홀드 차지 → 릴리스). press 버퍼를 보는
+                // ConditionMatches 게이트를 거치지 않고(릴리스는 press가 아님) 릴리스 신호를 직접 본다.
+                if (link.Timing == LinkTiming.OnRelease)
+                {
+                    if (TryReleaseLink(link, p, moveDir)) return true;
+                    continue;
+                }
+
                 // 조건(공격+방향)이 안 맞으면 어떤 타이밍이든 발동 안 함
                 if (!ConditionMatches(link, moveDir)) continue;
 
@@ -105,11 +113,6 @@ namespace ZZZ.Player.StateMachine.States
                 {
                     case LinkTiming.WhenMatched:
                         fire = p >= link.WindowStart && p <= link.WindowEnd;
-                        break;
-
-                    case LinkTiming.OnWindowMiss:
-                        // 윈도우 끝을 지나도록 조건이 유지되면 발동 (캔슬/타임아웃) — WhenMatched 링크보다 뒤에 둘 것
-                        fire = p > link.WindowEnd;
                         break;
 
                     case LinkTiming.OnEnd:
@@ -149,6 +152,19 @@ namespace ZZZ.Player.StateMachine.States
                 return true;
             }
             return false;
+        }
+
+        // OnRelease 처리 — [WindowStart,End] 안에서 이 링크의 Attack 키가 '안 눌린'(떼진) 상태면 전이.
+        // press 버퍼가 아니라 실제 홀드 상태를 본다: 누르고 있으면 대기(차지 지속), 떼면 발동(홀드 차지 → 발사).
+        // 윈도우 시작(WindowStart)이 최소 차지 — 그 전에 떼도 무시되어 windup이 끊기지 않는다. 방향 조건은 동일 검사.
+        private bool TryReleaseLink(ClipLink link, float p, MoveDir moveDir)
+        {
+            if (p < link.WindowStart || p > link.WindowEnd) return false;
+            if (Machine.IsInputHeld(link.Attack)) return false;   // 아직 누르고 있음 → 차지 지속
+            if (!MoveConditionMatches(link, moveDir)) return false;
+
+            TakeLink(link);
+            return true;
         }
 
         // OnEnd 발동 기준 normalizedTime.
@@ -330,11 +346,13 @@ namespace ZZZ.Player.StateMachine.States
         // 링크의 공격+방향 조건이 현재 입력 상태와 모두 맞는지
         private bool ConditionMatches(ClipLink link, MoveDir moveDir)
         {
-            // Reverse는 카메라 절대 방향이 아니라 현재 facing과의 관계 → dot으로 별도 판정
-            if (link.Direction == MoveDir.Reverse)
-                return AttackMatches(link.Attack) && IsReverseInput();
-            return AttackMatches(link.Attack) && MoveMatches(link.Direction, moveDir);
+            return AttackMatches(link.Attack) && MoveConditionMatches(link, moveDir);
         }
+
+        // 방향 조건만 (Attack 제외). Reverse는 카메라 절대 방향이 아니라 현재 facing과의 관계 → dot으로 별도 판정.
+        private bool MoveConditionMatches(ClipLink link, MoveDir moveDir)
+            => link.Direction == MoveDir.Reverse ? IsReverseInput()
+                                                 : MoveMatches(link.Direction, moveDir);
 
         // 입력이 현재 진행(facing) 방향의 반대쪽(>135도)인가 — 180 턴 전이 조건
         private bool IsReverseInput()

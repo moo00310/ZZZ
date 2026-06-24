@@ -31,10 +31,10 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 0.2f)] private float _parryBlend = 0.05f;
         [SerializeField, Range(0f, 1f)]   private float _parryReinterrupt = 0.3f;  // 스탠스 중 재입력 무시 임계
 
-        [Header("Special — 전용 키 입력 시 특수스킬 진입 (콤보 링크가 못 받은 경우의 전역 폴백)")]
-        [SerializeField] private string _specialSection = "Attack_Normal_Enhance_01";  // 특수 config 진입 섹션
-        [SerializeField, Range(0f, 0.2f)] private float _specialBlend = 0.05f;
-        [SerializeField, Range(0f, 1f)]   private float _specialReinterrupt = 0.3f;  // 시전 중 재입력 무시 임계
+        [Header("Attack_Normal_Enhance — 전용 키 입력 시 강화 공격 진입 (콤보 링크가 못 받은 경우의 전역 폴백)")]
+        [SerializeField] private string _attackNormalEnhanceSection = "Attack_Normal_Enhance_01";  // 강화 공격 config 진입 섹션
+        [SerializeField, Range(0f, 0.2f)] private float _attackNormalEnhanceBlend = 0.05f;
+        [SerializeField, Range(0f, 1f)]   private float _attackNormalEnhanceReinterrupt = 0.3f;  // 시전 중 재입력 무시 임계
 
         [Header("Hit")]
         // 이미 피격 중일 때, 현재 반응 진행도가 이 값을 넘어야 새 피격이 재시작된다 (재진입 가드).
@@ -51,12 +51,15 @@ namespace ZZZ.Player.StateMachine
         private HitTrigger         _hit;
         private DodgeTrigger       _dodge;
         private ParryTrigger       _parry;
-        private SpecialTrigger     _special;
+        private Attack_Normal_EnhanceTrigger _attackNormalEnhance;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
         public bool       HasBufferedInput => _input.HasInput;
         public ComboInput BufferedInput    => _input.Current;
         public void       ConsumeInput()   => _input.Consume();
+
+        // 키 홀드 facade — OnRelease 링크(홀드 차지 → 릴리스)가 "아직 누르고 있나"를 판정
+        public bool IsInputHeld(ComboInput input) => _input.IsHeld(input);
 
         // 무적 — i-frame 윈도우 동안 IFrameModule이 매 프레임 세팅. HitTrigger가 이 값을 보고 무시.
         public bool Invulnerable { get; set; }
@@ -94,7 +97,7 @@ namespace ZZZ.Player.StateMachine
             _hit   = new HitTrigger(this, _state, registry, _hitReinterruptThreshold, _hitEntryBlend, _parryPrefix);
             _dodge = new DodgeTrigger(this, _state, registry, _input, resources, _dodgePrefix, _dodgeBlend, _dodgeReinterrupt);
             _parry = new ParryTrigger(this, _state, registry, _input, _parryPrefix, _parryBlend, _parryReinterrupt);
-            _special = new SpecialTrigger(this, _state, registry, _input, _specialSection, _specialBlend, _specialReinterrupt);
+            _attackNormalEnhance = new Attack_Normal_EnhanceTrigger(this, _state, registry, _input, _attackNormalEnhanceSection, _attackNormalEnhanceBlend, _attackNormalEnhanceReinterrupt);
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
@@ -106,9 +109,9 @@ namespace ZZZ.Player.StateMachine
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
             _state.Update();
-            // 특수스킬은 콤보 링크(Attack=Special) 평가 이후 폴백 — 콤보 중엔 섹션 링크가 입력을 소비해
+            // 강화 공격은 콤보 링크(Attack=Attack_Normal_Enhance) 평가 이후 폴백 — 콤보 중엔 섹션 링크가 입력을 소비해
             // 진입하고(우선), 링크가 없는 상태(걷기/Idle)에선 입력이 남아 이 트리거가 강제 진입시킨다.
-            if (HasBufferedInput && BufferedInput == ComboInput.Special) _special.Trigger();
+            if (HasBufferedInput && BufferedInput == ComboInput.Attack_Normal_Enhance) _attackNormalEnhance.Trigger();
         }
 
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──
@@ -130,6 +133,11 @@ namespace ZZZ.Player.StateMachine
         private void OnAttack(InputValue value) { if (value.isPressed) _input.Buffer(ComboInput.Normal); }
         private void OnDodge(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Dodge); }
         private void OnParry(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Parry); }
-        private void OnSpecial(InputValue value) { if (value.isPressed) _input.Buffer(ComboInput.Special); }
+        // 누름 = 버퍼링(콤보 진입) + 홀드 ON, 뗌 = 홀드 OFF(OnRelease 링크가 이 전환을 보고 발사)
+        private void OnAttack_Normal_Enhance(InputValue value)
+        {
+            _input.SetHeld(ComboInput.Attack_Normal_Enhance, value.isPressed);
+            if (value.isPressed) _input.Buffer(ComboInput.Attack_Normal_Enhance);
+        }
     }
 }

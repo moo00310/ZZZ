@@ -88,10 +88,10 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Special",
-                    "type": "Button",
+                    "name": "Attack_Normal_Enhance",
+                    "type": "PassThrough",
                     "id": "a1f6c4e2-7b3d-4a59-9c12-8e0f5d63b701",
-                    "expectedControlType": "",
+                    "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -497,11 +497,11 @@
                 {
                     "name": "",
                     "id": "b2d7e1a4-5c8f-4e63-a90b-1f2c4d6e8a35",
-                    "path": "<Keyboard>/q",
+                    "path": "<Keyboard>/e",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Special",
+                    "action": "Attack_Normal_Enhance",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -512,7 +512,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Special",
+                    "action": "Attack_Normal_Enhance",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

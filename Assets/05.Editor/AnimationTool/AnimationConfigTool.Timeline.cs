@@ -261,11 +261,11 @@ namespace ZZZ.Editor.AnimationTool
                     Color col = focused ? Color.Lerp(baseCol, Color.white, 0.35f) : baseCol;
                     Color c   = new Color(col.r, col.g, col.b, alpha);
 
-                    // 출발 지점: WhenMatched/OnWindowMiss=윈도우끝, OnEnd=클립끝
+                    // 출발 지점: WhenMatched/OnRelease=윈도우끝, OnEnd=클립끝
                     float srcN = link.Timing switch
                     {
                         LinkTiming.WhenMatched    => link.WindowEnd,
-                        LinkTiming.OnWindowMiss   => link.WindowEnd,
+                        LinkTiming.OnRelease      => link.WindowEnd,
                         LinkTiming.OnEnd          => 1f,
                         LinkTiming.OnEndIfMatched => 1f,   // 래치는 섹션 끝에 발동
                         _                          => link.WindowEnd,
@@ -400,18 +400,18 @@ namespace ZZZ.Editor.AnimationTool
         {
             ComboInput.Normal   => new Color(0.3f, 0.6f, 1.0f),
             ComboInput.Enhanced => new Color(1.0f, 0.55f, 0.15f),
-            ComboInput.Special  => new Color(0.9f, 0.3f, 0.9f),
+            ComboInput.Attack_Normal_Enhance => new Color(0.9f, 0.3f, 0.9f),
             ComboInput.Dodge    => new Color(0.3f, 0.9f, 0.6f),
             ComboInput.None     => new Color(0.5f, 0.85f, 0.55f),  // 공격 없음 = 초록
             _                   => new Color(0.7f, 0.7f, 0.7f),    // Any
         };
 
-        // 링크 색상: OnWindowMiss=빨강(캔슬), OnEnd=회색, 그 외는 공격/방향 조건 색
+        // 링크 색상: OnRelease=청록(키 릴리스), OnEnd=회색, 그 외는 공격/방향 조건 색
         private static Color LinkColor(ClipLink link)
         {
             switch (link.Timing)
             {
-                case LinkTiming.OnWindowMiss: return new Color(0.95f, 0.35f, 0.35f);
+                case LinkTiming.OnRelease:    return new Color(0.35f, 0.8f, 0.9f);
                 case LinkTiming.OnEnd:        return new Color(0.75f, 0.75f, 0.75f);
                 default:                      return InputColor(link.Attack);
             }
@@ -468,12 +468,12 @@ namespace ZZZ.Editor.AnimationTool
                 float y    = baseY - i * (bandH + 1f);
                 Color col  = LinkColor(link);
 
-                // 밴드 구간: WhenMatched=윈도우, OnWindowMiss=윈도우끝~이후, OnEnd=끝부분
+                // 밴드 구간: WhenMatched/OnRelease=윈도우(릴리스 허용 구간), OnEnd=끝부분
                 float aN, bN;
                 switch (link.Timing)
                 {
                     case LinkTiming.WhenMatched:    aN = link.WindowStart; bN = link.WindowEnd; break;
-                    case LinkTiming.OnWindowMiss:   aN = link.WindowEnd;   bN = 1f;             break;
+                    case LinkTiming.OnRelease:      aN = link.WindowStart; bN = link.WindowEnd; break;  // 릴리스 허용 윈도우
                     case LinkTiming.OnEnd:          aN = 0.92f;            bN = 1f;             break;
                     case LinkTiming.OnEndIfMatched: aN = link.WindowStart; bN = link.WindowEnd; break;  // 입력 감지 윈도우
                     default:                        aN = 0f;               bN = 1f;             break;
@@ -482,9 +482,6 @@ namespace ZZZ.Editor.AnimationTool
                 float bX = barX + bN * barW;
                 EditorGUI.DrawRect(new Rect(aX, y, Mathf.Max(2f, bX - aX), bandH),
                     new Color(col.r, col.g, col.b, 0.75f));
-                // OnWindowMiss는 WindowEnd 지점에 마커
-                if (link.Timing == LinkTiming.OnWindowMiss)
-                    EditorGUI.DrawRect(new Rect(aX - 1f, y - 2f, 2f, bandH + 4f), col);
                 // 텍스트 라벨은 제거(클립 이름 아래 한 줄에 대상만 표기) — 밴드만 남김
             }
         }

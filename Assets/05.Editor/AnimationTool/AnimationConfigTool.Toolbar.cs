@@ -96,7 +96,7 @@ namespace ZZZ.Editor.AnimationTool
             {
                 InputToggle(ComboInput.Normal,   "Normal",   64);
                 InputToggle(ComboInput.Enhanced, "Enhanced", 72);
-                InputToggle(ComboInput.Special,  "Special",  64);
+                InputToggle(ComboInput.Attack_Normal_Enhance, "Enhance", 64);
                 InputToggle(ComboInput.Dodge,    "Dodge",    56);
                 if (GUILayout.Button("Clear", GUILayout.Width(48)))
                     System.Array.Clear(_heldInput, 0, _heldInput.Length);

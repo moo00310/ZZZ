@@ -141,7 +141,9 @@ namespace ZZZ
     public enum LinkTiming
     {
         WhenMatched,    // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
-        OnWindowMiss,   // 윈도우 끝까지 조건이 충족되지 않고 지나가면 (콤보 캔슬 / 타임아웃)
+        OnRelease,      // 이 링크의 Attack 키를 손에서 뗀 순간 발동 (홀드 차지 → 릴리스).
+                        //   [WindowStart,End] 안에서 떼야 함. press 버퍼가 아니라 릴리스 신호를 보므로
+                        //   ConfigState에서 ConditionMatches 게이트를 우회해 따로 처리한다.
         OnEnd,          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
         OnEndIfMatched  // 윈도우 안에서 조건이 '한 번이라도' 충족되면 래치 → 섹션 끝에 발동.
                         //   WhenMatched=즉시 캔슬, 이건 "섹션 끝까지 재생 후 입력 여부로 분기"(카운터 예약 등).
@@ -152,7 +154,7 @@ namespace ZZZ
     {
         Normal,
         Enhanced,
-        Special,
+        Attack_Normal_Enhance,
         Dodge,
         Any,        // 아무 공격 입력
         None,       // 공격 입력 없음 (※ 직렬화 호환 위해 맨 끝에 추가)

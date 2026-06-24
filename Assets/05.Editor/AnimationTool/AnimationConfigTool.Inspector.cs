@@ -393,8 +393,8 @@ namespace ZZZ.Editor.AnimationTool
                     DrawChip(link.Attack.ToString(), k_chipAttack);
                 if (link.Direction != MoveDir.Any)
                     DrawChip(link.Direction.ToString(), k_chipDir);
-                if (link.Timing == LinkTiming.OnWindowMiss)
-                    DrawChip("miss", k_chipWhenMiss);
+                if (link.Timing == LinkTiming.OnRelease)
+                    DrawChip("release", k_chipWhenMiss);
                 else if (link.Timing == LinkTiming.OnEnd)
                     DrawChip("end", k_chipWhen);
                 else if (link.Timing == LinkTiming.OnEndIfMatched)
@@ -513,7 +513,7 @@ namespace ZZZ.Editor.AnimationTool
 
             string suffix = link.Timing switch
             {
-                LinkTiming.OnWindowMiss   => " (miss)",
+                LinkTiming.OnRelease      => " (release)",
                 LinkTiming.OnEnd          => " (end)",
                 LinkTiming.OnEndIfMatched => " (win→end)",
                 _                          => "",
@@ -524,7 +524,7 @@ namespace ZZZ.Editor.AnimationTool
         private static string TimingHelp(LinkTiming t) => t switch
         {
             LinkTiming.WhenMatched    => "윈도우 안에서 조건 충족 시 즉시 전이",
-            LinkTiming.OnWindowMiss   => "윈도우 끝까지 조건 유지되면 전이 (캔슬/타임아웃)",
+            LinkTiming.OnRelease      => "윈도우 안에서 Attack 키를 떼면 전이 (홀드 차지 → 릴리스)",
             LinkTiming.OnEnd          => "클립이 끝나면 전이 (루프 클립 제외)",
             LinkTiming.OnEndIfMatched => "윈도우 안에 조건이 한 번이라도 충족되면 래치 → 섹션 끝에 전이 (카운터 예약 등)",
             _                          => "",

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
-  m_Name: AttackConfig
+  m_Name: Attack_Nomal_Config
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: Attack_Normal_01
   LoopTrack: 0
