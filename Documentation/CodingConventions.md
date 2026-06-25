@@ -2,16 +2,17 @@
 
 ## 네임스페이스
 
+> 현재 코드에 실제로 존재하는 네임스페이스만 적는다. (계획만 있고 코드가 없는 네임스페이스는 추가하지 않음 — 생길 때 등록)
+
 | 위치 | 네임스페이스 |
 |------|-------------|
+| 04.Scripts (AnimationConfig 등 공용) | `ZZZ` |
 | 04.Scripts/Player | `ZZZ.Player` |
+| 04.Scripts/Player/StateMachine | `ZZZ.Player.StateMachine` |
+| 04.Scripts/Player/StateMachine/States | `ZZZ.Player.StateMachine.States` |
+| 04.Scripts/Player/Debug | `ZZZ.Player.Debugging` |
 | 04.Scripts/Combat | `ZZZ.Combat` |
-| 04.Scripts/UI | `ZZZ.UI` |
-| 04.Scripts/Utilities | `ZZZ.Utilities` |
 | 05.Editor/AnimationTool | `ZZZ.Editor.AnimationTool` |
-| 05.Editor/EffectTool | `ZZZ.Editor.EffectTool` |
-| 05.Editor/RenderTargetTool | `ZZZ.Editor.RenderTargetTool` |
-| 06.RenderPipeline/RenderFeatures | `ZZZ.Rendering` |
 
 ---
 
@@ -120,20 +121,6 @@ namespace ZZZ.Editor.AnimationTool
         {
             // GUI 코드
         }
-    }
-}
-```
-
-### RenderFeature (`06.RenderPipeline/RenderFeatures/`)
-```csharp
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
-
-namespace ZZZ.Rendering
-{
-    public class OutlineRenderFeature : ScriptableRendererFeature
-    {
-        // ...
     }
 }
 ```

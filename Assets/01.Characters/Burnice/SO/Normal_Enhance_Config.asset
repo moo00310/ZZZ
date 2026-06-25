@@ -431,6 +431,42 @@ MonoBehaviour:
       WindowEnd: 1
     Notifies: []
     Modules: []
+  - SectionName: Attack_Normal_Enhance_Front
+    Clip: {fileID: 7400000, guid: 865b08a48497845429e8359306b00683, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    LockWindowStart: 0
+    LockWindowEnd: 1
+    SmoothLoopSpeed: 0
+    BackMotionScale: 1
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
+    SectionTurn: 0
+    TurnWindowStart: 0
+    TurnWindowEnd: 1
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_Enhance_02
+      BlendDuration: 0.2
+      EntryOffset: 0.52
+      Attack: 2
+      Direction: 0
+      RequireHeld: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+    Modules: []
   - SectionName: Attack_Normal_Enhance_Back
     Clip: {fileID: 7400000, guid: 5e84d3d8cf7fc4844b59bc5189670139, type: 2}
     Speed: 1
@@ -456,7 +492,7 @@ MonoBehaviour:
     TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
-      TargetSection: 
+      TargetSection: Attack_Normal_Enhance_03
       BlendDuration: 0.01
       EntryOffset: 0.1
       Attack: 2
@@ -465,32 +501,6 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
-    Modules: []
-  - SectionName: Attack_Normal_Enhance_Front
-    Clip: {fileID: 7400000, guid: 865b08a48497845429e8359306b00683, type: 2}
-    Speed: 1
-    MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
-    Links: []
     Notifies: []
     Modules: []
   GlobalLinks: []

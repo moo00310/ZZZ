@@ -20,19 +20,22 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
     │  (PlayerInput SendMessages → 입력 버퍼링)
     ▼
 [ PlayerStateMachine ]        ← MonoBehaviour, 얇은 코디네이터(조립 + facade)
-    │   · 협력 객체 조립: InputBuffer / HitTrigger / DodgeTrigger / ConfigRegistry
-    │   · 무적(Invulnerable)·퍼펙트 회피 윈도우 보유 + facade 노출
-    │   ├── InputBuffer      입력 버퍼 (Normal / Dodge)
-    │   ├── HitTrigger       피격 트리거 (재진입 가드 + L/H 승격)
-    │   ├── DodgeTrigger     회피 트리거 (push, 방향→섹션 선택)
-    │   └── ConfigRegistry   섹션 이름으로 config 자동 검색 (FindWithSection)
+    │   · 협력 객체 조립: InputBuffer / HitTrigger / DodgeTrigger / ParryTrigger /
+    │     Attack_Normal_EnhanceTrigger / ConfigRegistry / EnemySensor
+    │   · 무적(Invulnerable)·패링(ParryActive)·들어오는 공격 윈도우 보유 + facade 노출
+    │   ├── InputBuffer        입력 버퍼 (Normal / Dodge …)
+    │   ├── HitTrigger         피격 트리거 (재진입 가드 + L/H 승격 + 패링 시 쳐냄 분기)
+    │   ├── DodgeTrigger       회피 트리거 (push, 방향→섹션 선택)
+    │   ├── ParryTrigger       패링 트리거 (push, 스탠스 단일 진입)
+    │   ├── Attack_Normal_EnhanceTrigger  강화공격 (방향 우선 → 거리 분기 폴백)
+    │   └── ConfigRegistry     섹션 이름으로 config 자동 검색 (FindWithSection)
     │   (테스트용 H/J/K 키는 PlayerTestTriggers 컴포넌트로 분리)
     │
     │  단일 ConfigState 보유 → Enter() / Update() 직접 호출
     ▼
 [ ConfigState ]               ← 순수 C# 단일 러너 (상태 클래스 1개)
     │   · AnimationConfig(Clips + Links)를 파싱·구동
-    │   · 걷기 / 콤보 / 대시 / 회피 / 피격을 전부 이 한 클래스로 표현
+    │   · 걷기 / 콤보 / 강화공격 / 대시 / 회피 / 패링 / 피격을 전부 이 한 클래스로 표현
     │   · Link(전이) · Notify(이벤트) · Module(기능) · 워프/섹션턴 처리
     │
     ├── 클립 재생 ──────────────┐
@@ -259,18 +262,25 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아 **
 
 ## 섹션 모듈 (SectionModule) — 기능을 끼워 넣는 플러그인
 
-한 섹션에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **폴리모픽 직렬화**된다.
-새 연출/판정 기능 = `SectionModule` 상속 1개 추가 (ConfigState 본체는 안 건드림).
+**기능** — 한 섹션에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **폴리모픽 직렬화**된다.
+새 연출/판정 기능 = 베이스 상속 1개 추가 (ConfigState 본체는 안 건드림).
+
+**동작** — `ConfigState`가 섹션 진입 시 `OnEnter`, 매 프레임 `Tick`을 호출한다.
+구간(Start~End) 동안 무언가를 켜는 패턴이 반복돼서, 구간 판정을 `WindowModule` 베이스로 한 번만 짜고
+"무엇을 켜느냐"만 자식이 정의한다.
 
 ```
-SectionModule (추상)
-├── OnEnter(tc, ctx)        섹션 진입 시 1회
-└── Tick(tc, nt, ctx)       매 프레임
-    └── IFrameModule        무적 구간 — 윈도우(Start~End) 동안 Machine.Invulnerable = true
+SectionModule (추상)           OnEnter(1회) / Tick(매 프레임)
+└── WindowModule (추상)        [Start, End] normalizedTime 구간 판정(InWindow) 공유 — 루프 wrap 처리 포함
+    ├── IFrameModule           구간 동안 Machine.Invulnerable = true   → 피격 '무시'
+    └── ParryModule            구간 동안 Machine.ParryActive  = true   → 피격을 '쳐냄'으로 분기
 ```
 
-`ConfigState`는 섹션 진입 시 `Machine.Invulnerable = false`로 리셋하고, `IFrameModule`이
-윈도우 동안만 다시 켠다. `TriggerHit`는 `Invulnerable`이면 피격을 무시 → **회피 i-frame**.
+`ConfigState`는 섹션 진입 시 `Invulnerable`/`ParryActive`를 **false로 리셋**하고, 모듈이 윈도우 동안만 다시 켠다.
+`HitTrigger`는 `Invulnerable`이면 피격을 무시(회피 i-frame), `ParryActive`면 쳐냄으로 분기(패링).
+
+- **장점** — 무적·패링처럼 "구간 동안 플래그를 켜는" 판정을 **클래스 1개 + 구간 두 값**으로 추가한다. 툴의 추가 메뉴/구간 편집 UI가 베이스 덕에 자동으로 잡힌다. i-frame('무시')과 parry('응수')가 대칭이라 읽기 쉽다.
+- **단점** — `[SerializeReference]` 폴리모픽은 타입 리네임/이동 시 직렬화가 깨질 수 있고, 모듈 간 실행 순서·상호작용이 늘면 암묵적 의존이 생긴다(현재는 플래그 토글뿐이라 단순).
 
 ---
 
@@ -306,6 +316,37 @@ ConfigState.InterruptWith(cfg, section, _dodgeBlend)
 - **회피 도중엔 맞지 않아야 함** → `IFrameModule`로 회피 시작~중반 구간에 무적(i-frame) 부여, 이 사이 피격은 무시
 - **연타로 회피 재입력 시 프리즈** → 이미 회피 중 + 진행도 < `_dodgeReinterrupt`면 새 회피 무시 (재진입 가드)
 - **회피 전이 중 캐릭터가 튀는 문제(전방 회피→달리기 튐 / 후방 회피 연타 워프)** → 전이 구간 루트모션 델타는 두 클립 블렌딩 아티팩트라 신뢰 불가 → 전이 중 수평 이동을 통째로 버려 해결 ([루트모션](#루트모션-직접-구현) "스냅" 항목 참조)
+
+---
+
+## 패링 (Parry) — i-frame과 대칭인 '응수' 방어
+
+**왜 만들었나** — 회피(i-frame)는 공격을 *무시*만 한다. 패링은 같은 타이밍 방어지만 적 공격을
+*쳐내고 반격으로 응수*하는, 더 공격적인 선택지를 주려고 만들었다. 둘을 **대칭 구조**로 설계해
+판정 코드를 거의 공유한다(무적=`Invulnerable`, 패링=`ParryActive`).
+
+```
+패링 입력 (push, 어느 config에 있든)
+    │
+    ▼
+ParryTrigger.Trigger()  — 스탠스 섹션(Attack_ParryAid_Start)으로 강제 진입 (방향 분기 없음)
+    │  · 재진입 가드: 같은 스탠스 중 + 진행도 < _reinterrupt 면 무시
+    ▼
+ParryModule (윈도우)  — 활성 구간 동안 Machine.ParryActive = true
+    │
+    ▼  (이 사이 적 공격이 닿으면)
+HitTrigger.Trigger()
+    ├── Invulnerable 이면 → 피격 무시 (회피 i-frame)
+    ├── ParryActive 이고 TryDeflect() 성공 → 쳐냄(ParryAid_L/H) 진입  ← 패링 성공
+    └── 둘 다 아니면 → 일반 피격 (Hit_L/H_Front/Back)
+            │
+            ▼
+        쳐냄 ParryAid_L/H config의 Link(Attack=Normal → Counter)가 카운터 follow-up 처리
+```
+
+- **동작 요점** — 적 공격 강도(`IncomingStrength`)로 쳐냄 섹션 L/H를 고른다. 쳐냄 섹션 config가 없으면 `TryDeflect()`가 false를 반환해 **일반 피격으로 안전하게 폴백**한다(패링 모션 미제작 상태에서도 안 깨짐).
+- **장점** — 회피/피격과 판정 경로(`HitTrigger`)·진입 방식(push)·구간 모듈(`WindowModule`)을 **공유**해 코드 추가가 작다. 데이터(섹션 이름 규약 `Attack_ParryAid_*`)만으로 쳐냄·카운터를 잇는다.
+- **단점** — 현재 들어오는 공격은 테스트키(`K`)로 시뮬레이션이라, 실제 적 AI가 `OpenIncomingAttack(window, strength)`를 공격 액티브 직전에 호출하도록 배선해야 완성된다. 접두어 문자열 규약(`Attack_ParryAid_`)을 `ParryTrigger`/`HitTrigger`가 공유하므로 한 곳(`ParryTrigger.Prefix`)에서만 정의해 주입한다.
 
 ---
 
@@ -354,13 +395,36 @@ PlayerStateMachine
                     └── 발동 시 ConsumeInput() 후 TargetConfig/Section으로 전이
 ```
 
-> 콤보 진입 경로는 이제 **config 기반 단일 경로**다. (과거 하드코딩 콤보 State는 제거됨)
 > `ComboInput` = `Normal / Enhanced / Special / Dodge / Any / None`.
 
 ### 문제와 해결
 
 - **선입력은 받되 아무 때나 콤보가 나가면 안 됨** → 입력을 0.25초(`_inputBufferWindow`) 버퍼에 저장해두고, Link의 `Timing`/`Window`로 "콤보를 이어갈 수 있는 구간"에서만 다음 동작이 발동하도록 데이터로 제어
 - **회피와 콤보 입력이 충돌** → 회피(Dodge)는 링크 평가보다 먼저 검사해 콤보보다 우선 (공격 중에도 회피로 캔슬 가능)
+
+---
+
+## 강화공격 (Attack_Normal_Enhance) — 상황으로 진입 모션을 고른다
+
+**기능** — 같은 강화공격 입력(E)이라도 **상황에 맞는 다른 진입 모션**으로 들어간다
+(앞으로 누르면 돌진, 멀면 거리 좁히는 대시 등).
+
+**동작** — 두 경로가 있다.
+1. **콤보 중** — 각 공격 섹션의 `Attack_Normal_Enhance` Link가 윈도우 안에서 입력을 먼저 소비(우선).
+2. **걷기/Idle 등 링크가 없는 상태** — `PlayerStateMachine`이 `ConfigState.Update`(콤보 링크 평가) 후
+   입력이 남아 있으면 `Attack_Normal_EnhanceTrigger`(전역 폴백)를 호출.
+
+폴백 트리거의 섹션 선택 — **방향 우선 → 중립이면 거리** ([Attack_Normal_EnhanceTrigger.cs](../Assets/04.Scripts/Player/StateMachine/Triggers/Attack_Normal_EnhanceTrigger.cs)):
+
+| 입력 상황 | 진입 섹션 |
+|-----------|-----------|
+| 이동 Forward(W) | `..._Front_01` (전진 돌진) |
+| 이동 Back(S) | `..._Back_01` (백스텝 카운터) |
+| 그 외(중립·좌·우) | `EnemySensor`로 잰 전방 적 거리 → 근(`_01`) / 중(`_02`) / 원(`_03`) |
+
+- **폴백 안전망** — 방향/거리 전용 섹션이 아직 config에 없으면 한 단계 가까운 쪽으로 자동 폴백(원→중→근). 모션을 다 안 만든 상태에서도 안 깨진다.
+- **장점** — "어떤 상황에 어떤 모션"을 코드가 아니라 섹션 이름 규약 + 거리 임계값(인스펙터)으로 조절. 적과의 거리는 워프에 쓰는 `EnemySensor.FindTarget(out dist)`를 **재사용**(탐색 1회).
+- **단점** — 진입 분기 규칙이 트리거 코드에 들어가 있어, 완전히 데이터만으로 정의되진 않는다(섹션 이름 컨벤션 의존).
 
 ---
 
@@ -380,27 +444,45 @@ PlayerStateMachine
 Assets/04.Scripts/
 ├── AnimationConfig.cs               ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
 │
+├── Combat/
+│   ├── EnemySensor.cs               전방 부채꼴 적 탐지 (워프 타겟 / 거리 분기)
+│   ├── HitTarget.cs                 피격 대상(허수아비) — HP 보유
+│   └── IHittable.cs                 피격 가능 인터페이스
+│
+├── Movement/
+│   └── RootMotionTracker.cs         본 위치 프레임 델타 추출 헬퍼
+│
 └── Player/
-    ├── PlayerController.cs           이동, 입력 수신, 루트모션(위치=Bip001 / 회전=Root yaw 추출), 워프
+    ├── PlayerController.cs           이동/루트모션(위치=Bip001 / 회전=Root yaw 추출)·워프·섹션턴
+    ├── PlayerResources.cs            플레이어 자원(스태미나 등)
     ├── PlayerStateHUD.cs             현재 config/섹션/입력 디버그 HUD
-    ├── TPSCameraController.cs        TPS 카메라
+    ├── TPSCameraController.cs        커스텀 TPS 카메라
     │
-    ├── Debug/
-    │   ├── AdditiveCompareTool.cs
-    │   └── AnimatorLayerHUD.cs
+    ├── Debug/                        AdditiveCompareTool / AnimatorLayerHUD
     │
     └── StateMachine/
-        ├── PlayerStateMachine.cs     루트 MonoBehaviour — 입력 버퍼, 피격/회피 트리거, config 검색
+        ├── PlayerStateMachine.cs     코디네이터 — 입력버퍼·트리거·config 검색 조립 + facade
         ├── PlayerStateContext.cs     상태 공유 데이터 (Controller/Animator/CC/Transform)
         ├── PlayerAnimatorBridge.cs   Animator 파사드 (Play + additive Hit_Shake)
+        ├── PlayerTestTriggers.cs     테스트 입력(H/J/K) 분리 컴포넌트
+        ├── ConfigRegistry.cs         섹션 이름으로 config 검색 (FindWithSection)
+        ├── InputBuffer.cs            선입력 버퍼
         │
         ├── States/
         │   └── ConfigState.cs        ★ 단일 러너 — config로 모든 흐름 구동
         │
-        └── Modules/
-            ├── SectionModule.cs      섹션 기능 추상 베이스 (폴리모픽)
-            ├── SectionContext.cs     모듈이 받는 런타임 핸들 묶음
-            └── IFrameModule.cs       무적 구간(i-frame)
+        ├── Triggers/                 외부/전역 진입 (push)
+        │   ├── HitTrigger.cs             피격 + 패링 쳐냄 분기
+        │   ├── DodgeTrigger.cs           회피 (방향→섹션)
+        │   ├── ParryTrigger.cs           패링 스탠스 진입
+        │   └── Attack_Normal_EnhanceTrigger.cs  강화공격 (방향/거리 분기)
+        │
+        └── Modules/                  섹션 플러그인 (폴리모픽)
+            ├── SectionModule.cs          추상 베이스 (OnEnter/Tick)
+            ├── WindowModule.cs           구간(Start~End) 판정 베이스
+            ├── SectionContext.cs         모듈이 받는 런타임 핸들 묶음
+            ├── IFrameModule.cs           무적 구간(i-frame)
+            └── ParryModule.cs            패링 활성 구간
 ```
 
 

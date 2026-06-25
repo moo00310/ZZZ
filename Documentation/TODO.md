@@ -1,5 +1,10 @@
 # ZZZ Unity Project — TODO.md
 
+## 최근 완료
+
+- [x] **패링(Parry)** — `ParryModule`(활성 윈도우) + `ParryTrigger`(push 진입). 활성 중 적 공격이 닿으면 `HitTrigger`가 피격 대신 쳐냄(`ParryAid_L/H`)으로 분기. i-frame('무시')과 대칭('반격으로 응수')
+- [x] **강화공격(Attack_Normal_Enhance)** — 방향(앞W/뒤S) 우선 → 중립이면 적과의 거리(근/중/원)로 진입 섹션 분기. 콤보 링크가 못 받은 입력의 전역 폴백 트리거
+
 ## 진행중
 
 - [ ] **특수 기술(Special) 제작 & 연결** — 특수 기술 신규 제작 후 기존 시스템(콤보/입력/연출)에 배선·연결
