@@ -196,18 +196,21 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.MinMaxSlider(
                     new GUIContent($"  Lock Window  {lockWS:F2}~{lockWE:F2}", "회전을 잠그는 normalizedTime 구간. End<=Start면 섹션 전체"),
                     ref lockWS, ref lockWE, 0f, 1f);
-            bool faceInput = EditorGUILayout.Toggle(
-                new GUIContent("Face Input On Enter", "진입 순간 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). Lock Rotation과 함께 쓰면 진입 때 한 번 조준 후 고정"),
-                tc.FaceInputOnEnter);
+            bool faceInput = tc.FaceInputOnEnter;   // 토글은 아래 고급 'Facing' 그룹에서 그림 (조준 옵션끼리 묶음)
 
             // 루프 전진 평속화 — RootMotion 루프 섹션 전용 (걷기/달리기). 비루프/비RootMotion엔 영향 없음.
             bool smoothLoop = tc.SmoothLoopSpeed;
             float backScale = tc.BackMotionScale;
             if (mode == MoveMode.RootMotion)
             {
-                smoothLoop = EditorGUILayout.Toggle(
-                    new GUIContent("Smooth Loop Speed", "루프 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균속도로 제거. 끄면 원본 보폭감(프레임별 가감속) 유지하되 틱이 보일 수 있음. 비루프 클립엔 영향 없음"),
-                    tc.SmoothLoopSpeed);
+                // Smooth Loop Speed는 루프 클립에서만 의미 있는 기능 → 루프일 때만 토글 노출(켜고/끄기).
+                // 비루프 클립은 런타임에서 무시되므로 토글을 숨기고, 켜져 있던 stale 값은 꺼서 정리한다.
+                if (tc.IsLooping)
+                    smoothLoop = EditorGUILayout.Toggle(
+                        new GUIContent("Smooth Loop Speed", "루프 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균속도로 제거. 끄면 원본 보폭감(프레임별 가감속) 유지하되 틱이 보일 수 있음"),
+                        tc.SmoothLoopSpeed);
+                else
+                    smoothLoop = false;   // 비루프 → 항상 끔 (토글 숨김)
                 backScale = EditorGUILayout.FloatField(
                     new GUIContent("Back Motion Scale", "후진(캐릭터 기준 -Z) 루트모션만 이 배율로 증폭. 전진/측면 불변. 1=원본, 1.2=뒤로 빠지는 모션 20% 강조(스텝백·recoil 강조)"),
                     tc.BackMotionScale);
@@ -216,18 +219,19 @@ namespace ZZZ.Editor.AnimationTool
             // ── 고급 (접기) — Boost / Target Tracking / Section Turn ──
             // 값은 항상 현재값으로 초기화 → 접혀서 UI를 안 그려도 저장 로직이 그대로 유지됨
             float boostSpd = tc.StartBoostSpeed,  boostT = tc.StartBoostTime;
-            bool  track    = tc.EnableTracking,   snap   = tc.SnapRotation;
-            bool  warpFace = tc.WarpFaceTarget;
-            float warpTurn = tc.WarpTurnSpeed;
+            bool  track    = tc.EnableTracking,   face   = tc.FaceTarget;
+            float faceTurn = tc.FaceTurnSpeed;
+            float fwS = tc.FaceWindowStart, fwE = tc.FaceWindowEnd;
             float twS = tc.TrackWindowStart, twE = tc.TrackWindowEnd, stopD = tc.StopDistance;
             bool  secTurn  = tc.SectionTurn;
             float turnWS   = tc.TurnWindowStart, turnWE = tc.TurnWindowEnd;
 
             // 접혀 있어도 어떤 고급 옵션이 켜져 있는지 라벨로 표시
             string advLabel = "고급";
-            if (boostSpd > 0f) advLabel += " · Boost";
-            if (track)         advLabel += " · Track";
-            if (secTurn)       advLabel += " · Turn";
+            if (boostSpd > 0f)          advLabel += " · Boost";
+            if (track)                  advLabel += " · Warp";
+            if (face || faceInput)      advLabel += " · Face";
+            if (secTurn)                advLabel += " · Turn";
             _clipAdvFold = EditorGUILayout.Foldout(_clipAdvFold, advLabel, true);
             if (_clipAdvFold)
             {
@@ -239,23 +243,37 @@ namespace ZZZ.Editor.AnimationTool
 
                 if (mode == MoveMode.RootMotion)
                 {
+                    EditorGUILayout.LabelField("── Facing & Warp ──", EditorStyles.miniBoldLabel);
+
+                    // [이동 워프] 루트모션 이동을 적 방향으로 끌어와 StopDistance 앞에서 멈춤 (회전과 별개)
                     track = EditorGUILayout.Toggle(
-                        new GUIContent("Target Tracking", "전방 적이 있으면 루트모션을 적 방향으로 워프. 없으면 원본 그대로"),
+                        new GUIContent("Target Warp (Move)", "전방 적 방향으로 루트모션 이동을 끌어와 StopDistance 앞에서 멈춤. 회전과 독립"),
                         tc.EnableTracking);
                     if (track)
                     {
                         EditorGUILayout.MinMaxSlider(
-                            new GUIContent($"  Window  {twS:F2}~{twE:F2}", "워프가 작동하는 normalizedTime 구간. 타격 이후엔 끊을 것"),
+                            new GUIContent($"  Warp Window  {twS:F2}~{twE:F2}", "이동 워프가 작동하는 normalizedTime 구간. 타격 이후엔 끊을 것"),
                             ref twS, ref twE, 0f, 1f);
                         stopD = EditorGUILayout.FloatField(
-                            new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지)"), tc.StopDistance);
-                        snap = EditorGUILayout.Toggle(
-                            new GUIContent("  Snap Rotation", "섹션 진입 시 타겟 방향으로 즉시 회전"), tc.SnapRotation);
-                        warpFace = EditorGUILayout.Toggle(
-                            new GUIContent("  Face Target (Lock-on)", "워프 윈도우 동안 매 프레임 타겟을 향해 회전. Snap(진입 1회)과 달리 적이 움직여도 계속 따라붙음"), tc.WarpFaceTarget);
-                        if (warpFace)
-                            warpTurn = EditorGUILayout.FloatField(
-                                new GUIContent("    Turn Speed(°/s)", "락온 회전 각속도. 0=즉시(스냅처럼)"), tc.WarpTurnSpeed);
+                            new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지) — 이동 워프 전용"), tc.StopDistance);
+                    }
+
+                    // [입력 조준] 진입 순간 내 이동 입력(WASD) 방향으로 1회 스냅. 적 방향(Face Target)보다 우선.
+                    faceInput = EditorGUILayout.Toggle(
+                        new GUIContent("Face Input (Enter)", "진입 순간 이동 입력 방향으로 즉시 스냅 (적이 아니라 내 입력 방향). 입력 있으면 Face Target보다 우선"),
+                        tc.FaceInputOnEnter);
+
+                    // [타겟 조준] Snap+Lock-on 통합 — FaceWindow 동안 타겟 향해 회전. [0,0]=진입 스냅, 넓히면 락온
+                    face = EditorGUILayout.Toggle(
+                        new GUIContent("Face Target", "FaceWindow 동안 타겟을 향해 회전. Window [0,0]=진입 1회 스냅 / 넓히면 락온(적이 움직여도 따라붙음). Target Warp와 독립"),
+                        tc.FaceTarget);
+                    if (face)
+                    {
+                        EditorGUILayout.MinMaxSlider(
+                            new GUIContent($"  Face Window  {fwS:F2}~{fwE:F2}", "조준 작동 구간. Start==End(=0)면 진입 1회 스냅, 넓히면 그 구간 내내 락온"),
+                            ref fwS, ref fwE, 0f, 1f);
+                        faceTurn = EditorGUILayout.FloatField(
+                            new GUIContent("  Turn Speed(°/s)", "조준 회전 각속도. 0=즉시(스냅)"), tc.FaceTurnSpeed);
                     }
                 }
 
@@ -292,9 +310,10 @@ namespace ZZZ.Editor.AnimationTool
                 tc.TrackWindowStart = Mathf.Clamp01(Mathf.Min(twS, twE));
                 tc.TrackWindowEnd   = Mathf.Clamp01(Mathf.Max(twS, twE));
                 tc.StopDistance     = Mathf.Max(0f, stopD);
-                tc.SnapRotation     = snap;
-                tc.WarpFaceTarget   = warpFace;
-                tc.WarpTurnSpeed    = Mathf.Max(0f, warpTurn);
+                tc.FaceTarget       = face;
+                tc.FaceWindowStart  = Mathf.Clamp01(Mathf.Min(fwS, fwE));
+                tc.FaceWindowEnd    = Mathf.Clamp01(Mathf.Max(fwS, fwE));
+                tc.FaceTurnSpeed    = Mathf.Max(0f, faceTurn);
                 tc.SectionTurn     = secTurn;
                 tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(turnWS, turnWE));
                 tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(turnWS, turnWE));
@@ -419,6 +438,12 @@ namespace ZZZ.Editor.AnimationTool
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
                     var attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, link.Attack);
+                    // 특정 공격 키일 때만 의미 — 그 키가 '눌려있는 동안' 조건 충족 (차지 루프용)
+                    bool requireHeld = link.RequireHeld;
+                    if (attack != ComboInput.None && attack != ComboInput.Any)
+                        requireHeld = EditorGUILayout.Toggle(
+                            new GUIContent("  Require Held", "체크 시 이 키가 '지금 눌려있을(held) 때' 충족 (누름 버퍼 대신 홀드). OnEnd 자기-루프+EntryOffset과 함께 차지 루프"),
+                            link.RequireHeld);
                     var dir    = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, link.Direction);
                     var timing = (LinkTiming)ColoredEnum(
                         new GUIContent("When", TimingHelp(link.Timing)), k_chipWhen, link.Timing);
@@ -429,6 +454,9 @@ namespace ZZZ.Editor.AnimationTool
                             new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
 
                     float blend = EditorGUILayout.FloatField("Blend (s)", link.BlendDuration);
+                    float entryOff = EditorGUILayout.Slider(
+                        new GUIContent($"Entry Offset {link.EntryOffset:F2}", "전이 후 대상 섹션을 이 normalizedTime 지점부터 재생 (0=처음부터, 윈드업 스킵 등). 이 지점 이전 Notify는 생략"),
+                        link.EntryOffset, 0f, 1f);
 
                     if (EditorGUI.EndChangeCheck())
                     {
@@ -436,11 +464,13 @@ namespace ZZZ.Editor.AnimationTool
                         link.TargetConfig  = targetCfg;
                         link.TargetSection = newIdx == 0 ? "" : sectionOptions[newIdx];
                         link.Attack        = attack;
+                        link.RequireHeld   = requireHeld;
                         link.Direction     = dir;
                         link.Timing        = timing;
                         link.WindowStart   = ws;
                         link.WindowEnd     = we;
                         link.BlendDuration = Mathf.Max(0f, blend);
+                        link.EntryOffset   = Mathf.Clamp01(entryOff);
                         EditorUtility.SetDirty(_config);
                     }
                 }

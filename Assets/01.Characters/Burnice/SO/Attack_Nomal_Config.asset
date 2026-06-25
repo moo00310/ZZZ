@@ -33,9 +33,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.37865213
     StopDistance: 1.5
-    SnapRotation: 1
-    WarpFaceTarget: 1
-    WarpTurnSpeed: 720
+    FaceTarget: 1
+    FaceWindowStart: 0
+    FaceWindowEnd: 0.37865213
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -43,6 +44,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Attack_Normal_02
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -51,6 +53,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 0
       Timing: 2
@@ -74,9 +77,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
-    WarpFaceTarget: 0
-    WarpTurnSpeed: 720
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -84,6 +88,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.1
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -92,6 +97,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -100,6 +106,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -123,9 +130,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.8055556
     StopDistance: 1.5
-    SnapRotation: 0
-    WarpFaceTarget: 1
-    WarpTurnSpeed: 720
+    FaceTarget: 1
+    FaceWindowStart: 0
+    FaceWindowEnd: 0.8055556
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.1777778
@@ -133,6 +141,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_03
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -141,6 +150,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Attack_Normal_02_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 0
       Timing: 2
@@ -164,9 +174,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
-    WarpFaceTarget: 0
-    WarpTurnSpeed: 720
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -174,6 +185,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.2
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -182,6 +194,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -190,6 +203,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.1
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -213,9 +227,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.5277778
     StopDistance: 1.5
-    SnapRotation: 1
-    WarpFaceTarget: 1
-    WarpTurnSpeed: 720
+    FaceTarget: 1
+    FaceWindowStart: 0
+    FaceWindowEnd: 0.5277778
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0.19444445
     TurnWindowEnd: 0.41388893
@@ -223,6 +238,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_04
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -231,6 +247,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_03_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 0
       Timing: 2
@@ -254,9 +271,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
-    WarpFaceTarget: 0
-    WarpTurnSpeed: 720
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -264,6 +282,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.1
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -272,6 +291,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -280,6 +300,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.1
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -303,9 +324,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.11185452
     StopDistance: 1.5
-    SnapRotation: 1
-    WarpFaceTarget: 1
-    WarpTurnSpeed: 720
+    FaceTarget: 1
+    FaceWindowStart: 0
+    FaceWindowEnd: 0.11185452
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -313,6 +335,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_05
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -321,6 +344,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_04_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 0
       Timing: 2
@@ -344,9 +368,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
-    WarpFaceTarget: 0
-    WarpTurnSpeed: 720
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -354,6 +379,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.2
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -362,6 +388,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -370,6 +397,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -393,9 +421,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.40581894
     StopDistance: 1.5
-    SnapRotation: 1
-    WarpFaceTarget: 1
-    WarpTurnSpeed: 720
+    FaceTarget: 1
+    FaceWindowStart: 0
+    FaceWindowEnd: 0.40581894
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -403,6 +432,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_02
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -411,6 +441,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_05_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 0
       Timing: 2
@@ -434,9 +465,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
-    WarpFaceTarget: 0
-    WarpTurnSpeed: 720
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
@@ -444,6 +476,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.2
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -452,6 +485,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 0
       Direction: 0
       Timing: 0
@@ -460,6 +494,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2

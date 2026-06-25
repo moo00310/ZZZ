@@ -228,7 +228,7 @@ namespace ZZZ.Editor.AnimationTool
                 _scrollY          = 0f;
 
                 _comboLog += $"  →[{newCfg.name}] {SectionLabel(t)}";
-                BeginJump(fromTc, t, link.BlendDuration);
+                BeginJump(fromTc, t, link.BlendDuration, link.EntryOffset);
                 return;
             }
 
@@ -242,11 +242,12 @@ namespace ZZZ.Editor.AnimationTool
             }
 
             _comboLog += $"  → {SectionLabel(ti)}";
-            BeginJump(fromTc, ti, link.BlendDuration);
+            BeginJump(fromTc, ti, link.BlendDuration, link.EntryOffset);
         }
 
-        // 이전 클립 → toIdx 클립으로 전이 (블렌드 + 루트모션 추적 초기화)
-        private void BeginJump(TrackClip fromTc, int toIdx, float blendDur)
+        // 이전 클립 → toIdx 클립으로 전이 (블렌드 + 루트모션 추적 초기화).
+        // entryOffset(normalizedTime) > 0이면 대상 클립을 그 지점부터 재생 (런타임 EntryOffset과 일치).
+        private void BeginJump(TrackClip fromTc, int toIdx, float blendDur, float entryOffset = 0f)
         {
             if (fromTc.Clip != null && blendDur > 0.0001f)
             {
@@ -260,7 +261,9 @@ namespace ZZZ.Editor.AnimationTool
             else _blending = false;
 
             _comboActiveClip = toIdx;
-            _comboClipTime   = 0f;
+            var toClip = _config.Clips[toIdx].Clip;
+            _comboClipTime = (entryOffset > 0f && toClip != null)
+                ? Mathf.Clamp01(entryOffset) * toClip.length : 0f;
             _rmTracker.Reset();
         }
 

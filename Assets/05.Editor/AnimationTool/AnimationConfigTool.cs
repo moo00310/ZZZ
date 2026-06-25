@@ -195,7 +195,8 @@ namespace ZZZ.Editor.AnimationTool
             float contentY = ToolbarH + PlaybarH;
             float contentH = position.height - contentY;
             // 인스펙터 폭 = 창 너비 비율(클램프) → 큰 창일수록 넓게, 값 잘림 방지
-            float inspW = Mathf.Clamp(position.width * 0.27f, 250f, 380f);
+            // 링크 설정 박스가 이 패널 안이라 폭을 넉넉히 — 비율/최소/최대 모두 상향
+            float inspW = Mathf.Clamp(position.width * 0.33f, 320f, 520f);
             float timelineW = Mathf.Max(100f, position.width - inspW - 1f);
 
             DrawTimeline(new Rect(0, contentY, timelineW, contentH));

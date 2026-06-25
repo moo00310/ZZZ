@@ -32,7 +32,15 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 1f)]   private float _parryReinterrupt = 0.3f;  // 스탠스 중 재입력 무시 임계
 
         [Header("Attack_Normal_Enhance — 전용 키 입력 시 강화 공격 진입 (콤보 링크가 못 받은 경우의 전역 폴백)")]
-        [SerializeField] private string _attackNormalEnhanceSection = "Attack_Normal_Enhance_01";  // 강화 공격 config 진입 섹션
+        // 진입 섹션 선택 — 방향 우선(앞W/뒤S), 중립이면 전방 적과의 거리로 근/중/원 분기.
+        // 방향 전용 섹션이 비거나 config에 없으면 거리 분기로, 거리 변종이 없으면 가까운 단계로 폴백.
+        [SerializeField] private string _attackNormalEnhanceSectionForward = "Attack_Normal_Enhance_Front_01";  // 앞방향(W)+E
+        [SerializeField] private string _attackNormalEnhanceSectionBack    = "Attack_Normal_Enhance_Back_01";   // 뒷방향(S)+E
+        [SerializeField] private string _attackNormalEnhanceSectionNear = "Attack_Normal_Enhance_01";  // 근접(기본·중립)
+        [SerializeField] private string _attackNormalEnhanceSectionMid  = "Attack_Normal_Enhance_02";  // 중거리
+        [SerializeField] private string _attackNormalEnhanceSectionFar  = "Attack_Normal_Enhance_03";  // 원거리
+        [SerializeField] private float  _attackNormalEnhanceMidDistance = 2f;   // 이 거리 이상 → 중거리 섹션
+        [SerializeField] private float  _attackNormalEnhanceFarDistance = 4f;   // 이 거리 이상 → 원거리 섹션
         [SerializeField, Range(0f, 0.2f)] private float _attackNormalEnhanceBlend = 0.05f;
         [SerializeField, Range(0f, 1f)]   private float _attackNormalEnhanceReinterrupt = 0.3f;  // 시전 중 재입력 무시 임계
 
@@ -87,6 +95,7 @@ namespace ZZZ.Player.StateMachine
             var animator   = GetComponent<PlayerAnimatorBridge>();
             var cc         = GetComponent<CharacterController>();
             var resources  = GetComponent<PlayerResources>();
+            var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();   // 거리 분기용 (PlayerController.Awake 순서와 무관하게 직접 획득)
 
             _ctx   = new PlayerStateContext(controller, animator, cc, transform);
             _state = new ConfigState(_ctx, this, _startConfig);
@@ -97,7 +106,11 @@ namespace ZZZ.Player.StateMachine
             _hit   = new HitTrigger(this, _state, registry, _hitReinterruptThreshold, _hitEntryBlend, _parryPrefix);
             _dodge = new DodgeTrigger(this, _state, registry, _input, resources, _dodgePrefix, _dodgeBlend, _dodgeReinterrupt);
             _parry = new ParryTrigger(this, _state, registry, _input, _parryPrefix, _parryBlend, _parryReinterrupt);
-            _attackNormalEnhance = new Attack_Normal_EnhanceTrigger(this, _state, registry, _input, _attackNormalEnhanceSection, _attackNormalEnhanceBlend, _attackNormalEnhanceReinterrupt);
+            _attackNormalEnhance = new Attack_Normal_EnhanceTrigger(this, _state, registry, _input, sensor,
+                _attackNormalEnhanceSectionNear, _attackNormalEnhanceSectionMid, _attackNormalEnhanceSectionFar,
+                _attackNormalEnhanceSectionForward, _attackNormalEnhanceSectionBack,
+                _attackNormalEnhanceMidDistance, _attackNormalEnhanceFarDistance,
+                _attackNormalEnhanceBlend, _attackNormalEnhanceReinterrupt);
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
@@ -108,11 +121,10 @@ namespace ZZZ.Player.StateMachine
             // 회피/패링은 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
-            _state.Update();
-            // 강화 공격은 콤보 링크(Attack=Attack_Normal_Enhance) 평가 이후 폴백 — 콤보 중엔 섹션 링크가 입력을 소비해
-            // 진입하고(우선), 링크가 없는 상태(걷기/Idle)에선 입력이 남아 이 트리거가 강제 진입시킨다.
             if (HasBufferedInput && BufferedInput == ComboInput.Attack_Normal_Enhance) _attackNormalEnhance.Trigger();
-        }
+      
+            _state.Update();
+             }
 
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──
         public void TriggerHitFrom(Vector3 attackerPos) => _hit.TriggerFrom(attackerPos, transform);

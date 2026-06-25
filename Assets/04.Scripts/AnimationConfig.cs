@@ -58,25 +58,31 @@ namespace ZZZ
         // 전진/측면은 그대로. 1 = 원본, 1.2 = 뒤로 빠지는 모션 20% 강조(스텝백·recoil 강조용). 0이어도 1 취급.
         public float    BackMotionScale = 1f;
         // 진입 순간 현재 이동 입력 방향으로 즉시 스냅 (공격 첫 프레임 조준). LockRotation과 함께 쓰면
-        // "진입 때 한 번 조준 → 휘두름 중 고정"이 된다. 입력이 있으면 SnapRotation(적 방향)보다 우선.
+        // "진입 때 한 번 조준 → 휘두름 중 고정"이 된다. 입력이 있으면 FaceTarget(적 방향 조준)보다 우선.
         public bool     FaceInputOnEnter = false;
 
         [Header("Start Boost — 시작 시 진행방향 초기 이동(루트모션 워밍업 보완)")]
         public float StartBoostSpeed = 0f;   // 클립 시작 순간 속도(0 = 끔). 시간이 지나며 0으로 감쇠
         public float StartBoostTime  = 0.15f; // 부스트가 0으로 감쇠하기까지의 시간(초)
 
-        [Header("Target Tracking — 전방 적에게 루트모션 워프 (RootMotion 전용)")]
-        // 섹션 진입 시 전방 적을 찾아 루트모션 수평 이동을 적 방향으로 재조준한다.
-        // 적이 없으면 보정량 0 → 원본 루트모션 그대로 (적 유무 분기 불필요)
+        [Header("Target Warp & Facing — 전방 적 기반 (각 토글 독립, RootMotion 전용)")]
+        // 이동 워프와 타겟 조준은 서로 독립 토글 — 하나라도 켜지면 진입 시 전방 적을 찾는다.
+        // 적이 없으면 둘 다 무동작(원본 모션 그대로).
+
+        // [이동 워프] 루트모션 수평 이동을 적 방향으로 재조준 + StopDistance 앞에서 멈춤. 회전과 무관(이동만).
         public bool  EnableTracking = false;
-        [Range(0f, 1f)] public float TrackWindowStart = 0f;    // 보정 작동 구간 (normalizedTime)
+        [Range(0f, 1f)] public float TrackWindowStart = 0f;    // 이동 워프 작동 구간 (normalizedTime)
         [Range(0f, 1f)] public float TrackWindowEnd   = 0.4f;  // 타격 이후엔 끊어야 적을 따라 휙 돌지 않음
-        public float StopDistance = 1.2f;   // 타겟 앞 정지 거리 (관통 방지)
-        public bool  SnapRotation = true;   // 섹션 진입 시 타겟 방향으로 즉시 회전
-        // 워프 윈도우 동안 매 프레임 타겟을 향해 transform을 회전(락온). SnapRotation은 진입 1회뿐이라
-        // 적이 움직이면 빗나가는데, 이건 윈도우 내내 facing을 따라붙인다. LockRotation과 무관(워프 별도 권한).
-        public bool  WarpFaceTarget = false;
-        public float WarpTurnSpeed  = 720f;  // 락온 회전 각속도(도/초). 0 = 즉시(스냅처럼)
+        public float StopDistance = 1.2f;   // 타겟 앞 정지 거리 (관통 방지) — 이동 워프 전용
+
+        // [타겟 조준] FaceWindow 동안 타겟을 향해 회전. Snap(1회)·Lock-on(지속) 통합:
+        //   FaceWindow [0,0] = 진입 1회 스냅 / [0,0.5]처럼 넓히면 지속 락온(적이 움직여도 따라붙음).
+        //   TurnSpeed 0 = 즉시(스냅). 이동 워프와 독립(회전만) — 트래킹 없이도 동작. LockRotation과도 무관.
+        //   ※ 구 WarpFaceTarget(락온)을 이 필드로 승계(FormerlySerializedAs) — 구 SnapRotation(1회)은 FaceWindow[0,0]로 표현.
+        [FormerlySerializedAs("WarpFaceTarget")] public bool FaceTarget = false;
+        [Range(0f, 1f)] public float FaceWindowStart = 0f;     // 조준 작동 구간 (normalizedTime)
+        [Range(0f, 1f)] public float FaceWindowEnd   = 0f;     // Start==End(=0) → 진입 1회 스냅
+        [FormerlySerializedAs("WarpTurnSpeed")] public float FaceTurnSpeed = 720f;  // 회전 각속도(도/초). 0 = 즉시
 
         [Header("Section Turn — 구워진 턴 회전을 transform으로 추출 (RootMotion 전용)")]
         // 클립에 구워진 회전(턴)을 Bip001 yaw 델타로 매 프레임 뽑아 transform에 적용한다.
@@ -124,12 +130,19 @@ namespace ZZZ
         public AnimationConfig TargetConfig;        // null = 현재 config
         public string          TargetSection = "";  // 빈 값 = (현재)복귀 / (타겟)EntrySection
         public float           BlendDuration = 0.01f;  // 이 전이가 발동할 때 CrossFade 시간(초)
+        // 이 전이로 진입 시 대상 섹션을 이 normalizedTime 지점부터 재생 (0 = 처음부터). 윈드업 스킵 등.
+        // 이 지점 이전의 Notify는 발동하지 않는다. ※ E 트리거(InterruptWith) 진입엔 적용 안 됨 — 링크 전이 전용.
+        [Range(0f, 1f)] public float EntryOffset = 0f;
 
         [Header("Condition — 공격/방향 입력 조건 (AND)")]
         [FormerlySerializedAs("Input")]
         public ComboInput Attack    = ComboInput.None;  // 요구 공격 입력 (None = 공격 없음)
         [FormerlySerializedAs("Move")]
         public MoveDir    Direction = MoveDir.Any;       // 요구 방향 입력 (Any = 상관없음)
+        // true면 Attack 키가 "지금 눌려있을(held) 때" 조건 충족 — 누름 버퍼(짧은 선입력) 대신 홀드 상태를 본다.
+        // 차지 루프용: OnEnd 자기-루프 + RequireHeld + EntryOffset → E 누르고 있는 동안 구간 반복.
+        // Attack이 None/Any면 무시(홀드 개념 없음). 키 추적은 PlayerStateMachine이 SetHeld로 하는 입력만.
+        public bool RequireHeld = false;
 
         [Header("Timing — 언제 평가할지")]
         public LinkTiming Timing = LinkTiming.WhenMatched;

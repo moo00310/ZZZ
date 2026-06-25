@@ -27,8 +27,9 @@ namespace ZZZ.Player.StateMachine
         public void ApplyAnimatorSpeed(float speed = 1f) => _animator.speed = speed;
 
         // 클립을 layer 0에 CrossFade. crossFade는 "초" 단위(고정 시간)라 config의 BlendDuration(초)과 단위가 일치.
-        public void Play(string stateName, float crossFade = 0.01f)
-            => _animator.CrossFadeInFixedTime(stateName, crossFade, 0);
+        // fixedTimeOffset(초) = 대상 클립을 그 지점부터 재생 (중간 프레임 진입). 0 = 처음부터.
+        public void Play(string stateName, float crossFade = 0.01f, float fixedTimeOffset = 0f)
+            => _animator.CrossFadeInFixedTime(stateName, crossFade, 0, fixedTimeOffset);
 
         // ── Hit Shake (Additive) ──────────────────────────────────
         // Hit config 클립의 Notify(EventName="OnHitShake")가 SendMessage로 호출한다.

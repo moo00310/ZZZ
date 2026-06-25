@@ -14,7 +14,11 @@ namespace ZZZ.Combat
         private static readonly Collider[] s_hits = new Collider[16];
 
         // 부채꼴 안에서 가장 가까운 생존 HitTarget의 Transform (없으면 null)
-        public Transform FindTarget()
+        public Transform FindTarget() => FindTarget(out _);
+
+        // 위와 동일하되 가장 가까운 적까지의 수평 거리도 함께 반환 (적 없으면 distance = float.MaxValue).
+        // 거리별 진입 섹션 분기(근/중/원) 등에서 사용 — 탐색을 한 번만 돌리도록 out으로 묶었다.
+        public Transform FindTarget(out float distance)
         {
             int count = Physics.OverlapSphereNonAlloc(
                 transform.position, _radius, s_hits, _mask, QueryTriggerInteraction.Collide);
@@ -37,6 +41,7 @@ namespace ZZZ.Combat
                 best     = target.transform;
                 bestDist = dist;
             }
+            distance = best != null ? bestDist : float.MaxValue;
             return best;
         }
 

@@ -25,6 +25,7 @@ MonoBehaviour:
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 1
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -32,7 +33,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 1
@@ -40,6 +44,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Run_End
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -48,6 +53,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0.05
+      EntryOffset: 0
       Attack: 5
       Direction: 7
       Timing: 0
@@ -63,6 +69,7 @@ MonoBehaviour:
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -70,7 +77,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 1
@@ -78,6 +88,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -86,6 +97,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.2
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 0
@@ -101,6 +113,7 @@ MonoBehaviour:
     LockWindowStart: 0
     LockWindowEnd: 0.42211825
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -108,7 +121,10 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 1
     TurnWindowStart: 0
     TurnWindowEnd: 0.42211825
@@ -116,6 +132,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0
+      EntryOffset: 0
       Attack: 5
       Direction: 7
       Timing: 0
@@ -124,6 +141,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Run_Loop
       BlendDuration: 0
+      EntryOffset: 0
       Attack: 5
       Direction: 2
       Timing: 2
@@ -132,6 +150,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 0}
       TargetSection: Run_End
       BlendDuration: 0
+      EntryOffset: 0
       Attack: 5
       Direction: 1
       Timing: 2
@@ -143,6 +162,7 @@ MonoBehaviour:
   - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
     TargetSection: Attack_Normal_01
     BlendDuration: 0.01
+    EntryOffset: 0
     Attack: 0
     Direction: 0
     Timing: 0

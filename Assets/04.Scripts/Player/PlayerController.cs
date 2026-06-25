@@ -61,11 +61,13 @@ namespace ZZZ.Player
         private float _boostDuration;
         private float _boostTimeLeft;
 
-        // 타겟 워프 — 공격 루트모션을 적 방향으로 재조준 (ConfigState가 설정)
-        private Transform _warpTarget;
+        // 타겟 워프 — 공격 루트모션을 적 방향으로 재조준 (ConfigState가 설정).
+        // 이동(translate)과 회전(faceTarget)은 독립 — 회전만 켜고 이동 워프는 끌 수 있다.
+        private Transform _warpTarget;         // 이동/회전 공통 타겟 (같은 적)
         private float     _warpStopDistance;
-        private bool      _warpFaceTarget;     // 윈도우 동안 매 프레임 타겟 향해 회전(락온)
-        private float     _warpTurnSpeed;      // 락온 회전 각속도(도/초). 0 = 즉시
+        private bool      _warpTranslate;      // 루트모션 수평 이동을 적 방향으로 끌어올지 (false면 회전만, 이동 워프 없음)
+        private bool      _faceEnabled;        // FaceWindow 동안 타겟 향해 회전(스냅/락온 통합)
+        private float     _faceTurnSpeed;      // 회전 각속도(도/초). 0 = 즉시(스냅)
         private ZZZ.Combat.EnemySensor _enemySensor;
 
         public bool UseCodeMovement { get; set; } = true;
@@ -116,23 +118,29 @@ namespace ZZZ.Player
 
         // ── 타겟 워프 API (ConfigState가 구동) ─────────────────────
         public ZZZ.Combat.EnemySensor EnemySensor => _enemySensor;
-        public bool WarpWindowActive { get; set; }   // 트래킹 윈도우 안인지 — ConfigState가 매 프레임 갱신
+        public bool WarpWindowActive { get; set; }   // 이동 워프 윈도우 안인지 — ConfigState가 매 프레임 갱신
+        public bool FaceWindowActive { get; set; }   // 타겟 조준 윈도우 안인지 — ConfigState가 매 프레임 갱신
 
-        public void SetWarpTarget(Transform target, float stopDistance,
-            bool faceTarget = false, float turnSpeed = 720f)
+        // translate = 이동 워프(EnableTracking), face = 타겟 조준(FaceTarget) — 둘은 독립. 같은 적 타겟 공유.
+        public void SetWarpTarget(Transform target, float stopDistance, bool translate,
+            bool face = false, float faceTurnSpeed = 720f)
         {
             _warpTarget       = target;
             _warpStopDistance = stopDistance;
-            _warpFaceTarget   = faceTarget;
-            _warpTurnSpeed    = turnSpeed;
+            _warpTranslate    = translate;
+            _faceEnabled      = face;
+            _faceTurnSpeed    = faceTurnSpeed;
             WarpWindowActive  = false;
+            FaceWindowActive  = false;
         }
 
         public void ClearWarpTarget()
         {
             _warpTarget      = null;
-            _warpFaceTarget  = false;
+            _warpTranslate   = false;
+            _faceEnabled     = false;
             WarpWindowActive = false;
+            FaceWindowActive = false;
         }
 
         // 즉시 회전 (공격 진입 시 타겟 방향 스냅)
@@ -161,12 +169,12 @@ namespace ZZZ.Player
             ApplyStartBoost();
         }
 
-        // 락온 facing — 워프 윈도우 동안 매 프레임 타겟을 향해 transform을 회전한다.
-        // SnapRotation(진입 1회)과 달리 적이 움직여도 계속 따라붙는다. 입력 회전 잠금(LockRotation)과
-        // 무관하게 워프가 회전 권한을 갖는다. 단, 섹션 턴(ExtractRootRotation)이 회전을 소유하면 양보.
+        // 타겟 조준 facing — FaceWindow 동안 매 프레임 타겟을 향해 transform을 회전한다.
+        // FaceWindow[0,0](진입 1회)면 스냅, 넓히면 적이 움직여도 따라붙는 락온. TurnSpeed 0 = 즉시.
+        // 입력 회전 잠금(LockRotation)과 무관하게 회전 권한을 갖는다. 단, 섹션 턴(ExtractRootRotation)이 회전을 소유하면 양보.
         private void UpdateWarpFacing()
         {
-            if (!_warpFaceTarget || _warpTarget == null || !WarpWindowActive) return;
+            if (!_faceEnabled || _warpTarget == null || !FaceWindowActive) return;
             if (ExtractRootRotation) return;
 
             Vector3 to = _warpTarget.position - transform.position;
@@ -174,8 +182,8 @@ namespace ZZZ.Player
             if (to.sqrMagnitude < 0.0001f) return;
 
             Quaternion target = Quaternion.LookRotation(to);
-            transform.rotation = _warpTurnSpeed > 0f
-                ? Quaternion.RotateTowards(transform.rotation, target, _warpTurnSpeed * Time.deltaTime)
+            transform.rotation = _faceTurnSpeed > 0f
+                ? Quaternion.RotateTowards(transform.rotation, target, _faceTurnSpeed * Time.deltaTime)
                 : target;
         }
 
@@ -202,9 +210,9 @@ namespace ZZZ.Player
 
             float step = _boostSpeed * ramp * Time.deltaTime;
 
-            // 워프 타겟이 있으면 부스트도 타겟 방향 + StopDistance 클램프
-            // (제자리 공격 클립의 흡착을 부스트가 담당)
-            if (_warpTarget != null)
+            // 이동 워프가 켜졌고 타겟이 있으면 부스트도 타겟 방향 + StopDistance 클램프
+            // (제자리 공격 클립의 흡착을 부스트가 담당). 회전만 켠 경우(_warpTranslate=false)엔 원본 방향 유지.
+            if (_warpTarget != null && _warpTranslate)
             {
                 Vector3 to = _warpTarget.position - transform.position;
                 to.y = 0f;
@@ -419,7 +427,7 @@ namespace ZZZ.Player
         // 크기는 원본 delta를 유지 → 애니메이션이 만든 속도감 보존, 방향만 휘어짐.
         private void WarpRootMotion(ref Vector3 move)
         {
-            if (_warpTarget == null || !WarpWindowActive) return;
+            if (_warpTarget == null || !WarpWindowActive || !_warpTranslate) return;
 
             Vector3 to = _warpTarget.position - transform.position;
             to.y = 0f;

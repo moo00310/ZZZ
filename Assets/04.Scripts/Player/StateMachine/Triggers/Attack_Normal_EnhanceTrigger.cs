@@ -1,5 +1,6 @@
 using UnityEngine;
 using ZZZ;
+using ZZZ.Combat;
 using ZZZ.Player.StateMachine.States;
 
 namespace ZZZ.Player.StateMachine
@@ -8,39 +9,62 @@ namespace ZZZ.Player.StateMachine
     // 콤보 중에는 각 공격 섹션의 Attack_Normal_Enhance 링크가 윈도우 안에서 입력을 소비해 진입하고(우선),
     // 걷기/Idle처럼 링크가 없는 상태에서는 이 트리거가 입력을 받아 강화 공격 config로 강제 진입한다.
     // 그래서 PlayerStateMachine은 _state.Update(콤보 링크 평가) 이후 입력이 남아 있을 때만 이걸 부른다.
+    //
+    // 섹션 선택 — 방향 우선, 그다음 거리.
+    //   이동 입력 Forward(W) → 앞 섹션 / Back(S) → 뒤 섹션 (전용 모션: 전진 돌진 / 백스텝 카운터 등).
+    //   그 외(Neutral·Left·Right) → 전방 적과의 거리로 근/중/원 분기 (근접 강타 / 원거리 대시).
+    //   방향 전용 섹션이 아직 config에 없으면 거리 분기로 폴백, 거리 변종이 없으면 가까운 단계로 폴백.
     public class Attack_Normal_EnhanceTrigger
     {
         private readonly PlayerStateMachine _machine;
         private readonly ConfigState        _state;
         private readonly ConfigRegistry     _registry;
         private readonly InputBuffer        _input;
-        private readonly string             _section;       // 진입 섹션 (특수 config의 EntrySection)
+        private readonly EnemySensor        _sensor;
+        private readonly string             _sectionNear;     // 근접(기본) 진입 섹션
+        private readonly string             _sectionMid;      // 중거리 진입 섹션
+        private readonly string             _sectionFar;      // 원거리 진입 섹션
+        private readonly string             _sectionForward;  // 앞방향(W)+E 진입 섹션
+        private readonly string             _sectionBack;     // 뒷방향(S)+E 진입 섹션
+        private readonly float              _midDist;         // 이 거리 이상 → 중거리
+        private readonly float              _farDist;         // 이 거리 이상 → 원거리
         private readonly float              _blend;
-        private readonly float              _reinterrupt;   // 시전 중 재입력 무시 임계
+        private readonly float              _reinterrupt;     // 시전 중 재입력 무시 임계
 
         public Attack_Normal_EnhanceTrigger(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
-            InputBuffer input, string section, float blend, float reinterrupt)
+            InputBuffer input, EnemySensor sensor,
+            string sectionNear, string sectionMid, string sectionFar,
+            string sectionForward, string sectionBack, float midDist, float farDist,
+            float blend, float reinterrupt)
         {
-            _machine     = machine;
-            _state       = state;
-            _registry    = registry;
-            _input       = input;
-            _section     = section;
-            _blend       = blend;
-            _reinterrupt = reinterrupt;
+            _machine        = machine;
+            _state          = state;
+            _registry       = registry;
+            _input          = input;
+            _sensor         = sensor;
+            _sectionNear    = sectionNear;
+            _sectionMid     = sectionMid;
+            _sectionFar     = sectionFar;
+            _sectionForward = sectionForward;
+            _sectionBack    = sectionBack;
+            _midDist        = midDist;
+            _farDist        = farDist;
+            _blend          = blend;
+            _reinterrupt    = reinterrupt;
         }
 
         public void Trigger()
         {
-            var cfg = _registry.FindWithSection(_section);
+            string section = PickSection();
+            var    cfg     = _registry.FindWithSection(section);
             if (cfg == null)
             {
-                Debug.LogWarning($"[Attack_Normal_Enhance] '{_section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", _machine);
+                Debug.LogWarning($"[Attack_Normal_Enhance] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", _machine);
                 return;
             }
 
             // 재진입 가드 — 이미 같은 스킬 시전 중이고 진행도가 낮으면 무시(연타로 무한 갱신 방지)
-            if (_state.CurrentConfig == cfg && _state.ActiveSection == _section
+            if (_state.CurrentConfig == cfg && _state.ActiveSection == section
                 && _state.CurrentNormalizedTime < _reinterrupt)
             {
                 _input.Consume();
@@ -48,7 +72,35 @@ namespace ZZZ.Player.StateMachine
             }
 
             _input.Consume();
-            _state.InterruptWith(cfg, _section, _blend);
+            _state.InterruptWith(cfg, section, _blend);
         }
+
+        // 방향 우선 → 중립이면 거리. 이동 입력 Forward/Back은 전용 섹션, 그 외는 거리 분기로.
+        // 방향 전용 섹션이 config에 없으면 거리 분기로 폴백.
+        private string PickSection()
+        {
+            switch (_machine.CurrentMoveDir)
+            {
+                case MoveDir.Forward: return Resolve(_sectionForward) ?? PickSectionByDistance();
+                case MoveDir.Back:    return Resolve(_sectionBack)    ?? PickSectionByDistance();
+                default:              return PickSectionByDistance();   // Neutral·Left·Right → 거리
+            }
+        }
+
+        // 전방 적과의 수평 거리로 근/중/원 섹션 선택. 적이 없으면 근접.
+        // 변종 섹션이 아직 config에 없으면 한 단계 가까운 쪽으로 폴백(원→중→근).
+        private string PickSectionByDistance()
+        {
+            if (_sensor == null) return _sectionNear;
+            if (_sensor.FindTarget(out float dist) == null) return _sectionNear;   // 적 없음 → 근접
+
+            if (dist >= _farDist) return Resolve(_sectionFar) ?? Resolve(_sectionMid) ?? _sectionNear;
+            if (dist >= _midDist) return Resolve(_sectionMid) ?? _sectionNear;
+            return _sectionNear;
+        }
+
+        // config에 실제로 존재하는 섹션이면 그대로, 아니면 null (폴백 신호)
+        private string Resolve(string section)
+            => !string.IsNullOrEmpty(section) && _registry.FindWithSection(section) != null ? section : null;
     }
 }

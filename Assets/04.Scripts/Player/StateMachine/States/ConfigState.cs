@@ -47,7 +47,7 @@ namespace ZZZ.Player.StateMachine.States
         }
 
         // config를 갈아끼우고 지정 섹션(비면 EntrySection)으로 진입
-        private void SwitchConfig(AnimationConfig config, string section, float blend)
+        private void SwitchConfig(AnimationConfig config, string section, float blend, float startOffset = 0f)
         {
             _config = config;
             if (_config == null || _config.Clips.Count == 0) { _active = -1; return; }
@@ -56,7 +56,7 @@ namespace ZZZ.Player.StateMachine.States
                 ? _config.IndexOfSection(section)
                 : _config.IndexOfSection(_config.EntrySection);
             _active = idx >= 0 ? idx : 0;
-            PlayActive(blend);
+            PlayActive(blend, startOffset);
         }
 
         public void Update()
@@ -73,6 +73,7 @@ namespace ZZZ.Player.StateMachine.States
 
             FireNotifies(tc, ntRaw);
             UpdateWarpWindow(tc, ntRaw);
+            UpdateFaceWindow(tc, ntRaw);
             UpdateRotationWindows(tc, ntRaw);
             TickModules(tc, ntRaw);
 
@@ -189,10 +190,10 @@ namespace ZZZ.Player.StateMachine.States
 
         private void TakeLink(ClipLink link)
         {
-            // 다른 config로 전이
+            // 다른 config로 전이 (EntryOffset → 대상 섹션 중간 프레임부터)
             if (link.TargetConfig != null && link.TargetConfig != _config)
             {
-                SwitchConfig(link.TargetConfig, link.TargetSection, link.BlendDuration);
+                SwitchConfig(link.TargetConfig, link.TargetSection, link.BlendDuration, link.EntryOffset);
                 return;
             }
 
@@ -200,14 +201,15 @@ namespace ZZZ.Player.StateMachine.States
             int ti = _config.IndexOfSection(link.TargetSection);
             if (ti < 0)
             {
-                SwitchConfig(_homeConfig, null, link.BlendDuration);
+                SwitchConfig(_homeConfig, null, link.BlendDuration, link.EntryOffset);
                 return;
             }
             _active = ti;
-            PlayActive(link.BlendDuration);
+            PlayActive(link.BlendDuration, link.EntryOffset);
         }
 
-        private void PlayActive(float blend)
+        // startOffset(normalizedTime, 0~1) = 대상 클립을 그 지점부터 재생(중간 프레임 진입). 0 = 처음부터.
+        private void PlayActive(float blend, float startOffset = 0f)
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
@@ -217,7 +219,17 @@ namespace ZZZ.Player.StateMachine.States
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
 
-            Ctx.Animator.Play(tc.Clip.name, blend);
+            // 중간 프레임 진입 — 로직 타임라인(_clipTime)과 애니 시작점을 같은 normalizedTime으로 맞춘다.
+            // SectionNormalizedTime = _clipTime * Speed / length 이므로 _clipTime = off * length / Speed.
+            float offsetSec = 0f;
+            if (startOffset > 0f && tc.Clip.length > 0f)
+            {
+                float off = Mathf.Clamp01(startOffset);
+                _clipTime = off * tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
+                offsetSec = off * tc.Clip.length;   // CrossFade는 클립 초(speed 무관) 단위
+            }
+
+            Ctx.Animator.Play(tc.Clip.name, blend, offsetSec);
             // 비주얼 재생 속도를 로직 타임라인(SectionNormalizedTime의 Speed)과 일치시킨다.
             // 안 맞추면 애니는 1배속으로 끝나 freeze되고 로직만 Speed배로 흘러 OnEnd가 늦게/일찍 발동(전환 딜레이).
             Ctx.Animator.ApplyAnimatorSpeed(tc.Speed);
@@ -234,7 +246,7 @@ namespace ZZZ.Player.StateMachine.States
 
             // 진입 스냅 — 이동 입력이 있으면 그쪽으로 즉시 회전 후(LockRotation이면) 고정.
             // 콤보가 새 섹션으로 진입하는 순간이 곧 "콤보 사이" 재조준 지점이 된다.
-            // 입력이 있으면 아래 적 방향 스냅(SnapRotation)보다 우선한다.
+            // 입력이 있으면 아래 적 방향 조준(FaceTarget 진입 스냅)보다 우선한다.
             bool facedInput = false;
             if (tc.FaceInputOnEnter)
             {
@@ -246,18 +258,21 @@ namespace ZZZ.Player.StateMachine.States
                 }
             }
 
-            // 타겟 워프 — 전방 적이 있으면 루트모션을 적 방향으로 보정 (없으면 원본 그대로)
-            // 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
+            // 타겟 기반 기능 — 이동 워프(EnableTracking)와 타겟 조준(FaceTarget)은 독립 토글.
+            // 하나라도 켜져 있으면 적을 찾는다. 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다.
             Ctx.Controller.ClearWarpTarget();
-            if (tc.MoveMode == MoveMode.RootMotion && tc.EnableTracking)
+            if (tc.MoveMode == MoveMode.RootMotion && (tc.EnableTracking || tc.FaceTarget))
             {
                 var sensor = Ctx.Controller.EnemySensor;
                 var target = sensor != null ? sensor.FindTarget() : null;
                 if (target != null)
                 {
+                    // translate = 이동 워프(EnableTracking), face = 타겟 조준(FaceTarget) — 회전은 트래킹과 무관
                     Ctx.Controller.SetWarpTarget(target, tc.StopDistance,
-                        tc.WarpFaceTarget, tc.WarpTurnSpeed);
-                    if (tc.SnapRotation && !facedInput)
+                        tc.EnableTracking, tc.FaceTarget, tc.FaceTurnSpeed);
+                    // 진입 1회 스냅 — FaceWindow가 0부터면 첫 프레임에 즉시 정렬(입력 조준이 있으면 양보).
+                    // 이후 FaceWindow 동안의 지속 회전(락온)은 컨트롤러 UpdateWarpFacing이 담당.
+                    if (tc.FaceTarget && tc.FaceWindowStart <= 0f && !facedInput)
                         Ctx.Controller.FaceToward(target.position - Ctx.Transform.position);
                 }
             }
@@ -271,6 +286,10 @@ namespace ZZZ.Player.StateMachine.States
                 tc.Modules[i]?.OnEnter(tc, _sc);
 
             _notifyFired = new bool[tc.Notifies.Count];
+            // 중간 진입 시 그 지점 이전의 Notify는 이미 지난 것으로 처리 — 진입하자마자 무더기 발동 방지.
+            if (startOffset > 0f)
+                for (int i = 0; i < tc.Notifies.Count; i++)
+                    if (tc.Notifies[i].NormalizedTime < startOffset) _notifyFired[i] = true;
         }
 
         // 섹션 진입 후 경과 시간을 normalizedTime으로 변환 (Speed 반영, 루프는 계속 증가)
@@ -280,12 +299,20 @@ namespace ZZZ.Player.StateMachine.States
             return _clipTime * Mathf.Max(0.01f, tc.Speed) / tc.Clip.length;
         }
 
-        // 트래킹 윈도우 안에서만 워프 작동 — 타격 이후 적을 따라 휙 도는 것 방지
+        // 이동 워프 윈도우 — TrackWindow 안에서만 이동 재조준 작동 (타격 이후 적을 따라 휙 도는 것 방지)
         private void UpdateWarpWindow(TrackClip tc, float ntRaw)
         {
-            if (!tc.EnableTracking) return;
+            if (!tc.EnableTracking) { Ctx.Controller.WarpWindowActive = false; return; }
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
             Ctx.Controller.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
+        }
+
+        // 타겟 조준 윈도우 — FaceWindow 안에서 컨트롤러가 타겟을 향해 회전. [0,0]이면 진입 1회(스냅), 넓히면 락온.
+        private void UpdateFaceWindow(TrackClip tc, float ntRaw)
+        {
+            if (!tc.FaceTarget) { Ctx.Controller.FaceWindowActive = false; return; }
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+            Ctx.Controller.FaceWindowActive = p >= tc.FaceWindowStart && p <= tc.FaceWindowEnd;
         }
 
         // 입력 회전 잠금(LockRotation)을 normalizedTime 구간에서만 작동시킨다. End<=Start면 섹션 전체.
@@ -346,7 +373,7 @@ namespace ZZZ.Player.StateMachine.States
         // 링크의 공격+방향 조건이 현재 입력 상태와 모두 맞는지
         private bool ConditionMatches(ClipLink link, MoveDir moveDir)
         {
-            return AttackMatches(link.Attack) && MoveConditionMatches(link, moveDir);
+            return AttackMatches(link) && MoveConditionMatches(link, moveDir);
         }
 
         // 방향 조건만 (Attack 제외). Reverse는 카메라 절대 방향이 아니라 현재 facing과의 관계 → dot으로 별도 판정.
@@ -362,9 +389,16 @@ namespace ZZZ.Player.StateMachine.States
             return Vector3.Dot(Ctx.Transform.forward, inputDir) < -0.707f;
         }
 
-        // 공격 입력 조건 (버퍼된 입력 기준)
-        private bool AttackMatches(ComboInput required)
+        // 공격 입력 조건. 기본은 누름 버퍼(짧은 선입력) 기준.
+        // RequireHeld면 그 키가 "지금 눌려있는지(held)"로 판정 — 차지 루프(OnEnd 자기-루프) 등.
+        private bool AttackMatches(ClipLink link)
         {
+            var required = link.Attack;
+
+            // 홀드 조건 — 특정 키가 현재 눌려있으면 충족. None/Any는 홀드 개념이 없어 버퍼 폴백.
+            if (link.RequireHeld && required != ComboInput.None && required != ComboInput.Any)
+                return Machine.IsInputHeld(required);
+
             switch (required)
             {
                 case ComboInput.None: return !Machine.HasBufferedInput;             // 공격 없을 때
