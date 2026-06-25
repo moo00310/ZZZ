@@ -14,43 +14,47 @@ namespace ZZZ.Player.StateMachine
     //   이동 입력 Forward(W) → 앞 섹션 / Back(S) → 뒤 섹션 (전용 모션: 전진 돌진 / 백스텝 카운터 등).
     //   그 외(Neutral·Left·Right) → 전방 적과의 거리로 근/중/원 분기 (근접 강타 / 원거리 대시).
     //   방향 전용 섹션이 아직 config에 없으면 거리 분기로 폴백, 거리 변종이 없으면 가까운 단계로 폴백.
+    //
+    // 설정은 이 객체가 직접 들고, 런타임 의존은 Init으로 주입한다.
+    [System.Serializable]
     public class Attack_Normal_EnhanceTrigger
     {
-        private readonly PlayerStateMachine _machine;
-        private readonly ConfigState        _state;
-        private readonly ConfigRegistry     _registry;
-        private readonly InputBuffer        _input;
-        private readonly EnemySensor        _sensor;
-        private readonly string             _sectionNear;     // 근접(기본) 진입 섹션
-        private readonly string             _sectionMid;      // 중거리 진입 섹션
-        private readonly string             _sectionFar;      // 원거리 진입 섹션
-        private readonly string             _sectionForward;  // 앞방향(W)+E 진입 섹션
-        private readonly string             _sectionBack;     // 뒷방향(S)+E 진입 섹션
-        private readonly float              _midDist;         // 이 거리 이상 → 중거리
-        private readonly float              _farDist;         // 이 거리 이상 → 원거리
-        private readonly float              _blend;
-        private readonly float              _reinterrupt;     // 시전 중 재입력 무시 임계
+        [Header("진입 섹션 — 방향 우선(앞W/뒤S), 중립이면 거리(근/중/원)")]
+        [Tooltip("앞방향(W)+E 진입 섹션")]
+        [SerializeField] private string _sectionForward = "Attack_Normal_Enhance_Front_01";
+        [Tooltip("뒷방향(S)+E 진입 섹션")]
+        [SerializeField] private string _sectionBack    = "Attack_Normal_Enhance_Back_01";
+        [Tooltip("근접(기본·중립) 진입 섹션")]
+        [SerializeField] private string _sectionNear    = "Attack_Normal_Enhance_01";
+        [Tooltip("중거리 진입 섹션")]
+        [SerializeField] private string _sectionMid     = "Attack_Normal_Enhance_02";
+        [Tooltip("원거리 진입 섹션")]
+        [SerializeField] private string _sectionFar     = "Attack_Normal_Enhance_03";
 
-        public Attack_Normal_EnhanceTrigger(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
-            InputBuffer input, EnemySensor sensor,
-            string sectionNear, string sectionMid, string sectionFar,
-            string sectionForward, string sectionBack, float midDist, float farDist,
-            float blend, float reinterrupt)
+        [Header("거리 임계 / 전이")]
+        [Tooltip("이 거리 이상 → 중거리 섹션")]
+        [SerializeField] private float _midDist = 2f;
+        [Tooltip("이 거리 이상 → 원거리 섹션")]
+        [SerializeField] private float _farDist = 4f;
+        [SerializeField, Range(0f, 0.2f)] private float _blend = 0.05f;
+        [Tooltip("시전 중 재입력 무시 임계")]
+        [SerializeField, Range(0f, 1f)] private float _reinterrupt = 0.3f;
+
+        // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
+        private PlayerStateMachine _machine;
+        private ConfigState        _state;
+        private ConfigRegistry     _registry;
+        private InputBuffer        _input;
+        private EnemySensor        _sensor;
+
+        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
+            InputBuffer input, EnemySensor sensor)
         {
-            _machine        = machine;
-            _state          = state;
-            _registry       = registry;
-            _input          = input;
-            _sensor         = sensor;
-            _sectionNear    = sectionNear;
-            _sectionMid     = sectionMid;
-            _sectionFar     = sectionFar;
-            _sectionForward = sectionForward;
-            _sectionBack    = sectionBack;
-            _midDist        = midDist;
-            _farDist        = farDist;
-            _blend          = blend;
-            _reinterrupt    = reinterrupt;
+            _machine  = machine;
+            _state    = state;
+            _registry = registry;
+            _input    = input;
+            _sensor   = sensor;
         }
 
         public void Trigger()

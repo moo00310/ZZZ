@@ -7,27 +7,31 @@ namespace ZZZ.Player.StateMachine
     // 피격 반응 트리거 — 외부 이벤트(충돌/적 공격)로 Hit config에 강제 진입한다.
     //   A. 재진입 가드 — 이미 피격 중이고 진행도가 임계값 미만이면 무시(연타 stunlock/프리즈 방지).
     //   escalation — 연속타 카운트로 강도 승격: 홀수타=L, 짝수타=H 교대.
+    // 설정은 이 객체가 직접 들고, 런타임 의존은 Init으로 주입한다.
+    // _parryPrefix(쳐냄 섹션 접두어)는 ParryTrigger와 한 곳에서만 정의하려고 Init으로 받는다.
+    [System.Serializable]
     public class HitTrigger
     {
-        private readonly PlayerStateMachine _machine;
-        private readonly ConfigState        _state;
-        private readonly ConfigRegistry     _registry;
-        private readonly float              _reinterruptThreshold;
-        private readonly float              _entryBlend;   // 진입 CrossFade(초). 크면 클립 앞부분 넉백 root motion이 먹힘 → 작게.
-        private readonly string             _parryPrefix;  // 쳐냄 섹션 접두어 (Attack_ParryAid_ → +L/H)
+        [Tooltip("이미 피격 중일 때, 반응 진행도가 이 값을 넘어야 새 피격이 재시작 (재진입 가드)")]
+        [SerializeField, Range(0f, 1f)] private float _reinterruptThreshold = 0.3f;
+        [Tooltip("피격 진입 CrossFade(초). 전이 중 root motion이 버려지므로 작게 둘 것")]
+        [SerializeField, Range(0f, 0.2f)] private float _entryBlend = 0.03f;
+
+        // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
+        private PlayerStateMachine _machine;
+        private ConfigState        _state;
+        private ConfigRegistry     _registry;
+        private string             _parryPrefix;  // 쳐냄 섹션 접두어 (Attack_ParryAid_ → +L/H) — ParryTrigger와 공유
 
         // 연속 피격 카운트 — hit이 아닌 상태에서 새로 맞으면 0으로 리셋.
         private int _comboHitCount;
 
-        public HitTrigger(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
-            float reinterruptThreshold, float entryBlend, string parryPrefix)
+        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry, string parryPrefix)
         {
-            _machine              = machine;
-            _state                = state;
-            _registry             = registry;
-            _reinterruptThreshold = reinterruptThreshold;
-            _entryBlend           = entryBlend;
-            _parryPrefix          = parryPrefix;
+            _machine     = machine;
+            _state       = state;
+            _registry    = registry;
+            _parryPrefix = parryPrefix;
         }
 
         // 충돌 검출에서 호출 — 공격자 위치로 Front/Back 판정 후 진입.

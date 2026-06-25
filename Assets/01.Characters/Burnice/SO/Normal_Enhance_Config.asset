@@ -53,7 +53,7 @@ MonoBehaviour:
       WindowEnd: 1
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_Enhance_03
-      BlendDuration: 0.1
+      BlendDuration: 0.2
       EntryOffset: 0.55
       Attack: 2
       Direction: 0
@@ -191,7 +191,7 @@ MonoBehaviour:
       WindowEnd: 1
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_Enhance_02
-      BlendDuration: 0.1
+      BlendDuration: 0.2
       EntryOffset: 0.5
       Attack: 2
       Direction: 0
@@ -329,8 +329,8 @@ MonoBehaviour:
       WindowEnd: 1
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Normal_Enhance_03
-      BlendDuration: 0.1
-      EntryOffset: 0.5
+      BlendDuration: 0.2
+      EntryOffset: 0.52
       Attack: 2
       Direction: 0
       RequireHeld: 1

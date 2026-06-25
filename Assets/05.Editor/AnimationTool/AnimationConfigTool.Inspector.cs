@@ -110,15 +110,28 @@ namespace ZZZ.Editor.AnimationTool
             DrawLinksEditor(_config.GlobalLinks);
 
             DrawSeparator();
-            EditorGUILayout.LabelField("Root Motion", EditorStyles.boldLabel);
-            if (_target != null && _target.GetComponentInChildren<ZZZ.Player.PlayerController>() != null)
-                EditorGUILayout.LabelField("PlayerController에서 자동 감지됨", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Root Motion (프리뷰 전용)", EditorStyles.boldLabel);
 
-            _bip001Bone = (Transform)EditorGUILayout.ObjectField("Bip001 Bone", _bip001Bone, typeof(Transform), true);
-            _rootMotionScale = EditorGUILayout.FloatField("RM Scale", _rootMotionScale);
+            // PlayerController가 있으면 _bip001Bone/_rootMotionScale은 거기서 자동 추출된다(AutoDetectRootBones).
+            // 그 경우 수동 입력칸은 무의미(덮어써짐)하므로 읽기전용 표시만, 없을 때만 수동 오버라이드 노출.
+            bool autoDetected = _target != null
+                && _target.GetComponentInChildren<ZZZ.Player.PlayerController>() != null;
+            if (autoDetected)
+            {
+                string boneLabel = _bip001Bone != null ? _bip001Bone.name : "미설정";
+                EditorGUILayout.LabelField("자동 감지",
+                    $"Bip001: {boneLabel}  ·  RM×{_rootMotionScale:0.##}  (PlayerController)",
+                    EditorStyles.miniLabel);
+            }
+            else
+            {
+                // PlayerController 없는 타겟 → 수동 오버라이드(폴백)
+                _bip001Bone = (Transform)EditorGUILayout.ObjectField("Bip001 Bone", _bip001Bone, typeof(Transform), true);
+                _rootMotionScale = EditorGUILayout.FloatField("RM Scale", _rootMotionScale);
+            }
 
             EditorGUILayout.HelpBox(
-                "클립 Move Mode = RootMotion이면\nBip001 이동량이 GameObject에 적용됩니다.",
+                "클립 Move Mode = RootMotion이면\nBip001 이동량이 프리뷰 캐릭터에 적용됩니다 (런타임/빌드엔 무관).",
                 MessageType.None);
 
             DrawSeparator();
@@ -142,17 +155,17 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUI.BeginChangeCheck();
-                if (m is IFrameModule ifm)
+                if (m is WindowModule wm)   // 윈도우 모듈(무적/패링/…) 공용 — Start/End 슬라이더
                 {
-                    float s = ifm.Start, e = ifm.End;
+                    float s = wm.Start, e = wm.End;
                     EditorGUILayout.MinMaxSlider(
-                        new GUIContent($"   Window  {s:F2}~{e:F2}", "무적이 작동하는 normalizedTime 구간"),
+                        new GUIContent($"   Window  {s:F2}~{e:F2}", "이 모듈이 작동하는 normalizedTime 구간"),
                         ref s, ref e, 0f, 1f);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_config, "Edit Module");
-                        ifm.Start = Mathf.Clamp01(Mathf.Min(s, e));
-                        ifm.End   = Mathf.Clamp01(Mathf.Max(s, e));
+                        wm.Start = Mathf.Clamp01(Mathf.Min(s, e));
+                        wm.End   = Mathf.Clamp01(Mathf.Max(s, e));
                         EditorUtility.SetDirty(_config);
                     }
                 }
@@ -168,14 +181,36 @@ namespace ZZZ.Editor.AnimationTool
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Add:", GUILayout.Width(34));
-            using (new EditorGUI.DisabledScope(tc.Modules.Exists(x => x is IFrameModule)))
-                if (GUILayout.Button("I-Frame", GUILayout.Width(80)))
-                {
-                    Undo.RecordObject(_config, "Add Module");
-                    tc.Modules.Add(new IFrameModule());
-                    EditorUtility.SetDirty(_config);
-                }
+            // 등록된 모든 SectionModule 타입을 드롭다운으로 나열 — 새 모듈 추가 = 클래스 1개 추가뿐.
+            if (GUILayout.Button("＋ 모듈 선택", EditorStyles.popup, GUILayout.Width(160)))
+                ShowAddModuleMenu(tc);
             EditorGUILayout.EndHorizontal();
+        }
+
+        // SectionModule을 상속한 모든(비추상) 타입을 메뉴로 띄워 추가. 이미 있는 타입은 비활성.
+        private void ShowAddModuleMenu(TrackClip tc)
+        {
+            var menu = new GenericMenu();
+            foreach (var t in TypeCache.GetTypesDerivedFrom<SectionModule>())
+            {
+                if (t.IsAbstract) continue;
+                var sample = (SectionModule)System.Activator.CreateInstance(t);
+                var label  = new GUIContent(sample.MenuName);
+
+                if (tc.Modules.Exists(x => x != null && x.GetType() == t))
+                    menu.AddDisabledItem(new GUIContent(sample.MenuName + "  (이미 있음)"));
+                else
+                {
+                    var type = t;   // 클로저 캡처
+                    menu.AddItem(label, false, () =>
+                    {
+                        Undo.RecordObject(_config, "Add Module");
+                        tc.Modules.Add((SectionModule)System.Activator.CreateInstance(type));
+                        EditorUtility.SetDirty(_config);
+                    });
+                }
+            }
+            menu.ShowAsContext();
         }
 
         private void DrawClipInspector(TrackClip tc, int idx)

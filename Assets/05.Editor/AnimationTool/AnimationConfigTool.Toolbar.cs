@@ -94,12 +94,15 @@ namespace ZZZ.Editor.AnimationTool
 
             if (_comboMode)
             {
-                InputToggle(ComboInput.Normal,   "Normal",   64);
-                InputToggle(ComboInput.Enhanced, "Enhanced", 72);
-                InputToggle(ComboInput.Attack_Normal_Enhance, "Enhance", 64);
-                InputToggle(ComboInput.Dodge,    "Dodge",    56);
-                if (GUILayout.Button("Clear", GUILayout.Width(48)))
-                    System.Array.Clear(_heldInput, 0, _heldInput.Length);
+                // 공격 입력은 한 번에 하나만 누름 → 토글 줄 대신 단일 드롭다운 (Move처럼 접음)
+                GUILayout.Label("Attack", GUILayout.Width(44));
+                ComboInput curAtk = CurrentHeldAttack();
+                int curIdx = Mathf.Max(0, System.Array.IndexOf(s_attackInputs, curAtk));
+                var prevBg = GUI.backgroundColor;
+                if (curAtk != ComboInput.None) GUI.backgroundColor = InputColor(curAtk);   // 눌린 입력 색 표시
+                int newIdx = EditorGUILayout.Popup(curIdx, s_attackInputLabels, GUILayout.Width(90));
+                GUI.backgroundColor = prevBg;
+                if (newIdx != curIdx) SetHeldAttack(s_attackInputs[newIdx]);
 
                 GUILayout.Label("Move", GUILayout.Width(36));
                 _simMoveDir = (MoveDir)EditorGUILayout.EnumPopup(_simMoveDir, GUILayout.Width(72));
@@ -132,15 +135,25 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
-        // 눌러두면 유지되는 입력 토글
-        private void InputToggle(ComboInput input, string label, float width)
+        // 콤보 프리뷰에서 선택 가능한 공격 입력 (None = 아무것도 안 누름). 한 번에 하나만.
+        private static readonly ComboInput[] s_attackInputs =
+            { ComboInput.None, ComboInput.Normal, ComboInput.Enhanced, ComboInput.Attack_Normal_Enhance, ComboInput.Dodge };
+        private static readonly string[]     s_attackInputLabels =
+            { "None", "Normal", "Enhanced", "Enhance", "Dodge" };
+
+        // 현재 눌러둔(held) 공격 입력 — 없으면 None. (_heldInput에서 역으로 읽음)
+        private ComboInput CurrentHeldAttack()
         {
-            bool held = _heldInput[(int)input];
-            var prevBg = GUI.backgroundColor;
-            if (held) GUI.backgroundColor = InputColor(input);
-            bool next = GUILayout.Toggle(held, label, "Button", GUILayout.Width(width));
-            GUI.backgroundColor = prevBg;
-            _heldInput[(int)input] = next;
+            foreach (var ci in s_attackInputs)
+                if (ci != ComboInput.None && _heldInput[(int)ci]) return ci;
+            return ComboInput.None;
+        }
+
+        // 드롭다운 선택 반영 — 하나만 held로 두고 나머지는 해제 (None이면 전부 해제)
+        private void SetHeldAttack(ComboInput ci)
+        {
+            System.Array.Clear(_heldInput, 0, _heldInput.Length);
+            if (ci != ComboInput.None) _heldInput[(int)ci] = true;
         }
     }
 }

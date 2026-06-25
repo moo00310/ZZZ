@@ -21,34 +21,17 @@ namespace ZZZ.Player.StateMachine
         // config가 새로 생기면 이 리스트에 드롭만 하면 됨 (재생할 섹션 이름으로 자동 검색 — ConfigRegistry).
         [SerializeField] private List<AnimationConfig> _configs = new List<AnimationConfig>();
 
-        [Header("Dodge — 어떤 config에서든 회피 입력 시 강제 진입 (push)")]
-        [SerializeField] private string _dodgePrefix     = "Evade_";  // 섹션 접두어 (Evade_Front 등)
-        [SerializeField, Range(0f, 0.2f)] private float _dodgeBlend = 0.05f;
-        [SerializeField, Range(0f, 1f)]   private float _dodgeReinterrupt = 0.3f;  // 회피 중 재입력 무시 임계
-
-        [Header("Parry — 어떤 config에서든 패링 입력 시 스탠스 진입 (push)")]
-        [SerializeField] private string _parryPrefix     = "Attack_ParryAid_";  // 섹션 접두어 (Attack_ParryAid_Start 등)
-        [SerializeField, Range(0f, 0.2f)] private float _parryBlend = 0.05f;
-        [SerializeField, Range(0f, 1f)]   private float _parryReinterrupt = 0.3f;  // 스탠스 중 재입력 무시 임계
-
-        [Header("Attack_Normal_Enhance — 전용 키 입력 시 강화 공격 진입 (콤보 링크가 못 받은 경우의 전역 폴백)")]
-        // 진입 섹션 선택 — 방향 우선(앞W/뒤S), 중립이면 전방 적과의 거리로 근/중/원 분기.
-        // 방향 전용 섹션이 비거나 config에 없으면 거리 분기로, 거리 변종이 없으면 가까운 단계로 폴백.
-        [SerializeField] private string _attackNormalEnhanceSectionForward = "Attack_Normal_Enhance_Front_01";  // 앞방향(W)+E
-        [SerializeField] private string _attackNormalEnhanceSectionBack    = "Attack_Normal_Enhance_Back_01";   // 뒷방향(S)+E
-        [SerializeField] private string _attackNormalEnhanceSectionNear = "Attack_Normal_Enhance_01";  // 근접(기본·중립)
-        [SerializeField] private string _attackNormalEnhanceSectionMid  = "Attack_Normal_Enhance_02";  // 중거리
-        [SerializeField] private string _attackNormalEnhanceSectionFar  = "Attack_Normal_Enhance_03";  // 원거리
-        [SerializeField] private float  _attackNormalEnhanceMidDistance = 2f;   // 이 거리 이상 → 중거리 섹션
-        [SerializeField] private float  _attackNormalEnhanceFarDistance = 4f;   // 이 거리 이상 → 원거리 섹션
-        [SerializeField, Range(0f, 0.2f)] private float _attackNormalEnhanceBlend = 0.05f;
-        [SerializeField, Range(0f, 1f)]   private float _attackNormalEnhanceReinterrupt = 0.3f;  // 시전 중 재입력 무시 임계
-
-        [Header("Hit")]
-        // 이미 피격 중일 때, 현재 반응 진행도가 이 값을 넘어야 새 피격이 재시작된다 (재진입 가드).
-        [SerializeField, Range(0f, 1f)] private float _hitReinterruptThreshold = 0.3f;
-        // 피격 진입 CrossFade 시간. 전이 중 root motion이 버려지므로(점프 방지) 작게 둘 것.
-        [SerializeField, Range(0f, 0.2f)] private float _hitEntryBlend = 0.03f;
+        // ── 외부 키/이벤트 진입 트리거 — 각 트리거가 자기 설정을 보유(인스펙터에서 폴드로 편집).
+        // 런타임 의존(상태/레지스트리/입력 등)은 Awake에서 Init으로 주입한다.
+        [Header("Triggers")]
+        [Tooltip("어떤 config에서든 회피 입력 시 강제 진입 (push) — 콤보보다 우선")]
+        [SerializeField] private DodgeTrigger _dodge = new DodgeTrigger();
+        [Tooltip("어떤 config에서든 패링 입력 시 스탠스 진입 (push)")]
+        [SerializeField] private ParryTrigger _parry = new ParryTrigger();
+        [Tooltip("E 입력 시 강화 공격 진입 (콤보 링크가 못 받은 경우의 전역 폴백). 방향/거리로 섹션 선택")]
+        [SerializeField] private Attack_Normal_EnhanceTrigger _attackNormalEnhance = new Attack_Normal_EnhanceTrigger();
+        [Tooltip("외부 이벤트(충돌/적 공격)로 피격 반응 진입")]
+        [SerializeField] private HitTrigger _hit = new HitTrigger();
 
         [Header("Input Buffer")]
         [SerializeField] private float _inputBufferWindow = 0.25f;  // 입력 버퍼 유효 시간
@@ -56,10 +39,6 @@ namespace ZZZ.Player.StateMachine
         private ConfigState        _state;   // 단일 config 러너 — 전이는 config가 관리
         private PlayerStateContext _ctx;
         private InputBuffer        _input;
-        private HitTrigger         _hit;
-        private DodgeTrigger       _dodge;
-        private ParryTrigger       _parry;
-        private Attack_Normal_EnhanceTrigger _attackNormalEnhance;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
         public bool       HasBufferedInput => _input.HasInput;
@@ -100,17 +79,13 @@ namespace ZZZ.Player.StateMachine
             _ctx   = new PlayerStateContext(controller, animator, cc, transform);
             _state = new ConfigState(_ctx, this, _startConfig);
 
-            // 협력 객체 조립 — 로직은 각자 담당, 머신은 조립과 구동 순서만 책임진다.
+            // 협력 객체 조립 — 트리거는 인스펙터에서 만들어진 인스턴스에 런타임 의존만 주입(Init).
             var registry = new ConfigRegistry(_startConfig, _configs);
             _input = new InputBuffer(_inputBufferWindow);
-            _hit   = new HitTrigger(this, _state, registry, _hitReinterruptThreshold, _hitEntryBlend, _parryPrefix);
-            _dodge = new DodgeTrigger(this, _state, registry, _input, resources, _dodgePrefix, _dodgeBlend, _dodgeReinterrupt);
-            _parry = new ParryTrigger(this, _state, registry, _input, _parryPrefix, _parryBlend, _parryReinterrupt);
-            _attackNormalEnhance = new Attack_Normal_EnhanceTrigger(this, _state, registry, _input, sensor,
-                _attackNormalEnhanceSectionNear, _attackNormalEnhanceSectionMid, _attackNormalEnhanceSectionFar,
-                _attackNormalEnhanceSectionForward, _attackNormalEnhanceSectionBack,
-                _attackNormalEnhanceMidDistance, _attackNormalEnhanceFarDistance,
-                _attackNormalEnhanceBlend, _attackNormalEnhanceReinterrupt);
+            _dodge.Init(this, _state, registry, _input, resources);
+            _parry.Init(this, _state, registry, _input);
+            _attackNormalEnhance.Init(this, _state, registry, _input, sensor);
+            _hit.Init(this, _state, registry, _parry.Prefix);   // 쳐냄 섹션 접두어는 ParryTrigger에서 단일 정의
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
@@ -124,7 +99,7 @@ namespace ZZZ.Player.StateMachine
             if (HasBufferedInput && BufferedInput == ComboInput.Attack_Normal_Enhance) _attackNormalEnhance.Trigger();
       
             _state.Update();
-             }
+        }
 
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──
         public void TriggerHitFrom(Vector3 attackerPos) => _hit.TriggerFrom(attackerPos, transform);

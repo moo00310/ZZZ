@@ -6,28 +6,32 @@ namespace ZZZ.Player.StateMachine
 {
     // 회피 트리거 (push) — 어떤 config에 있든 회피 입력 시 강제 진입. 콤보보다 우선(공격 중 캔슬).
     // Hit과 같은 방식: 입력 상태로 섹션 이름(접두어+방향)을 만들고 registry에서 검색해 진입한다.
+    // 설정은 이 객체가 직접 들고(PlayerStateMachine이 [SerializeField]로 인스펙터 노출),
+    // 런타임 의존(머신/상태/레지스트리/입력/자원)은 Init으로 주입한다.
+    [System.Serializable]
     public class DodgeTrigger
     {
-        private readonly PlayerStateMachine _machine;
-        private readonly ConfigState        _state;
-        private readonly ConfigRegistry     _registry;
-        private readonly InputBuffer        _input;
-        private readonly PlayerResources    _resources;     // 대쉬 충전/쿨 게이트 (null이면 게이트 없음)
-        private readonly string             _prefix;        // 섹션 접두어 (Evade_Front 등)
-        private readonly float              _blend;
-        private readonly float              _reinterrupt;   // 회피 중 재입력 무시 임계
+        [Tooltip("섹션 접두어 (Evade_Front 등)")]
+        [SerializeField] private string _prefix = "Evade_";
+        [SerializeField, Range(0f, 0.2f)] private float _blend = 0.05f;
+        [Tooltip("회피 중 재입력 무시 임계")]
+        [SerializeField, Range(0f, 1f)] private float _reinterrupt = 0.3f;
 
-        public DodgeTrigger(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
-            InputBuffer input, PlayerResources resources, string prefix, float blend, float reinterrupt)
+        // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
+        private PlayerStateMachine _machine;
+        private ConfigState        _state;
+        private ConfigRegistry     _registry;
+        private InputBuffer        _input;
+        private PlayerResources    _resources;   // 대쉬 충전/쿨 게이트 (null이면 게이트 없음)
+
+        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
+            InputBuffer input, PlayerResources resources)
         {
-            _machine     = machine;
-            _state       = state;
-            _registry    = registry;
-            _input       = input;
-            _resources   = resources;
-            _prefix      = prefix;
-            _blend       = blend;
-            _reinterrupt = reinterrupt;
+            _machine   = machine;
+            _state     = state;
+            _registry  = registry;
+            _input     = input;
+            _resources = resources;
         }
 
         public void Trigger()
