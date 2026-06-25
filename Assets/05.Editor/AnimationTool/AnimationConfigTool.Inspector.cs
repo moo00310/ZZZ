@@ -82,7 +82,11 @@ namespace ZZZ.Editor.AnimationTool
                 string.IsNullOrEmpty(_config.EntrySection) ? "(End/Entry)" : _config.EntrySection));
             int sel = EditorGUILayout.Popup("Entry Section", cur, ShortAll(opts));
 
-            float done  = EditorGUILayout.Slider("OnEnd 발동 (0=마지막프레임)", _config.DoneThreshold, 0f, 1f);
+            // DoneThreshold는 config 전역값 → Entry/첫 섹션 프레임 기준으로 표시 (0=클립 마지막 프레임 자동)
+            TrackClip doneRef = ReferenceClip();
+            float done = doneRef != null
+                ? FrameField("OnEnd 발동 (0=끝)", "OnEnd 링크가 발동하는 프레임 (0=클립 마지막 프레임 자동). 기준: Entry/첫 섹션", doneRef, _config.DoneThreshold)
+                : EditorGUILayout.Slider("OnEnd 발동 (0=마지막프레임)", _config.DoneThreshold, 0f, 1f);
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -158,9 +162,7 @@ namespace ZZZ.Editor.AnimationTool
                 if (m is WindowModule wm)   // 윈도우 모듈(무적/패링/…) 공용 — Start/End 슬라이더
                 {
                     float s = wm.Start, e = wm.End;
-                    EditorGUILayout.MinMaxSlider(
-                        new GUIContent($"   Window  {s:F2}~{e:F2}", "이 모듈이 작동하는 normalizedTime 구간"),
-                        ref s, ref e, 0f, 1f);
+                    FrameWindowField("   Window (f)", "이 모듈이 작동하는 프레임 구간", tc, ref s, ref e);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_config, "Edit Module");
@@ -228,9 +230,8 @@ namespace ZZZ.Editor.AnimationTool
                 tc.LockRotation);
             float lockWS = tc.LockWindowStart, lockWE = tc.LockWindowEnd;
             if (lockRot)
-                EditorGUILayout.MinMaxSlider(
-                    new GUIContent($"  Lock Window  {lockWS:F2}~{lockWE:F2}", "회전을 잠그는 normalizedTime 구간. End<=Start면 섹션 전체"),
-                    ref lockWS, ref lockWE, 0f, 1f);
+                FrameWindowField("  Lock Window (f)", "회전을 잠그는 프레임 구간. End<=Start면 섹션 전체",
+                    tc, ref lockWS, ref lockWE);
             bool faceInput = tc.FaceInputOnEnter;   // 토글은 아래 고급 'Facing' 그룹에서 그림 (조준 옵션끼리 묶음)
 
             // 루프 전진 평속화 — RootMotion 루프 섹션 전용 (걷기/달리기). 비루프/비RootMotion엔 영향 없음.
@@ -286,9 +287,8 @@ namespace ZZZ.Editor.AnimationTool
                         tc.EnableTracking);
                     if (track)
                     {
-                        EditorGUILayout.MinMaxSlider(
-                            new GUIContent($"  Warp Window  {twS:F2}~{twE:F2}", "이동 워프가 작동하는 normalizedTime 구간. 타격 이후엔 끊을 것"),
-                            ref twS, ref twE, 0f, 1f);
+                        FrameWindowField("  Warp Window (f)", "이동 워프가 작동하는 프레임 구간. 타격 이후엔 끊을 것",
+                            tc, ref twS, ref twE);
                         stopD = EditorGUILayout.FloatField(
                             new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지) — 이동 워프 전용"), tc.StopDistance);
                     }
@@ -304,9 +304,8 @@ namespace ZZZ.Editor.AnimationTool
                         tc.FaceTarget);
                     if (face)
                     {
-                        EditorGUILayout.MinMaxSlider(
-                            new GUIContent($"  Face Window  {fwS:F2}~{fwE:F2}", "조준 작동 구간. Start==End(=0)면 진입 1회 스냅, 넓히면 그 구간 내내 락온"),
-                            ref fwS, ref fwE, 0f, 1f);
+                        FrameWindowField("  Face Window (f)", "조준 작동 구간. Start==End면 진입 1회 스냅, 넓히면 그 구간 내내 락온",
+                            tc, ref fwS, ref fwE);
                         faceTurn = EditorGUILayout.FloatField(
                             new GUIContent("  Turn Speed(°/s)", "조준 회전 각속도. 0=즉시(스냅)"), tc.FaceTurnSpeed);
                     }
@@ -318,9 +317,8 @@ namespace ZZZ.Editor.AnimationTool
                         new GUIContent("Section Turn (Root)", "클립에 구워진 턴 회전을 Bip001 yaw 델타로 추출해 transform에 적용. 각도는 애니가 결정. 켤 때 Lock Rotation도 함께 둘 것"),
                         tc.SectionTurn);
                     if (secTurn)
-                        EditorGUILayout.MinMaxSlider(
-                            new GUIContent($"  Turn Window  {turnWS:F2}~{turnWE:F2}", "yaw 델타를 추출하는 normalizedTime 구간. End<=Start면 섹션 전체. 구간 밖에선 추출만 멈추고 회전은 유지"),
-                            ref turnWS, ref turnWE, 0f, 1f);
+                        FrameWindowField("  Turn Window (f)", "yaw 델타를 추출하는 프레임 구간. End<=Start면 섹션 전체. 구간 밖에선 추출만 멈추고 회전은 유지",
+                            tc, ref turnWS, ref turnWE);
                 }
             }
 
@@ -427,6 +425,10 @@ namespace ZZZ.Editor.AnimationTool
                         MoveLink(links, i, i + 1);
                         EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical(); break;
                     }
+                // 복사 — 이 링크를 클립보드에 담아 다른 섹션/모든 섹션에 붙여넣기
+                if (GUILayout.Button(new GUIContent("⧉", "이 링크 복사 (아래 '붙여넣기'로 다른 섹션에)"),
+                        GUILayout.Width(22)))
+                    _linkClipboard = CloneLink(link);
                 if (GUILayout.Button("×", GUILayout.Width(20)))
                 {
                     Undo.RecordObject(_config, "Remove Link");
@@ -483,15 +485,30 @@ namespace ZZZ.Editor.AnimationTool
                     var timing = (LinkTiming)ColoredEnum(
                         new GUIContent("When", TimingHelp(link.Timing)), k_chipWhen, link.Timing);
 
+                    // Window = 현재(owner) 섹션 기준 프레임 / Entry Offset = 대상 섹션 기준 프레임
+                    TrackClip ownerTc = (ownerClip >= 0 && ownerClip < _config.Clips.Count)
+                        ? _config.Clips[ownerClip] : null;
+
                     float ws = link.WindowStart, we = link.WindowEnd;
                     if (timing != LinkTiming.OnEnd)   // OnEnd는 윈도우 불필요
-                        EditorGUILayout.MinMaxSlider(
-                            new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
+                    {
+                        if (ownerTc != null)
+                            FrameWindowField("Window (f)", "이 섹션 재생 중 이 프레임 구간에서 조건을 평가", ownerTc, ref ws, ref we);
+                        else   // Global Links 등 owner 클립이 없으면 normalized 슬라이더 폴백 (섹션마다 길이가 달라 프레임 불가)
+                            EditorGUILayout.MinMaxSlider(new GUIContent($"Window {ws:F2}-{we:F2}"), ref ws, ref we, 0f, 1f);
+                    }
 
                     float blend = EditorGUILayout.FloatField("Blend (s)", link.BlendDuration);
-                    float entryOff = EditorGUILayout.Slider(
-                        new GUIContent($"Entry Offset {link.EntryOffset:F2}", "전이 후 대상 섹션을 이 normalizedTime 지점부터 재생 (0=처음부터, 윈드업 스킵 등). 이 지점 이전 Notify는 생략"),
-                        link.EntryOffset, 0f, 1f);
+
+                    // Entry Offset은 '대상 섹션'을 그 지점부터 재생 → 대상 클립의 프레임 기준
+                    var       offCfg    = targetCfg != null ? targetCfg : _config;
+                    int       offSecIdx = offCfg != null ? offCfg.IndexOfSection(link.TargetSection) : -1;
+                    TrackClip offTc     = (offCfg != null && offSecIdx >= 0) ? offCfg.Clips[offSecIdx] : null;
+                    float     entryOff;
+                    if (offTc != null)
+                        entryOff = FrameField("Entry Offset (f)", "전이 후 대상 섹션을 이 프레임부터 재생 (0=처음부터, 윈드업 스킵). 이 지점 이전 Notify는 생략", offTc, link.EntryOffset);
+                    else
+                        entryOff = EditorGUILayout.Slider(new GUIContent($"Entry Offset {link.EntryOffset:F2}", "전이 후 대상 섹션을 이 normalizedTime 지점부터 재생 (0=처음부터)"), link.EntryOffset, 0f, 1f);
 
                     if (EditorGUI.EndChangeCheck())
                     {
@@ -512,8 +529,91 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.EndVertical();
             }
 
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("+ Link 추가"))
                 AddLink(links, new ClipLink());
+
+            using (new EditorGUI.DisabledScope(_linkClipboard == null))
+            {
+                string clipDesc = _linkClipboard != null
+                    ? "→ " + (string.IsNullOrEmpty(_linkClipboard.TargetSection)
+                              ? "End/복귀" : Short(_linkClipboard.TargetSection))
+                    : "복사된 링크 없음";
+
+                // 이 목록에 클립보드 링크 1개 추가
+                if (GUILayout.Button(new GUIContent("⧉ 붙여넣기", $"복사한 링크 추가  ({clipDesc})"),
+                        GUILayout.Width(90)))
+                    AddLink(links, CloneLink(_linkClipboard));
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        // 링크 클립보드 — 한 링크를 복사해 다른 섹션/모든 섹션에 붙여넣기 (창 세션 동안 유지)
+        private static ClipLink _linkClipboard;
+
+        // ClipLink 깊은 복사 — 값 필드 전부 복사, TargetConfig는 참조 그대로(에셋 공유)
+        private static ClipLink CloneLink(ClipLink s) => new ClipLink
+        {
+            TargetConfig  = s.TargetConfig,
+            TargetSection = s.TargetSection,
+            BlendDuration = s.BlendDuration,
+            EntryOffset   = s.EntryOffset,
+            Attack        = s.Attack,
+            Direction     = s.Direction,
+            RequireHeld   = s.RequireHeld,
+            Timing        = s.Timing,
+            WindowStart   = s.WindowStart,
+            WindowEnd     = s.WindowEnd,
+        };
+
+        // ── 프레임 단위 입력 헬퍼 ─────────────────────────────────────
+        // 데이터는 normalizedTime(0~1)으로 저장하되, 인스펙터에선 클립 프레임 수 기준 정수 프레임으로 표시/편집한다.
+        // owner 클립의 총 프레임(길이×frameRate)을 분모로 normalized↔frame 변환. clip이 없으면 1프레임으로 폴백.
+        private static int ClipFrames(TrackClip owner)
+            => (owner != null && owner.Clip != null && owner.Clip.frameRate > 0f)
+                ? Mathf.Max(1, Mathf.RoundToInt(owner.Clip.length * owner.Clip.frameRate)) : 1;
+
+        // 프레임 단위 Min-Max 입력 — normStart/normEnd(0~1)를 정수 프레임 두 칸으로 편집. 저장은 normalized.
+        private static void FrameWindowField(string label, string tooltip, TrackClip owner,
+            ref float normStart, ref float normEnd)
+        {
+            int frames = ClipFrames(owner);
+            int fs = Mathf.Clamp(Mathf.RoundToInt(normStart * frames), 0, frames);
+            int fe = Mathf.Clamp(Mathf.RoundToInt(normEnd   * frames), 0, frames);
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(new GUIContent(label, tooltip), GUILayout.Width(EditorGUIUtility.labelWidth));
+            fs = EditorGUILayout.IntField(fs, GUILayout.Width(44));
+            GUILayout.Label("~", GUILayout.Width(10));
+            fe = EditorGUILayout.IntField(fe, GUILayout.Width(44));
+            GUILayout.Label($"/ {frames}f", EditorStyles.miniLabel, GUILayout.Width(50));
+            EditorGUILayout.EndHorizontal();
+
+            normStart = Mathf.Clamp01((float)Mathf.Clamp(fs, 0, frames) / frames);
+            normEnd   = Mathf.Clamp01((float)Mathf.Clamp(fe, 0, frames) / frames);
+        }
+
+        // 프레임 단위 단일 값 입력 — norm(0~1)을 정수 프레임 한 칸으로 편집. 저장은 normalized.
+        private static float FrameField(string label, string tooltip, TrackClip owner, float norm)
+        {
+            int frames = ClipFrames(owner);
+            int f = Mathf.Clamp(Mathf.RoundToInt(norm * frames), 0, frames);
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(new GUIContent(label, tooltip), GUILayout.Width(EditorGUIUtility.labelWidth));
+            f = EditorGUILayout.IntField(f, GUILayout.Width(44));
+            GUILayout.Label($"/ {frames}f", EditorStyles.miniLabel, GUILayout.Width(60));
+            EditorGUILayout.EndHorizontal();
+
+            return Mathf.Clamp01((float)Mathf.Clamp(f, 0, frames) / frames);
+        }
+
+        // DoneThreshold(config 전역) 프레임 표시용 기준 클립 — Entry 섹션, 없으면 첫 클립.
+        private TrackClip ReferenceClip()
+        {
+            if (_config == null || _config.Clips.Count == 0) return null;
+            int i = _config.IndexOfSection(_config.EntrySection);
+            return _config.Clips[i >= 0 ? i : 0];
         }
 
         // 칩 카테고리 색 (Attack=파랑 / Direction=초록 / When=주황·빨강)
@@ -617,7 +717,7 @@ namespace ZZZ.Editor.AnimationTool
 
             EditorGUI.BeginChangeCheck();
             var   type   = (NotifyType)EditorGUILayout.EnumPopup("Type",  notify.Type);
-            float normT  = EditorGUILayout.Slider("Normalized Time", notify.NormalizedTime, 0f, 1f);
+            float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
             string eName = EditorGUILayout.TextField("Event Name",   notify.EventName);
             GameObject prefab = notify.EffectPrefab;
             if (type == NotifyType.Effect)

@@ -177,7 +177,10 @@ namespace ZZZ.Editor.AnimationTool
         {
             switch (required)
             {
-                case ComboInput.None: return !AnyInputHeld();
+                // 런타임의 None은 '버퍼된 누름이 없을 때'(!HasBufferedInput)를 본다 — 눌러둔(held) 차지 키는
+                // 입력 버퍼를 유지하지 않으므로(0.25s 만료) None 링크를 막지 않는다. 예: E 홀드 + 방향 → None+Back 링크.
+                // 프리뷰엔 만료되는 라이브 버퍼가 없어, 안정 상태(버퍼 비어 있음)와 일치하게 항상 충족으로 본다.
+                case ComboInput.None: return true;
                 case ComboInput.Any:  return AnyInputHeld();
                 default:              return _heldInput[(int)required];
             }

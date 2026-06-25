@@ -96,9 +96,16 @@ namespace ZZZ.Player.StateMachine
             // 회피/패링은 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
-            if (HasBufferedInput && BufferedInput == ComboInput.Attack_Normal_Enhance) _attackNormalEnhance.Trigger();
-      
-            _state.Update();
+
+            _state.Update();   // 콤보/섹션 링크 평가 — Attack_Normal_Enhance 링크가 E를 먼저 소비할 기회
+
+            // 강화 공격은 링크가 못 받은 경우의 전역 폴백(after) — E 링크를 가진 섹션(콤보·Rush 등)에선
+            // 그 섹션이 직접 E를 처리하므로 폴백을 억제한다. 안 그러면 링크 윈도우가 열리기 전에 폴백이 E를
+            // 가로채 일반 강화로 새버린다(예: Rush 윈도우 전 E → RushToEnhance 대신 일반 강화). E 링크가 없는
+            // idle/walk 등에서만 이 트리거가 받는다.
+            if (HasBufferedInput && BufferedInput == ComboInput.Attack_Normal_Enhance
+                && !_state.ActiveSectionHandles(ComboInput.Attack_Normal_Enhance))
+                _attackNormalEnhance.Trigger();
         }
 
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──

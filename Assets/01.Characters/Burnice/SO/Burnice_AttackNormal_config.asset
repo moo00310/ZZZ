@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
-  m_Name: Attack_Nomal_Config
+  m_Name: Burnice_AttackNormal_config
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
   TrackName: Attack_Normal_01
   LoopTrack: 0
@@ -47,6 +47,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5565517
       WindowEnd: 1
@@ -56,6 +57,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 0
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -91,6 +93,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -100,6 +103,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -109,6 +113,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -144,6 +149,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5988245
       WindowEnd: 1
@@ -153,6 +159,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 0
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -188,6 +195,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -197,6 +205,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -206,6 +215,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -241,6 +251,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.67722195
       WindowEnd: 1
@@ -250,6 +261,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 0
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -285,6 +297,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -294,6 +307,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -303,6 +317,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -338,6 +353,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.583812
       WindowEnd: 1
@@ -347,6 +363,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 0
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -382,6 +399,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -391,6 +409,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -400,6 +419,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -435,6 +455,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.602494
       WindowEnd: 1
@@ -444,6 +465,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 0
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -479,6 +501,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -488,6 +511,7 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 0
       Direction: 0
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -497,6 +521,109 @@ MonoBehaviour:
       EntryOffset: 0
       Attack: 5
       Direction: 1
+      RequireHeld: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    Notifies: []
+    Modules: []
+  - SectionName: Attack_Rush
+    Clip: {fileID: 7400000, guid: fd0313b0bf3726c428884c3dab1ac9e4, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 1
+    LockWindowStart: 0
+    LockWindowEnd: 1
+    SmoothLoopSpeed: 0
+    BackMotionScale: 1
+    FaceInputOnEnter: 1
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 1
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.33802816
+    StopDistance: 1.2
+    FaceTarget: 1
+    FaceWindowStart: 0.014084507
+    FaceWindowEnd: 0.33802816
+    FaceTurnSpeed: 720
+    SectionTurn: 0
+    TurnWindowStart: 0
+    TurnWindowEnd: 1
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Rush_End
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 5
+      Direction: 0
+      RequireHeld: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 4b8e2d1a6f9c47538a0e1c5b3d7f9a26, type: 2}
+      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_RushToEnhance
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 2
+      Direction: 0
+      RequireHeld: 1
+      Timing: 0
+      WindowStart: 0.53521127
+      WindowEnd: 1
+    Notifies: []
+    Modules: []
+  - SectionName: Attack_Rush_End
+    Clip: {fileID: 7400000, guid: b1f9b2b8f9953fe48a6713e34603a047, type: 2}
+    Speed: 1
+    MoveMode: 2
+    LockRotation: 0
+    LockWindowStart: 0
+    LockWindowEnd: 1
+    SmoothLoopSpeed: 0
+    BackMotionScale: 1
+    FaceInputOnEnter: 0
+    StartBoostSpeed: 0
+    StartBoostTime: 0.15
+    EnableTracking: 0
+    TrackWindowStart: 0
+    TrackWindowEnd: 0.4
+    StopDistance: 1.2
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
+    SectionTurn: 0
+    TurnWindowStart: 0
+    TurnWindowEnd: 1
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 0
+      Direction: 0
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.1
+      EntryOffset: 0
+      Attack: 5
+      Direction: 2
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 5
+      Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1

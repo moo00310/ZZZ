@@ -7,6 +7,8 @@ namespace ZZZ.Player.StateMachine
     // 윈도우가 지나면 자동으로 무효가 된다. 발동 시 Consume()로 즉시 비운다.
     public class InputBuffer
     {
+        private static readonly int Count = System.Enum.GetValues(typeof(ComboInput)).Length;
+
         private readonly float _window;   // 입력 유효 시간(초)
         private ComboInput     _input;
         private float          _time = -10f;
@@ -22,7 +24,7 @@ namespace ZZZ.Player.StateMachine
         // ── 키 홀드 상태 — OnRelease 타이밍(홀드 차지 → 릴리스)이 참조한다.
         // 타임아웃 버퍼가 아니라 실제 눌림 여부를 그대로 들고 있어, "누르고 있으면 대기 / 떼면 발동"이
         // 클립 길이/프레임 타이밍과 무관하게 확정적으로 판정된다. (인덱스 = (int)ComboInput)
-        private readonly bool[] _held = new bool[System.Enum.GetValues(typeof(ComboInput)).Length];
+        private readonly bool[] _held = new bool[Count];
 
         public bool IsHeld(ComboInput input) => _held[(int)input];
         public void SetHeld(ComboInput input, bool held) => _held[(int)input] = held;

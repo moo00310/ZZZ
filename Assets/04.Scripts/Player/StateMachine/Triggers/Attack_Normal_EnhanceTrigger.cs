@@ -10,20 +10,19 @@ namespace ZZZ.Player.StateMachine
     // 걷기/Idle처럼 링크가 없는 상태에서는 이 트리거가 입력을 받아 강화 공격 config로 강제 진입한다.
     // 그래서 PlayerStateMachine은 _state.Update(콤보 링크 평가) 이후 입력이 남아 있을 때만 이걸 부른다.
     //
-    // 섹션 선택 — 방향 우선, 그다음 거리.
-    //   이동 입력 Forward(W) → 앞 섹션 / Back(S) → 뒤 섹션 (전용 모션: 전진 돌진 / 백스텝 카운터 등).
-    //   그 외(Neutral·Left·Right) → 전방 적과의 거리로 근/중/원 분기 (근접 강타 / 원거리 대시).
-    //   방향 전용 섹션이 아직 config에 없으면 거리 분기로 폴백, 거리 변종이 없으면 가까운 단계로 폴백.
+    // 진입 섹션 선택(폴백 Trigger) — 이동 입력 Forward(W) → 앞 섹션, 그 외는 전방 적과의 거리로 근/중/원 분기.
+    //   전용 섹션이 config에 없으면 거리 분기로 폴백, 거리 변종이 없으면 가까운 단계로.
+    //
+    // ※ Rush→Enhance처럼 '특정 섹션에서만' E 진입은 그 섹션의 config 링크(Attack=Attack_Normal_Enhance →
+    //    TargetConfig=Enhance, TargetSection=RushToEnhance)로 처리한다. 이 트리거는 링크 평가 이후 폴백이라 링크가 우선.
     //
     // 설정은 이 객체가 직접 들고, 런타임 의존은 Init으로 주입한다.
     [System.Serializable]
     public class Attack_Normal_EnhanceTrigger
     {
-        [Header("진입 섹션 — 방향 우선(앞W/뒤S), 중립이면 거리(근/중/원)")]
+        [Header("진입 섹션 — 앞(W)은 전용, 그 외는 거리(근/중/원)")]
         [Tooltip("앞방향(W)+E 진입 섹션")]
         [SerializeField] private string _sectionForward = "Attack_Normal_Enhance_Front_01";
-        [Tooltip("뒷방향(S)+E 진입 섹션")]
-        [SerializeField] private string _sectionBack    = "Attack_Normal_Enhance_Back_01";
         [Tooltip("근접(기본·중립) 진입 섹션")]
         [SerializeField] private string _sectionNear    = "Attack_Normal_Enhance_01";
         [Tooltip("중거리 진입 섹션")]
@@ -79,15 +78,13 @@ namespace ZZZ.Player.StateMachine
             _state.InterruptWith(cfg, section, _blend);
         }
 
-        // 방향 우선 → 중립이면 거리. 이동 입력 Forward/Back은 전용 섹션, 그 외는 거리 분기로.
-        // 방향 전용 섹션이 config에 없으면 거리 분기로 폴백.
+        // 폴백 진입 섹션: 앞(W)만 전용, 그 외는 거리 분기. 전용 섹션이 config에 없으면 거리 분기로 폴백.
         private string PickSection()
         {
             switch (_machine.CurrentMoveDir)
             {
                 case MoveDir.Forward: return Resolve(_sectionForward) ?? PickSectionByDistance();
-                case MoveDir.Back:    return Resolve(_sectionBack)    ?? PickSectionByDistance();
-                default:              return PickSectionByDistance();   // Neutral·Left·Right → 거리
+                default:              return PickSectionByDistance();   // Neutral·Back·Left·Right → 거리
             }
         }
 

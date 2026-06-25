@@ -437,5 +437,23 @@ namespace ZZZ.Player.StateMachine.States
             (_config != null && _active >= 0 && _active < _config.Clips.Count)
                 ? SectionNormalizedTime(_config.Clips[_active]) : 0f;
         public MoveDir CurrentMoveDir        => Ctx.Controller.CurrentMoveDir;
+
+        // 현재 섹션(또는 config 공통 GlobalLinks)에 이 공격 입력을 받는 링크가 있는지.
+        // 있으면 그 섹션이 입력을 '직접' 처리한다는 뜻 → 전역 폴백 트리거(강화 등)가 윈도우 전에 입력을
+        // 가로채지 않도록 게이트하는 데 쓴다. (Attack==input 또는 Any를 받는 링크가 대상. None은 제외)
+        public bool ActiveSectionHandles(ComboInput input)
+        {
+            if (_config == null || _active < 0 || _active >= _config.Clips.Count) return false;
+            return HasInputLink(_config.Clips[_active].Links, input)
+                || HasInputLink(_config.GlobalLinks, input);
+        }
+
+        private static bool HasInputLink(List<ClipLink> links, ComboInput input)
+        {
+            if (links == null) return false;
+            foreach (var l in links)
+                if (l.Attack == input || l.Attack == ComboInput.Any) return true;
+            return false;
+        }
     }
 }

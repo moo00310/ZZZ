@@ -5,9 +5,18 @@
 - [x] **패링(Parry)** — `ParryModule`(활성 윈도우) + `ParryTrigger`(push 진입). 활성 중 적 공격이 닿으면 `HitTrigger`가 피격 대신 쳐냄(`ParryAid_L/H`)으로 분기. i-frame('무시')과 대칭('반격으로 응수')
 - [x] **강화공격(Attack_Normal_Enhance)** — 방향(앞W/뒤S) 우선 → 중립이면 적과의 거리(근/중/원)로 진입 섹션 분기. 콤보 링크가 못 받은 입력의 전역 폴백 트리거
 
+### Attack_Normal_Enhance 리워크 (이번 묶음)
+- [x] **Special → Attack_Normal_Enhance 전면 리네임** — enum / 트리거 클래스 / 입력 액션 / 에디터 툴
+- [x] **링크 타이밍·조건 확장** — `OnWindowMiss → OnRelease`(키 릴리스, 홀드 상태 기준), `RequireHeld`(홀드 차지 루프), `EntryOffset`(중간 프레임 진입), `OnEndIfMatched`
+- [x] **타겟 조준 통합(FaceTarget)** — Snap/Lock-on을 `FaceWindow` 하나로, 이동 워프(`EnableTracking`)와 **독립 토글**
+- [x] **트리거 4종 데이터화** — `[Serializable]`로 각자 설정 보유 → `PlayerStateMachine` 인스펙터 폴드 노출 (런타임 의존은 `Init`)
+- [x] **모듈 추가 드롭다운** — 등록된 `SectionModule` 타입 자동 나열 (`WindowModule` 베이스로 구간 편집 일반화)
+- [x] **에디터 정리** — 콤보 입력 단일 드롭다운, 라이브 `Held` 표시, 프리뷰 전용 Bip/RM 자동감지 시 숨김
+- [x] **Explode에서 E 재입력 → `Attack_ExSpecial_01`** (Explode 섹션 링크), 임시 더블탭 코드 제거
+
 ## 진행중
 
-- [ ] **특수 기술(Special) 제작 & 연결** — 특수 기술 신규 제작 후 기존 시스템(콤보/입력/연출)에 배선·연결
+- [ ] **ExSpecial 모션 제작 & 연결** — `Attack_ExSpecial_01` 모션 신규 제작. **진입은 배선 완료**(Explode 재생 중 E 재입력 → ExSpecial 링크). 모션·연출만 채우면 됨
 
 ## 예정 (로드맵)
 

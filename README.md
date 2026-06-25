@@ -50,7 +50,7 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 | 구성요소 | 하는 일 |
 |------|------|
-| [**Links (전이)**](Documentation/AnimationArchitecture.md#cliplink-전이-정의) | "이 섹션에서 → 어떤 입력/타이밍이면 → 어느 config·섹션으로"를 분기. `Timing`(`WhenMatched`/`OnWindowMiss`/`OnEnd`) + `Window`로 콤보 선입력 윈도우 제어 |
+| [**Links (전이)**](Documentation/AnimationArchitecture.md#cliplink-전이-정의) | "이 섹션에서 → 어떤 입력/타이밍이면 → 어느 config·섹션으로"를 분기. `Timing`(`WhenMatched`/`OnRelease`/`OnEnd`/`OnEndIfMatched`) + `Window`/`EntryOffset`/`RequireHeld`로 콤보·차지·중간진입 제어 |
 | [**Notifies**](Documentation/AnimationArchitecture.md#피격-외부-이벤트-진입) | 재생 중 특정 시점에 이벤트/이펙트 발동 (피격 흔들림 신호 등) |
 | [**Modules (플러그인)**](Documentation/AnimationArchitecture.md#섹션-모듈-sectionmodule--기능을-끼워-넣는-플러그인) | `[SerializeReference]` 폴리모픽 — **새 판정/연출 = 클래스 1개 상속**. 무적(`IFrameModule`)·패링(`ParryModule`) 등 |
 

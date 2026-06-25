@@ -75,7 +75,8 @@ AnimationConfig
 │     ├── LockRotation / LockWindow / FaceInputOnEnter   입력 회전 잠금(구간 지정 가능) / 진입 시 입력 방향 스냅
 │     ├── SmoothLoopSpeed          루프 전진 평속화(틱 제거) — RootMotion 루프 전용, 기본 꺼짐
 │     ├── StartBoostSpeed / StartBoostTime     루트모션 워밍업 보완
-│     ├── EnableTracking / TrackWindow / StopDistance / SnapRotation   적 워프
+│     ├── EnableTracking / TrackWindow / StopDistance       적 방향으로 이동 워프
+│     ├── FaceTarget / FaceWindow / FaceTurnSpeed            타겟 조준 회전(스냅/락온 통합) — 워프와 독립
 │     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
 │     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 이벤트/이펙트
@@ -90,13 +91,16 @@ AnimationConfig
 | `TargetConfig` | 비면 현재 config 내 전이, 지정 시 그 config로 갈아끼움 |
 | `TargetSection` | 대상 섹션 (비면 복귀 / EntrySection) |
 | `Attack` + `Direction` | 발동 조건 (공격 입력 + 방향 입력, **AND**) |
-| `Timing` | 언제 평가할지 — `WhenMatched` / `OnWindowMiss` / `OnEnd` |
+| `RequireHeld` | Attack 키가 '지금 눌려있을(held) 때' 충족 — 누름 버퍼 대신 홀드 상태 (차지 루프용) |
+| `Timing` | 언제 평가할지 — `WhenMatched` / `OnRelease` / `OnEnd` / `OnEndIfMatched` |
 | `WindowStart` ~ `WindowEnd` | 평가 구간 (normalizedTime) |
 | `BlendDuration` | 전이 시 CrossFade 시간(초) |
+| `EntryOffset` | 전이 후 대상 섹션을 이 normalizedTime부터 재생 (중간 진입 — 윈드업 스킵 등) |
 
 - **WhenMatched** : 윈도우 구간 안에서 조건 충족 즉시 (콤보 입력 / 방향 이동 / 복귀)
-- **OnWindowMiss** : 윈도우 끝까지 조건이 안 맞고 지나가면 (콤보 캔슬 / 타임아웃)
+- **OnRelease** : 윈도우 안에서 Attack 키를 **뗀 순간** (홀드 차지 → 릴리스). 누름 버퍼가 아니라 실제 홀드 상태로 판정
 - **OnEnd** : 클립이 끝나면 (조건은 가드로 작동, 루프 클립엔 무효)
+- **OnEndIfMatched** : 윈도우 안에서 조건이 한 번이라도 충족되면 래치 → 섹션 끝에 발동 (카운터 예약 등)
 
 > 평가 순서: 클립 고유 `Links` 먼저 → 그다음 `config.GlobalLinks`. 첫 발동 링크에서 전이하고 멈춘다.
 > 실제 공격 입력(`Attack != None`)을 요구한 링크만 입력 버퍼를 소비한다.
@@ -193,14 +197,19 @@ Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않
 
 애니 원본만으로는 적을 정확히 못 때리므로, 루트모션 위에 두 가지 보정을 얹는다.
 
-### 타겟 워프 (EnableTracking)
-RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아 **루트모션 수평 이동을 적 방향으로 재조준**한다.
+### 타겟 워프 & 조준 — 이동(EnableTracking)과 회전(FaceTarget)은 독립
+RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, **둘 중 켜진 기능만** 적용한다(두 토글은 별개).
+적이 없으면 둘 다 무동작 → 원본 모션 그대로 (적 유무 분기 불필요).
 
-- 적이 없으면 보정량 0 → 원본 루트모션 그대로 (적 유무 분기 불필요)
+**이동 워프 (`EnableTracking`)** — 루트모션 수평 이동을 적 방향으로 재조준 (회전과 무관, 이동만).
 - `StopDistance`로 타겟 앞에서 멈춤(관통 방지)
-- `SnapRotation`이면 진입 시 타겟 방향으로 즉시 회전 (단, `FaceInputOnEnter`로 이미 입력 방향을 봤으면 생략)
 - `TrackWindow`(Start~End) 구간에서만 워프 작동 → 타격 이후엔 끊어 적을 따라 휙 도는 것 방지
 - 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
+
+**타겟 조준 (`FaceTarget`)** — `FaceWindow` 동안 타겟을 향해 회전. 스냅(1회)·락온(지속)을 하나로 통합.
+- `FaceWindow [0,0]` = 진입 1회 스냅 / 넓히면 그 구간 내내 락온(적이 움직여도 따라붙음)
+- `FaceTurnSpeed` 0 = 즉시(스냅처럼), >0 = 각속도 제한 회전
+- **이동 워프와 독립** — 트래킹 없이 회전만 켤 수 있다. `FaceInputOnEnter`(내 입력 방향 조준)가 있으면 진입 스냅보다 우선.
 
 ### 섹션 턴 (SectionTurn) — 루트 회전 추출
 
@@ -395,7 +404,8 @@ PlayerStateMachine
                     └── 발동 시 ConsumeInput() 후 TargetConfig/Section으로 전이
 ```
 
-> `ComboInput` = `Normal / Enhanced / Special / Dodge / Any / None`.
+> `ComboInput` = `Normal / Enhanced / Attack_Normal_Enhance / Dodge / Any / None / Parry`.
+> 입력은 누름 버퍼(0.25s)와 별개로 **홀드 상태(`IsHeld`)** 도 추적한다 — `OnRelease`/`RequireHeld`가 이 홀드 상태를 본다 (홀드 차지 → 릴리스). `Attack_Normal_Enhance` 입력 액션은 떼는 콜백을 받으려고 **PassThrough** 타입이다.
 
 ### 문제와 해결
 
@@ -435,6 +445,10 @@ PlayerStateMachine
 
 - 새 회피/피격 모션을 추가해도 코드 수정 불필요 — config를 만들어 리스트에 넣고 섹션 이름 규약만 지키면 됨
 - 링크로 도달 가능한 config(콤보 등)는 리스트에 넣을 필요 없음 — `TargetConfig` 참조로 연결
+
+> **트리거 설정도 인스펙터에서** — `Hit/Dodge/Parry/Attack_Normal_Enhance` 트리거는 `[Serializable]` 객체라
+> 각자 설정(섹션 이름·blend·거리 임계 등)을 직접 들고, `PlayerStateMachine` 인스펙터에 폴드로 노출된다.
+> 런타임 의존(상태/레지스트리/입력)만 `Init()`으로 주입한다. (평평하던 머신 필드 정리)
 
 ---
 
@@ -493,8 +507,9 @@ Assets/04.Scripts/
 `Assets/05.Editor/AnimationTool/AnimationConfigTool.cs`가 `AnimationConfig`를 시각 편집한다.
 
 - 타임라인에서 클립 배치·Link(베지어 연결선)·Notify·Module 편집
-- **Combo 프리뷰** : 입력을 눌러두고 Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
-- **라이브 모니터** : 플레이 중 `PlayerStateMachine`을 추적해 현재 config/섹션/입력 버퍼를 실시간 표시
-  (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir` 등을 노출)
+  - **Module 추가** : 등록된 `SectionModule` 타입을 드롭다운으로 자동 나열 — 새 모듈 = 클래스 1개 추가 → 메뉴 자동 등장
+- **Combo 프리뷰** : 공격 입력은 단일 드롭다운으로 '눌러둠(held)' 선택 → Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
+- **라이브 모니터** : 플레이 중 `PlayerStateMachine`을 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
+  (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)
 
 ---
