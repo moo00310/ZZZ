@@ -200,8 +200,8 @@ MonoBehaviour:
     Direction: 0
     RequireHeld: 0
     Timing: 0
-    WindowStart: 0.31075698
-    WindowEnd: 1
+    WindowStart: 0
+    WindowEnd: 0.99999994
   - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
     TargetSection: Attack_Normal_01
     BlendDuration: 0.01
