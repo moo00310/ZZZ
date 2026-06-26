@@ -45,7 +45,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_01_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 1
@@ -55,7 +55,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_03
       BlendDuration: 0.2
       EntryOffset: 0.55
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 1
       Timing: 2
@@ -65,7 +65,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Front_02
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 3
       RequireHeld: 0
       Timing: 0
@@ -75,7 +75,7 @@ MonoBehaviour:
       TargetSection: Evade_Left
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 5
       RequireHeld: 0
       Timing: 0
@@ -85,7 +85,7 @@ MonoBehaviour:
       TargetSection: Evade_Right
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 6
       RequireHeld: 0
       Timing: 0
@@ -95,7 +95,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Back
       BlendDuration: 0.03
       EntryOffset: 0.04
-      Attack: 5
+      Attack: 0
       Direction: 4
       RequireHeld: 0
       Timing: 0
@@ -105,7 +105,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_01_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -141,7 +141,7 @@ MonoBehaviour:
       TargetSection: 
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 0
@@ -151,7 +151,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_01_End
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -183,11 +183,31 @@ MonoBehaviour:
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
+    - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
+      TargetSection: Attack_ExSpecial_02
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 3
+      Direction: 0
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 2
+      Direction: 0
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 2
       RequireHeld: 0
       Timing: 0
@@ -197,7 +217,7 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 1
       RequireHeld: 0
       Timing: 2
@@ -233,7 +253,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 1
@@ -243,7 +263,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02
       BlendDuration: 0.2
       EntryOffset: 0.5
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 1
       Timing: 2
@@ -253,7 +273,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Front_02
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 3
       RequireHeld: 0
       Timing: 0
@@ -263,7 +283,7 @@ MonoBehaviour:
       TargetSection: Evade_Left
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 5
       RequireHeld: 0
       Timing: 0
@@ -273,7 +293,7 @@ MonoBehaviour:
       TargetSection: Evade_Right
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 6
       RequireHeld: 0
       Timing: 0
@@ -283,7 +303,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Back
       BlendDuration: 0.03
       EntryOffset: 0.04
-      Attack: 5
+      Attack: 0
       Direction: 4
       RequireHeld: 0
       Timing: 0
@@ -293,7 +313,7 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_Normal_Enhance_02_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -329,7 +349,7 @@ MonoBehaviour:
       TargetSection: 
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 0
@@ -339,7 +359,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02_End
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -375,8 +395,28 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
+      TargetSection: Attack_ExSpecial_02
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 3
+      Direction: 0
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 2
+      Direction: 0
       RequireHeld: 0
       Timing: 0
       WindowStart: 0
@@ -385,7 +425,7 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -421,7 +461,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_03_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 1
@@ -431,7 +471,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_03
       BlendDuration: 0.2
       EntryOffset: 0.52
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 1
       Timing: 2
@@ -441,7 +481,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Front_02
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 3
       RequireHeld: 0
       Timing: 0
@@ -451,7 +491,7 @@ MonoBehaviour:
       TargetSection: Evade_Left
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 5
       RequireHeld: 0
       Timing: 0
@@ -461,7 +501,7 @@ MonoBehaviour:
       TargetSection: Evade_Right
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 6
       RequireHeld: 0
       Timing: 0
@@ -471,7 +511,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_Back
       BlendDuration: 0.03
       EntryOffset: 0.04
-      Attack: 5
+      Attack: 0
       Direction: 4
       RequireHeld: 0
       Timing: 0
@@ -481,7 +521,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_03_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -517,7 +557,7 @@ MonoBehaviour:
       TargetSection: 
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 0
       Timing: 0
@@ -527,7 +567,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_03_End
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -563,8 +603,28 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.1
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
+      TargetSection: Attack_ExSpecial_02
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 3
+      Direction: 0
+      RequireHeld: 0
+      Timing: 0
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_01
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Attack: 2
+      Direction: 0
       RequireHeld: 0
       Timing: 0
       WindowStart: 0
@@ -573,7 +633,7 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 1
       RequireHeld: 0
       Timing: 2
@@ -609,7 +669,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02
       BlendDuration: 0.2
       EntryOffset: 0.52
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 1
       Timing: 2
@@ -619,7 +679,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2
@@ -655,7 +715,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02
       BlendDuration: 0.2
       EntryOffset: 0.5
-      Attack: 2
+      Attack: 4
       Direction: 0
       RequireHeld: 1
       Timing: 2
@@ -665,7 +725,7 @@ MonoBehaviour:
       TargetSection: Attack_Normal_Enhance_02_Explode
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 0
       RequireHeld: 0
       Timing: 2

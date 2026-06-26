@@ -1,3 +1,6 @@
+// 디버그 HUD — 에디터/개발 빌드에서만 컴파일. 릴리스 빌드에선 통째로 제외해
+// 빌드 용량과 매 프레임 OnGUI 문자열 GC를 없앤다.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZZZ.Player.StateMachine;
@@ -129,3 +132,4 @@ namespace ZZZ.Player
         }
     }
 }
+#endif

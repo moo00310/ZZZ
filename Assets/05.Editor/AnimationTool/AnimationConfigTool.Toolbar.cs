@@ -141,9 +141,9 @@ namespace ZZZ.Editor.AnimationTool
 
         // 콤보 프리뷰에서 선택 가능한 공격 입력 (None = 아무것도 안 누름). 한 번에 하나만.
         private static readonly ComboInput[] s_attackInputs =
-            { ComboInput.None, ComboInput.Normal, ComboInput.Enhanced, ComboInput.Attack_Normal_Enhance, ComboInput.Dodge };
+            { ComboInput.None, ComboInput.Normal, ComboInput.Strong, ComboInput.Enhance, ComboInput.Dodge };
         private static readonly string[]     s_attackInputLabels =
-            { "None", "Normal", "Enhanced", "Enhance", "Dodge" };
+            { "None", "Normal", "Strong", "Enhance", "Dodge" };
 
         // 현재 눌러둔(held) 공격 입력 — 없으면 None. (_heldInput에서 역으로 읽음)
         private ComboInput CurrentHeldAttack()

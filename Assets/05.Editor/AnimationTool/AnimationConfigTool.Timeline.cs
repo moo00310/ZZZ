@@ -398,12 +398,12 @@ namespace ZZZ.Editor.AnimationTool
         // 입력 타입별 색상
         private static Color InputColor(ComboInput input) => input switch
         {
-            ComboInput.Normal   => new Color(0.3f, 0.6f, 1.0f),
-            ComboInput.Enhanced => new Color(1.0f, 0.55f, 0.15f),
-            ComboInput.Attack_Normal_Enhance => new Color(0.9f, 0.3f, 0.9f),
-            ComboInput.Dodge    => new Color(0.3f, 0.9f, 0.6f),
-            ComboInput.None     => new Color(0.5f, 0.85f, 0.55f),  // 공격 없음 = 초록
-            _                   => new Color(0.7f, 0.7f, 0.7f),    // Any
+            ComboInput.Normal  => new Color(0.3f, 0.6f, 1.0f),
+            ComboInput.Strong  => new Color(1.0f, 0.55f, 0.15f),   // 강공격 = 주황
+            ComboInput.Enhance => new Color(0.9f, 0.3f, 0.9f),
+            ComboInput.Dodge   => new Color(0.3f, 0.9f, 0.6f),
+            ComboInput.None    => new Color(0.5f, 0.85f, 0.55f),   // 공격 없음 = 초록
+            _                  => new Color(0.7f, 0.7f, 0.7f),     // Any / Parry
         };
 
         // 링크 색상: OnRelease=청록(키 릴리스), OnEnd=회색, 그 외는 공격/방향 조건 색

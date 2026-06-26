@@ -266,7 +266,8 @@ namespace ZZZ.Editor.AnimationTool
             string advLabel = "고급";
             if (boostSpd > 0f)          advLabel += " · Boost";
             if (track)                  advLabel += " · Warp";
-            if (face || faceInput)      advLabel += " · Face";
+            if (faceInput)              advLabel += " · FaceInput";
+            if (face)                   advLabel += " · FaceTarget";
             if (secTurn)                advLabel += " · Turn";
             _clipAdvFold = EditorGUILayout.Foldout(_clipAdvFold, advLabel, true);
             if (_clipAdvFold)

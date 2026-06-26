@@ -48,6 +48,12 @@
 - [ ] SRP Batcher / GPU Instancing 확인, draw call 절감
 - [ ] 텍스처 압축(ASTC)·해상도 정리, 이펙트 파티클 수 예산 설정
 
+### 5) GC / 런타임 메모리 (코드)
+> 런타임 핫패스(전투 로직)는 이미 무할당 양호. 아래만 정리하면 됨.
+- [x] **디버그 HUD 빌드 제외** — `PlayerStateHUD`/`AnimatorLayerHUD`를 `#if UNITY_EDITOR || DEVELOPMENT_BUILD`로 가드. 릴리스에서 빌드 용량 + 매 프레임 OnGUI 문자열 GC 제거
+- [ ] **Notify 이펙트 풀링** — `ConfigState.DispatchNotify`의 `Object.Instantiate(EffectPrefab)`를 오브젝트 풀로 교체. 콤보 반복 발동 시 GC/인스턴스화 비용 누적 → 프리팹별 풀 Get/Release, VFX 재생 끝나면 자동 반납 (위 노티파이 트랙 확장의 '이펙트 풀링'과 동일 작업)
+- [ ] **`SendMessage` 대체 검토** — 같은 `DispatchNotify`의 `SendMessage(EventName)`는 리플렉션 할당 → 이벤트/델리게이트 디스패치로
+
 ## 발견된 버그
 
 - (없음)

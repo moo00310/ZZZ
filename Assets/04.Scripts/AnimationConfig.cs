@@ -163,15 +163,17 @@ namespace ZZZ
                         //   래치 안 되면 발동 안 함 → 뒤에 둔 OnEnd(Attack=None) 등으로 폴백.
     }
 
+    // ※ Unity는 이 enum을 '정수'로 직렬화한다(.asset의 Attack: N은 이름이 아니라 인덱스).
+    //    순서를 바꾸면 정수가 바뀌므로 기존 config의 Attack 값을 함께 리맵해야 한다.
     public enum ComboInput
     {
-        Normal,
-        Enhanced,
-        Attack_Normal_Enhance,
-        Dodge,
-        Any,        // 아무 공격 입력
-        None,       // 공격 입력 없음 (※ 직렬화 호환 위해 맨 끝에 추가)
-        Parry       // 패링(방어 어시스트) 입력 — Dodge처럼 push 트리거. ※ 직렬화 호환 위해 None 뒤에 추가
+        None,     // 공격 입력 없음 (특수 토큰)
+        Any,      // 아무 공격 (특수 토큰)
+        Normal,   // 일반공격 — 좌클릭 탭
+        Strong,   // 강공격 — 좌클릭 홀드
+        Enhance,  // 강화공격 — E
+        Dodge,    // 회피 (push 트리거)
+        Parry     // 패링 (push 트리거)
     }
 
     // 적 공격의 강도 — 패링 시 어떤 쳐냄 반응(ParryAid_L/H)을 재생할지 결정한다.
