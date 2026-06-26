@@ -44,7 +44,20 @@
       "Bash(awk '/--- !u!4 &7548444414743823799/{f=1} f{print} f&&/m_Father/{exit}' Assets/99.Scenes/SampleScene.unity)",
       "Bash(git log *)",
       "Bash(cd /e/Unity/project/Assets && echo \"===04.Scripts===\" && find 04.Scripts -name \"*.cs\" | sort && echo \"\" && echo \"===05.Editor===\" && find 05.Editor -name \"*.cs\" | sort)",
-      "Read(//e/e/Unity/project/Assets/**)"
+      "Read(//e/e/Unity/project/Assets/**)",
+      "Bash(git mv *)",
+      "Bash(sed -i 's/^  m_Name: RunConfig$/  m_Name: Burnice_Run_config/' Burnice_Run_config.asset)",
+      "Bash(sed -i 's/^  m_Name: EvadeConfig$/  m_Name: Burnice_Evade_config/' Burnice_Evade_config.asset)",
+      "Bash(sed -i 's/^  m_Name: Attack_Nomal_Config$/  m_Name: Burnice_AttackNormal_config/' Burnice_AttackNormal_config.asset)",
+      "Bash(sed -i 's/^  m_Name: ParryConfig$/  m_Name: Burnice_Parry_config/' Burnice_Parry_config.asset)",
+      "Bash(sed -i 's/^  m_Name: hitConfig$/  m_Name: Burnice_Hit_config/' Burnice_Hit_config.asset)",
+      "Bash(git add *)",
+      "Bash(git restore *)",
+      "Bash(git commit *)",
+      "Bash(command -v gh)",
+      "Bash(gh auth *)",
+      "Bash(git switch *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
