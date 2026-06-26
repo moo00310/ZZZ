@@ -55,7 +55,6 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
 > **상태 머신 프레임워크가 따로 없다.** `PlayerStateMachine`이 `ConfigState` 인스턴스 **하나**를
 > 들고 직접 `Update()`를 돌린다. 상태 전환(콤보·대시·회피·피격 복귀)은 별도 State 클래스로
 > 갈아끼우는 게 아니라, `ConfigState`가 **config를 갈아끼우는(SwitchConfig)** 방식으로 처리한다.
-> (과거의 `Core/`(IState·StateBase·StateMachine)와 하드코딩 State들은 모두 제거됨)
 
 ---
 
@@ -125,6 +124,20 @@ Layer 1 (Additive)
   config의 `BlendDuration`(초)과 단위가 일치. 함께 `ApplyAnimatorSpeed(Speed)`로
   애니 재생 속도를 로직 타임라인과 맞춘다(안 맞추면 전환 딜레이 발생).
 
+### 왜 Blend Tree를 안 쓰고 클립을 직접 재생하나
+
+이동(Idle/Walk/Run)조차 Blend Tree로 섞지 않고 각 클립을 `Play`(CrossFade)로 전환한다. 이유:
+
+| 이유 | 설명 |
+|------|------|
+| **루트모션(본 델타 추출)과 상극** | 루트모션을 `Bip001` 본의 프레임 델타로 뽑는데, Blend Tree는 두 클립 포즈를 **상시 블렌딩**해 본 위치를 "가짜 평균값"으로 만든다 → 이동 추출이 오염된다. 이미 *블렌드 구간(전환)의 수평 이동은 통째로 버리는데*([루트모션](#루트모션-직접-구현) 참조), Blend Tree는 그 오염을 항상 켜는 셈 |
+| **핵심 철학과 충돌** | 블렌딩 로직 + 파라미터(speed/direction)를 다시 AnimatorController로 밀어넣는다 → "분기/타이밍은 코드·데이터, Animator는 클립 재생만"이라는 전제를 깬다 |
+| **섹션 단위 제어 불가** | MoveMode·LockWindow·SmoothLoopSpeed·워프·SectionTurn·Link·Notify·Module은 전부 "특정 클립=섹션"에 붙는다. Blend Tree는 "어느 클립인지"를 추상화해 이 per-section 데이터를 붙일 곳이 없어진다 |
+| **시간 계산과 안 맞음** | normalizedTime을 `_clipTime`으로 직접 계산하는데([시간 계산](#시간-계산--애니메이터-시간을-안-믿는다)), Blend Tree의 연속 블렌딩은 "지금 어느 클립의 몇 %"가 모호해져 윈도우/Notify 판정이 흔들린다 |
+
+> 정리: 이 프로젝트의 이동은 **블렌딩이 아니라 개별 클립의 루트모션**으로 성립하므로, Blend Tree의
+> "포즈 보간"은 득보다 실(루트모션 오염·제어 상실)이 크다. 부드러운 전이는 클립 간 짧은 `CrossFade`로 충분히 얻는다.
+
 ---
 
 ## 시간 계산 — 애니메이터 시간을 안 믿는다
@@ -139,6 +152,51 @@ nt = _clipTime * Speed / clip.length
 - CrossFade 중 Animator가 "이전 클립의 시간"을 반환해 윈도우/Notify가 어긋나는 문제를 피한다.
 - 전환마다 `_clipTime`을 0으로 리셋 → 섹션 타임라인이 항상 0부터 시작.
 - 루프 클립은 `Mathf.Repeat(nt, 1f)`로 사이클 내 진행도를 본다.
+
+---
+
+## 타이밍 값은 normalizedTime으로 저장 — 에디터만 프레임으로 표시
+
+모든 타이밍/구간 값(`WindowStart`~`WindowEnd`, `LockWindow`, `FaceWindow`, `TrackWindow`, `TurnWindow`,
+`DoneThreshold`, `EntryOffset`, `Notify.NormalizedTime`, 모듈 `Start`~`End`)은 `.asset`에 **normalizedTime(0~1)** 으로
+저장된다. 반면 에디터 툴(`AnimationConfigTool`)은 이걸 **정수 프레임**으로 변환해 표시·편집한다.
+
+```
+저장(.asset)        normalizedTime (0~1)   ← 견고
+에디터 입력/표시     정수 프레임 (예: 21/68f) ← 직관
+런타임 평가          normalizedTime         ← 싸다
+```
+
+### 왜 데이터를 프레임이 아니라 normalizedTime으로 저장하나
+
+> 프레임 숫자는 그 클립의 `frameRate`·`length`에 묶인 **절대값**이라, 클립이 조금만 바뀌면 가리키는 지점이
+> 어긋난다. `0~1`은 "클립의 몇 % 지점"이라 클립이 바뀌어도 **상대 위치가 보존**된다.
+
+| 장점 | 설명 |
+|------|------|
+| **클립 재임포트/교체에 강함** (가장 큼) | 클립을 다시 뽑아 프레임 수가 68→72로 바뀌거나 30→60fps로 바뀌어도, `0.3`은 그대로 같은 포즈 근처를 가리켜 윈도우 재작업이 거의 없다. 프레임 저장이면 "21프레임"이 다른 순간을 가리켜 전부 다시 잡아야 함 |
+| **frameRate 독립** | 프레임 숫자는 fps를 알아야 의미가 생기지만, `0~1`은 그 자체로 완결 |
+| **재생 속도(Speed) 무관** | 런타임이 `nt = _clipTime * Speed / length`로 평가 → Speed가 바뀌어도 `0~1` 윈도우는 그대로 동작 |
+| **런타임 계산이 싸다** | 평가가 `p >= WindowStart && p <= WindowEnd` 한 줄. 매 프레임 `clip.frameRate`/`length`를 안 읽어도 됨 |
+| **길이 다른 여러 클립에 공용** | `GlobalLinks`처럼 여러 클립에 걸치는 값은 클립마다 길이가 달라 프레임으론 불가. `0~1`이면 길이 무관 균일 적용 |
+
+### 왜 에디터는 프레임으로 보여주나
+
+`normalized`의 유일한 약점은 **사람이 손으로 잡기 비직관적**(`0.3088…`보다 "21프레임"이 명확)이라는 점.
+그래서 **저장은 normalized(견고) + 입력은 프레임(직관)** 하이브리드로 둘 다 챙긴다.
+
+- 변환 헬퍼 `ClipFrames` / `FrameWindowField` / `FrameField`
+  ([AnimationConfigTool.Inspector.cs](../Assets/05.Editor/AnimationTool/AnimationConfigTool.Inspector.cs))가
+  `normalized ↔ frame` 양방향 변환(분모 = `clip.length * frameRate`). 입력란은 정수 프레임이고 옆에 `/ 68f` 총 프레임 표시.
+- 소속 클립이 없으면(예: `GlobalLinks`) 길이를 몰라 **normalized 슬라이더로 폴백**한다.
+- 툴바도 현재 재생 위치를 `21/68f`로 표시
+  ([AnimationConfigTool.Toolbar.cs](../Assets/05.Editor/AnimationTool/AnimationConfigTool.Toolbar.cs)).
+
+### 트레이드오프
+
+`normalized`는 "상대 위치"를 보존하지 정확한 "절대 프레임 수"는 보존하지 않는다. 예: **"클립 길이와 무관하게
+정확히 8프레임 i-frame"** 같은 절대 프레임 시맨틱이 필요하면, 클립 길이가 바뀔 때 실제 프레임 수가 달라진다.
+다만 여기서는 윈도우가 "특정 포즈 구간(캔슬·조준·무적)"에 묶이는 거라 **상대 위치 보존이 오히려 맞는** 선택이다.
 
 ---
 
