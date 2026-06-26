@@ -57,7 +57,13 @@
       "Bash(command -v gh)",
       "Bash(gh auth *)",
       "Bash(git switch *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "Bash(git pull *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(gh pr create *)",
+      "PowerShell(gh pr create *)"
     ]
   }
 }
