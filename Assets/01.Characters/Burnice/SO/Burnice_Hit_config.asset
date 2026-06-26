@@ -22,7 +22,10 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     LockRotation: 1
+    LockWindowStart: 0
+    LockWindowEnd: 1
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.15
@@ -30,25 +33,31 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
-    TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.02
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
@@ -63,7 +72,10 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     LockRotation: 1
+    LockWindowStart: 0
+    LockWindowEnd: 1
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
@@ -71,25 +83,31 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
-    TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.02
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -104,7 +122,10 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     LockRotation: 1
+    LockWindowStart: 0
+    LockWindowEnd: 1
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
@@ -112,25 +133,31 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
-    TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: 
       BlendDuration: 0.02
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -145,7 +172,10 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     LockRotation: 1
+    LockWindowStart: 0
+    LockWindowEnd: 1
     SmoothLoopSpeed: 0
+    BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
     StartBoostTime: 0.01
@@ -153,25 +183,31 @@ MonoBehaviour:
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
     StopDistance: 1.2
-    SnapRotation: 1
+    FaceTarget: 0
+    FaceWindowStart: 0
+    FaceWindowEnd: 0
+    FaceTurnSpeed: 720
     SectionTurn: 0
-    TurnAngle: 180
     TurnWindowStart: 0
     TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
       BlendDuration: 0.02
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
       BlendDuration: 0.01
-      Attack: 5
+      EntryOffset: 0
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1

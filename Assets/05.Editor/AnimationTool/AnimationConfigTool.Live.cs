@@ -77,10 +77,10 @@ namespace ZZZ.Editor.AnimationTool
 
                 // Held: 지금 눌려 있는 키 (OnRelease 차지 디버그용). Buffered는 1프레임만 떴다 소비돼
                 // 안 보이지만, Held는 누르고 있는 내내 켜져 있다 떼면 꺼진다.
-                bool enhanceHeld = _liveMachine.IsInputHeld(ComboInput.Attack_Normal_Enhance);
+                bool enhanceHeld = _liveMachine.IsInputHeld(ComboInput.Enhance);
                 var heldStyle = new GUIStyle(EditorStyles.miniLabel)
-                { normal = { textColor = enhanceHeld ? InputColor(ComboInput.Attack_Normal_Enhance) : Color.gray } };
-                GUILayout.Label($"Held: {(enhanceHeld ? "Attack_Normal_Enhance" : "-")}",
+                { normal = { textColor = enhanceHeld ? InputColor(ComboInput.Enhance) : Color.gray } };
+                GUILayout.Label($"Held: {(enhanceHeld ? "Enhance" : "-")}",
                     heldStyle, GUILayout.Width(200));
             }
 

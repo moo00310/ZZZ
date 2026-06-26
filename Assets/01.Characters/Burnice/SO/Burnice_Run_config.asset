@@ -45,8 +45,9 @@ MonoBehaviour:
       TargetSection: Run_End
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -54,8 +55,9 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0.05
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 7
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -89,8 +91,9 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -98,8 +101,9 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.2
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.2806533
       WindowEnd: 1
@@ -133,8 +137,9 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 7
+      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4489336
       WindowEnd: 1
@@ -142,8 +147,9 @@ MonoBehaviour:
       TargetSection: Run_Loop
       BlendDuration: 0
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 2
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -151,20 +157,32 @@ MonoBehaviour:
       TargetSection: Run_End
       BlendDuration: 0
       EntryOffset: 0
-      Attack: 5
+      Attack: 0
       Direction: 1
+      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   GlobalLinks:
+  - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
+    TargetSection: Attack_ExSpecial_02
+    BlendDuration: 0.05
+    EntryOffset: 0
+    Attack: 3
+    Direction: 0
+    RequireHeld: 0
+    Timing: 0
+    WindowStart: 0
+    WindowEnd: 1
   - TargetConfig: {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
     TargetSection: Attack_Normal_01
     BlendDuration: 0.01
     EntryOffset: 0
-    Attack: 0
+    Attack: 2
     Direction: 0
+    RequireHeld: 0
     Timing: 0
     WindowStart: 0
     WindowEnd: 1
