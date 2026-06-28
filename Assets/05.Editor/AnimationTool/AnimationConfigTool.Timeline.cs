@@ -413,7 +413,7 @@ namespace ZZZ.Editor.AnimationTool
             {
                 case LinkTiming.OnRelease:    return new Color(0.35f, 0.8f, 0.9f);
                 case LinkTiming.OnEnd:        return new Color(0.75f, 0.75f, 0.75f);
-                default:                      return InputColor(link.Attack);
+                default:                      return InputColor(ReadInput(link)?.Attack ?? ComboInput.None);
             }
         }
 

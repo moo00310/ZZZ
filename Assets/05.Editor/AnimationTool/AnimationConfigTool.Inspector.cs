@@ -446,18 +446,25 @@ namespace ZZZ.Editor.AnimationTool
                 // Attack=파랑 / Direction=초록 / When=주황. None/Any/기본 타이밍은 생략.
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(34f);
-                if (link.Attack != ComboInput.None)
-                    DrawChip(link.Attack.ToString(), k_chipAttack);
-                if (link.Direction != MoveDir.Any)
-                    DrawChip(link.Direction.ToString(), k_chipDir);
+                var chipIc = ReadInput(link);   // 표시 전용(비저장) — 미마이그레이션이면 레거시 합성
+                if (chipIc != null)
+                {
+                    if (chipIc.Attack != ComboInput.None)
+                        DrawChip(chipIc.Attack.ToString(), k_chipAttack);
+                    if (chipIc.Direction != MoveDir.Any)
+                        DrawChip(chipIc.Direction.ToString(), k_chipDir);
+                }
+                else if (link.Condition != null)   // 비입력 조건(Always/몬스터 등)
+                    DrawChip(link.Condition.DisplayName, k_chipAttack);
                 if (link.Timing == LinkTiming.OnRelease)
                     DrawChip("release", k_chipWhenMiss);
                 else if (link.Timing == LinkTiming.OnEnd)
                     DrawChip("end", k_chipWhen);
                 else if (link.Timing == LinkTiming.OnEndIfMatched)
                     DrawChip("win→end", k_chipWhen);
-                if (link.Attack == ComboInput.None && link.Direction == MoveDir.Any
-                    && link.Timing == LinkTiming.WhenMatched)
+                bool unconditional = link.Condition == null || link.Condition is AlwaysCondition
+                    || (chipIc != null && chipIc.Attack == ComboInput.None && chipIc.Direction == MoveDir.Any);
+                if (unconditional && link.Timing == LinkTiming.WhenMatched)
                     DrawChip("무조건", new Color(0.5f, 0.5f, 0.5f));
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
@@ -475,14 +482,20 @@ namespace ZZZ.Editor.AnimationTool
                         string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
-                    var attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, link.Attack);
+                    // 입력 조건 편집 — 시드는 InputCondition(미마이그레이션이면 레거시), 변경 시 EnsureInput에 기록.
+                    var seedIc = ReadInput(link);
+                    ComboInput seedAttack = seedIc?.Attack ?? ComboInput.None;
+                    MoveDir    seedDir    = seedIc?.Direction ?? MoveDir.Any;
+                    bool       seedHeld   = seedIc?.RequireHeld ?? false;
+
+                    var attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, seedAttack);
                     // 특정 공격 키일 때만 의미 — 그 키가 '눌려있는 동안' 조건 충족 (차지 루프용)
-                    bool requireHeld = link.RequireHeld;
+                    bool requireHeld = seedHeld;
                     if (attack != ComboInput.None && attack != ComboInput.Any)
                         requireHeld = EditorGUILayout.Toggle(
                             new GUIContent("  Require Held", "체크 시 이 키가 '지금 눌려있을(held) 때' 충족 (누름 버퍼 대신 홀드). OnEnd 자기-루프+EntryOffset과 함께 차지 루프"),
-                            link.RequireHeld);
-                    var dir    = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, link.Direction);
+                            seedHeld);
+                    var dir    = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, seedDir);
                     var timing = (LinkTiming)ColoredEnum(
                         new GUIContent("When", TimingHelp(link.Timing)), k_chipWhen, link.Timing);
 
@@ -516,9 +529,10 @@ namespace ZZZ.Editor.AnimationTool
                         Undo.RecordObject(_config, "Edit Link");
                         link.TargetConfig  = targetCfg;
                         link.TargetSection = newIdx == 0 ? "" : sectionOptions[newIdx];
-                        link.Attack        = attack;
-                        link.RequireHeld   = requireHeld;
-                        link.Direction     = dir;
+                        var ic = EnsureInput(link);
+                        ic.Attack          = attack;
+                        ic.RequireHeld     = requireHeld;
+                        ic.Direction       = dir;
                         link.Timing        = timing;
                         link.WindowStart   = ws;
                         link.WindowEnd     = we;
@@ -552,20 +566,41 @@ namespace ZZZ.Editor.AnimationTool
         // 링크 클립보드 — 한 링크를 복사해 다른 섹션/모든 섹션에 붙여넣기 (창 세션 동안 유지)
         private static ClipLink _linkClipboard;
 
-        // ClipLink 깊은 복사 — 값 필드 전부 복사, TargetConfig는 참조 그대로(에셋 공유)
+        // ClipLink 깊은 복사 — 값 필드 전부 복사, TargetConfig는 참조 그대로(에셋 공유). Condition은 깊은 복사.
         private static ClipLink CloneLink(ClipLink s) => new ClipLink
         {
             TargetConfig  = s.TargetConfig,
             TargetSection = s.TargetSection,
             BlendDuration = s.BlendDuration,
             EntryOffset   = s.EntryOffset,
-            Attack        = s.Attack,
-            Direction     = s.Direction,
-            RequireHeld   = s.RequireHeld,
+            Condition     = s.Condition?.Clone(),
             Timing        = s.Timing,
             WindowStart   = s.WindowStart,
             WindowEnd     = s.WindowEnd,
         };
+
+        // 에디터는 현재 입력 조건(InputCondition) 편집 UI만 제공 — link.Condition을 InputCondition으로 다룬다.
+        // 없거나 다른 타입이면 새로 만들어 채운다(향후 몬스터 조건 타입 추가 시 타입 선택 UI로 확장).
+        private static InputCondition EnsureInput(ClipLink link)
+        {
+            if (link.Condition is InputCondition ic) return ic;
+            // 미마이그레이션 링크면 레거시 입력 필드를 시드로 (빈 조건 생성 시 값 손실 방지).
+            var created = link.Condition == null
+                ? new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld }
+                : new InputCondition();
+            link.Condition = created;
+            return created;
+        }
+
+        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, null(미마이그레이션)이면 레거시 필드로 합성(비저장).
+        // 비입력 조건(Always/몬스터)이면 null. ※ 레거시 폴백은 2차 PR에서 제거.
+        private static InputCondition ReadInput(ClipLink link)
+        {
+            if (link.Condition is InputCondition ic) return ic;
+            if (link.Condition == null)
+                return new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld };
+            return null;
+        }
 
         // ── 프레임 단위 입력 헬퍼 ─────────────────────────────────────
         // 데이터는 normalizedTime(0~1)으로 저장하되, 인스펙터에선 클립 프레임 수 기준 정수 프레임으로 표시/편집한다.
@@ -662,6 +697,7 @@ namespace ZZZ.Editor.AnimationTool
         private void AddLink(List<ClipLink> links, ClipLink link)
         {
             Undo.RecordObject(_config, "Add Link");
+            if (link.Condition == null) link.Condition = new InputCondition();   // 새 링크 기본 = 입력 조건
             links.Add(link);
             EditorUtility.SetDirty(_config);
             Repaint();
@@ -671,10 +707,16 @@ namespace ZZZ.Editor.AnimationTool
         private static string CondLabel(ClipLink link)
         {
             string cond = "";
-            if (link.Attack != ComboInput.None) cond = link.Attack.ToString();
-            if (link.Direction != MoveDir.Any)
-                cond = string.IsNullOrEmpty(cond) ? link.Direction.ToString()
-                                                  : cond + "+" + link.Direction;
+            var ic = ReadInput(link);
+            if (ic != null)
+            {
+                if (ic.Attack != ComboInput.None) cond = ic.Attack.ToString();
+                if (ic.Direction != MoveDir.Any)
+                    cond = string.IsNullOrEmpty(cond) ? ic.Direction.ToString()
+                                                      : cond + "+" + ic.Direction;
+            }
+            else if (link.Condition != null && !(link.Condition is AlwaysCondition))
+                cond = link.Condition.DisplayName;
             if (string.IsNullOrEmpty(cond)) cond = "무조건";
 
             string suffix = link.Timing switch

@@ -22,6 +22,24 @@ namespace ZZZ.Player.StateMachine.States
         // OnEndIfMatched 링크의 윈도우 래치 상태 — 섹션 진입마다 비운다(섹션 스코프).
         private readonly HashSet<ClipLink> _latched = new HashSet<ClipLink>();
 
+        // 링크 조건(LinkCondition) 평가용 컨텍스트 — 플레이어 입력/방향 질의를 공급한다.
+        private readonly ILinkConditionContext _condCtx;
+
+        // 링크 조건 접근. Condition이 비어 있으면(아직 마이그레이션 안 한 레거시 에셋) 레거시 입력 필드로
+        // 즉석 InputCondition을 합성해 캐싱한다 — 마이그레이션 메뉴 실행 전에도 플레이가 깨지지 않게.
+        // 마이그레이션/신규 링크 후엔 이 폴백에 도달하지 않으며, 2차 PR에서 레거시 필드와 함께 제거한다.
+        private static LinkCondition Cond(ClipLink link)
+        {
+            if (link.Condition != null) return link.Condition;
+            link.Condition = new InputCondition
+            {
+                Attack      = link.Attack,
+                Direction   = link.Direction,
+                RequireHeld = link.RequireHeld,
+            };
+            return link.Condition;
+        }
+
         public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine,
             AnimationConfig homeConfig)
         {
@@ -29,6 +47,25 @@ namespace ZZZ.Player.StateMachine.States
             Machine     = machine;
             _homeConfig = homeConfig;
             _sc         = new SectionContext { Ctx = ctx, Machine = machine };
+            _condCtx    = new PlayerConditionContext(ctx, machine);
+        }
+
+        // 플레이어 입력/방향을 LinkCondition에 공급하는 어댑터. 몬스터는 별도 컨텍스트를 구현해 주입한다.
+        private sealed class PlayerConditionContext : ILinkConditionContext
+        {
+            private readonly PlayerStateContext _ctx;
+            private readonly PlayerStateMachine _machine;
+            public PlayerConditionContext(PlayerStateContext ctx, PlayerStateMachine machine)
+            { _ctx = ctx; _machine = machine; }
+
+            public bool       HasBufferedInput => _machine.HasBufferedInput;
+            public ComboInput BufferedInput    => _machine.BufferedInput;
+            public bool       IsHeld(ComboInput input) => _machine.IsInputHeld(input);
+            public void       ConsumeInput()   => _machine.ConsumeInput();
+
+            public MoveDir CurrentMoveDir => _ctx.Controller.CurrentMoveDir;
+            public Vector3 InputDir       => _ctx.Controller.MoveDirection;
+            public Vector3 Forward        => _ctx.Transform.forward;
         }
 
         public void Enter()
@@ -77,37 +114,35 @@ namespace ZZZ.Player.StateMachine.States
             UpdateRotationWindows(tc, ntRaw);
             TickModules(tc, ntRaw);
 
-            MoveDir moveDir = Ctx.Controller.CurrentMoveDir;
-
             // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 평가
-            if (TryLinks(tc.Links, tc, ntRaw, moveDir)) return;
-            if (_config.GlobalLinks != null && TryLinks(_config.GlobalLinks, tc, ntRaw, moveDir)) return;
+            if (TryLinks(tc.Links, tc, ntRaw)) return;
+            if (_config.GlobalLinks != null && TryLinks(_config.GlobalLinks, tc, ntRaw)) return;
         }
 
         // links를 순서대로 평가해 첫 발동 링크를 타고 전이한다. 전이했으면 true.
-        private bool TryLinks(List<ClipLink> links, TrackClip tc, float ntRaw, MoveDir moveDir)
+        private bool TryLinks(List<ClipLink> links, TrackClip tc, float ntRaw)
         {
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
             foreach (var link in links)
             {
                 // OnEndIfMatched: 조건을 '발동 시점'이 아니라 '윈도우 구간'에서 보고 래치한다.
-                // 그래서 top의 ConditionMatches 게이트를 거치지 않고 따로 처리(끝에선 입력이 이미 사라짐).
+                // 그래서 top의 Matches 게이트를 거치지 않고 따로 처리(끝에선 입력이 이미 사라짐).
                 if (link.Timing == LinkTiming.OnEndIfMatched)
                 {
-                    if (TryLatchLink(link, tc, p, moveDir)) return true;
+                    if (TryLatchLink(link, tc, p)) return true;
                     continue;
                 }
 
-                // OnRelease: 이 링크 Attack 키를 뗀 순간 발동(홀드 차지 → 릴리스). press 버퍼를 보는
-                // ConditionMatches 게이트를 거치지 않고(릴리스는 press가 아님) 릴리스 신호를 직접 본다.
+                // OnRelease: 이 링크 조건의 '릴리스 신호'(홀드 차지 → 뗌)로 발동. press 버퍼를 보는
+                // Matches 게이트 대신 Condition.ReleaseTriggered를 직접 본다.
                 if (link.Timing == LinkTiming.OnRelease)
                 {
-                    if (TryReleaseLink(link, p, moveDir)) return true;
+                    if (TryReleaseLink(link, p)) return true;
                     continue;
                 }
 
-                // 조건(공격+방향)이 안 맞으면 어떤 타이밍이든 발동 안 함
-                if (!ConditionMatches(link, moveDir)) continue;
+                // 조건이 안 맞으면 어떤 타이밍이든 발동 안 함
+                if (!Cond(link).Matches(_condCtx)) continue;
 
                 bool fire = false;
                 switch (link.Timing)
@@ -118,15 +153,14 @@ namespace ZZZ.Player.StateMachine.States
 
                     case LinkTiming.OnEnd:
                         // 루프 클립도 사이클 끝(wrap된 p)에서 탈출 조건을 검사한다.
-                        // 조건(Direction 등)이 안 맞으면 위 ConditionMatches에서 이미 걸러짐.
+                        // 조건(Direction 등)이 안 맞으면 위 Matches에서 이미 걸러짐.
                         fire = p >= EndThreshold(tc);
                         break;
                 }
 
                 if (fire)
                 {
-                    // 실제 공격 입력을 요구한 링크만 입력 버퍼 소비
-                    if (link.Attack != ComboInput.None) Machine.ConsumeInput();
+                    Cond(link).Consume(_condCtx);   // 입력을 요구한 조건만 버퍼 소비(InputCondition)
                     TakeLink(link);
                     return true;
                 }
@@ -137,14 +171,14 @@ namespace ZZZ.Player.StateMachine.States
         // OnEndIfMatched 처리 — 윈도우[Start,End] 안에서 조건이 충족되면 래치(입력은 즉시 소비해
         // 같은 입력이 다른 링크를 오발동시키지 않게 함). 섹션 끝(EndThreshold)에서 래치돼 있으면 전이.
         // 래치는 섹션 진입마다 리셋(_latched). 반환 true = 전이함.
-        private bool TryLatchLink(ClipLink link, TrackClip tc, float p, MoveDir moveDir)
+        private bool TryLatchLink(ClipLink link, TrackClip tc, float p)
         {
             if (!_latched.Contains(link)
                 && p >= link.WindowStart && p <= link.WindowEnd
-                && ConditionMatches(link, moveDir))
+                && Cond(link).Matches(_condCtx))
             {
                 _latched.Add(link);
-                if (link.Attack != ComboInput.None) Machine.ConsumeInput();
+                Cond(link).Consume(_condCtx);
             }
 
             if (p >= EndThreshold(tc) && _latched.Contains(link))
@@ -155,14 +189,13 @@ namespace ZZZ.Player.StateMachine.States
             return false;
         }
 
-        // OnRelease 처리 — [WindowStart,End] 안에서 이 링크의 Attack 키가 '안 눌린'(떼진) 상태면 전이.
-        // press 버퍼가 아니라 실제 홀드 상태를 본다: 누르고 있으면 대기(차지 지속), 떼면 발동(홀드 차지 → 발사).
-        // 윈도우 시작(WindowStart)이 최소 차지 — 그 전에 떼도 무시되어 windup이 끊기지 않는다. 방향 조건은 동일 검사.
-        private bool TryReleaseLink(ClipLink link, float p, MoveDir moveDir)
+        // OnRelease 처리 — [WindowStart,End] 안에서 조건의 릴리스 신호가 충족되면 전이.
+        // InputCondition은 "Attack 키가 떼졌고 방향 충족"을 릴리스로 본다(홀드 차지 → 발사).
+        // 윈도우 시작(WindowStart)이 최소 차지 — 그 전에 떼도 무시되어 windup이 끊기지 않는다.
+        private bool TryReleaseLink(ClipLink link, float p)
         {
             if (p < link.WindowStart || p > link.WindowEnd) return false;
-            if (Machine.IsInputHeld(link.Attack)) return false;   // 아직 누르고 있음 → 차지 지속
-            if (!MoveConditionMatches(link, moveDir)) return false;
+            if (!Cond(link).ReleaseTriggered(_condCtx)) return false;
 
             TakeLink(link);
             return true;
@@ -369,55 +402,6 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
-        // ── 조건 매칭 ──────────────────────────────────────────────
-        // 링크의 공격+방향 조건이 현재 입력 상태와 모두 맞는지
-        private bool ConditionMatches(ClipLink link, MoveDir moveDir)
-        {
-            return AttackMatches(link) && MoveConditionMatches(link, moveDir);
-        }
-
-        // 방향 조건만 (Attack 제외). Reverse는 카메라 절대 방향이 아니라 현재 facing과의 관계 → dot으로 별도 판정.
-        private bool MoveConditionMatches(ClipLink link, MoveDir moveDir)
-            => link.Direction == MoveDir.Reverse ? IsReverseInput()
-                                                 : MoveMatches(link.Direction, moveDir);
-
-        // 입력이 현재 진행(facing) 방향의 반대쪽(>135도)인가 — 180 턴 전이 조건
-        private bool IsReverseInput()
-        {
-            Vector3 inputDir = Ctx.Controller.MoveDirection;   // 카메라 기준 월드 입력 방향
-            if (inputDir.sqrMagnitude < 0.0001f) return false; // 입력 없으면 반대 아님
-            return Vector3.Dot(Ctx.Transform.forward, inputDir) < -0.707f;
-        }
-
-        // 공격 입력 조건. 기본은 누름 버퍼(짧은 선입력) 기준.
-        // RequireHeld면 그 키가 "지금 눌려있는지(held)"로 판정 — 차지 루프(OnEnd 자기-루프) 등.
-        private bool AttackMatches(ClipLink link)
-        {
-            var required = link.Attack;
-
-            // 홀드 조건 — 특정 키가 현재 눌려있으면 충족. None/Any는 홀드 개념이 없어 버퍼 폴백.
-            if (link.RequireHeld && required != ComboInput.None && required != ComboInput.Any)
-                return Machine.IsInputHeld(required);
-
-            switch (required)
-            {
-                case ComboInput.None: return !Machine.HasBufferedInput;             // 공격 없을 때
-                case ComboInput.Any:  return Machine.HasBufferedInput;              // 아무 공격
-                default:              return Machine.HasBufferedInput               // 특정 공격
-                                          && Machine.BufferedInput == required;
-            }
-        }
-
-        private static bool MoveMatches(MoveDir required, MoveDir current)
-        {
-            switch (required)
-            {
-                case MoveDir.Any:    return true;
-                case MoveDir.Moving: return current != MoveDir.Neutral;
-                default:             return required == current;
-            }
-        }
-
         // 현재는 항상 활성이라 호출되지 않지만, 무적 누수 방지를 위한 정리 진입점으로 남겨둔다.
         public void Exit()
         {
@@ -452,7 +436,7 @@ namespace ZZZ.Player.StateMachine.States
         {
             if (links == null) return false;
             foreach (var l in links)
-                if (l.Attack == input || l.Attack == ComboInput.Any) return true;
+                if (l != null && Cond(l).AcceptsInput(input)) return true;
             return false;
         }
     }
