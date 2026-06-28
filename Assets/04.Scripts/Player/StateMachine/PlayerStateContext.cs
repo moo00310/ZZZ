@@ -6,7 +6,7 @@ namespace ZZZ.Player.StateMachine
     public class PlayerStateContext : IConfigContext
     {
         public PlayerController      Controller     { get; }
-        public PlayerAnimatorBridge  Animator       { get; }
+        public AnimatorBridge  Animator       { get; }
         public CharacterController   CC             { get; }
         public Transform             Transform      { get; }
 
@@ -22,7 +22,7 @@ namespace ZZZ.Player.StateMachine
 
         public PlayerStateContext(
             PlayerController     controller,
-            PlayerAnimatorBridge animator,
+            AnimatorBridge animator,
             CharacterController  cc,
             Transform            transform)
         {

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ZZZ
 {
     // ConfigState(애니메이션 config 러너)가 캐릭터에 요구하는 추상 표면들.
-    // 플레이어(PlayerController/PlayerAnimatorBridge/PlayerStateMachine)와 몬스터가 각자 구현해
+    // 플레이어(PlayerController/AnimatorBridge/PlayerStateMachine)와 몬스터가 각자 구현해
     // 같은 ConfigState 엔진을 공유한다. ConfigState는 이 인터페이스들에만 의존(구상 타입 비의존).
 
     // 이동/회전/루트모션/타겟 표면 — ConfigState.PlayActive 및 매 프레임 윈도우 갱신이 호출.

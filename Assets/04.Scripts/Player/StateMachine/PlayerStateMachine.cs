@@ -10,7 +10,7 @@ namespace ZZZ.Player.StateMachine
     // 얇은 코디네이터 — config 러너(ConfigState)를 소유·구동하고, 협력 객체(입력 버퍼/트리거)를 조립한다.
     // 실제 로직은 InputBuffer / HitTrigger / DodgeTrigger / ConfigRegistry로 분리. 여기서는 조립 + facade만.
     [RequireComponent(typeof(PlayerController))]
-    [RequireComponent(typeof(PlayerAnimatorBridge))]
+    [RequireComponent(typeof(AnimatorBridge))]
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerResources))]
     public class PlayerStateMachine : MonoBehaviour, IConfigSignals
@@ -73,7 +73,7 @@ namespace ZZZ.Player.StateMachine
         private void Awake()
         {
             var controller = GetComponent<PlayerController>();
-            var animator   = GetComponent<PlayerAnimatorBridge>();
+            var animator   = GetComponent<AnimatorBridge>();
             var cc         = GetComponent<CharacterController>();
             var resources  = GetComponent<PlayerResources>();
             var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();   // 거리 분기용 (PlayerController.Awake 순서와 무관하게 직접 획득)
@@ -98,7 +98,7 @@ namespace ZZZ.Player.StateMachine
         private void OnEnable()  { if (_playerInput != null) _playerInput.actions["Attack"].performed += OnAttackPerformed; }
         private void OnDisable() { if (_playerInput != null) _playerInput.actions["Attack"].performed -= OnAttackPerformed; }
 
-        // Start는 모든 Awake가 끝난 뒤 실행 → PlayerAnimatorBridge._animator 초기화 보장
+        // Start는 모든 Awake가 끝난 뒤 실행 → AnimatorBridge._animator 초기화 보장
         private void Start() => _state.Enter();
 
         private void Update()
