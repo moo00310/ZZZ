@@ -135,8 +135,10 @@ namespace ZZZ.Editor.AnimationTool
                 // (차지 토글을 켜 둔 채 재생하다 끄면 발사). press 게이트는 우회.
                 if (link.Timing == LinkTiming.OnRelease)
                 {
-                    if (p >= link.WindowStart && p <= link.WindowEnd
-                        && !AttackMatches(link.Attack) && MoveMatches(link.Direction))
+                    var ric = ReadInput(link);
+                    if (ric != null
+                        && p >= link.WindowStart && p <= link.WindowEnd
+                        && !AttackMatches(ric.Attack) && MoveMatches(ric.Direction))
                     { JumpToLink(link); return true; }
                     continue;
                 }
@@ -155,9 +157,15 @@ namespace ZZZ.Editor.AnimationTool
             return false;
         }
 
-        // 링크의 공격+방향 조건이 현재 시뮬레이션 입력 상태와 모두 맞는지
+        // 링크 조건이 현재 시뮬레이션 입력 상태와 맞는지 — 프리뷰는 입력 조건만 시뮬한다.
+        // 비입력 조건(Always/몬스터)은 AI를 시뮬할 수 없어 Always만 true로 본다.
         private bool ConditionMatches(ClipLink link)
-            => AttackMatches(link.Attack) && MoveMatches(link.Direction);
+        {
+            var ic = ReadInput(link);   // 미마이그레이션이면 레거시 합성
+            if (ic != null)
+                return AttackMatches(ic.Attack) && MoveMatches(ic.Direction);
+            return link.Condition is AlwaysCondition;
+        }
 
         // OnEnd 발동 기준 (런타임 ConfigState와 동일 규칙)
         private float EndThreshold(TrackClip tc)

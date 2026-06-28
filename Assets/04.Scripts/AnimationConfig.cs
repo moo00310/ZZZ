@@ -119,9 +119,9 @@ namespace ZZZ
     }
 
     // 섹션 간 전이 정의.
-    // 조건(Attack + Direction)이 타이밍(Timing) 규칙에 맞게 충족되면 전이한다.
-    //   조건 = 공격 입력 + 방향 입력 (둘 다 AND)
-    //   타이밍 = 언제 그 조건을 평가/발동할지 (즉시 / 윈도우 통과 시 / 클립 끝)
+    // 조건(Condition, 폴리모픽)이 타이밍(Timing) 규칙에 맞게 충족되면 전이한다.
+    //   조건 = LinkCondition (InputCondition=공격+방향 / AlwaysCondition / 몬스터 거리·체력 등)
+    //   타이밍 = 언제 그 조건을 평가/발동할지 (즉시 / 윈도우 통과 시 / 클립 끝 / 릴리스)
     [Serializable]
     public class ClipLink
     {
@@ -134,15 +134,18 @@ namespace ZZZ
         // 이 지점 이전의 Notify는 발동하지 않는다. ※ E 트리거(InterruptWith) 진입엔 적용 안 됨 — 링크 전이 전용.
         [Range(0f, 1f)] public float EntryOffset = 0f;
 
-        [Header("Condition — 공격/방향 입력 조건 (AND)")]
+        [Header("Condition — 전이 조건 (폴리모픽)")]
+        // 무엇이 충족인지를 정의 — 플레이어 입력(InputCondition) / 무조건(AlwaysCondition) / (몬스터)거리·체력 등.
+        // null이면 ConfigState가 항상 true(Always)로 취급한다. [SerializeReference] 폴리모픽(SectionModule과 동형).
+        [SerializeReference] public LinkCondition Condition;
+
+        // ── 레거시(마이그레이션 전용) — InputCondition으로 이전 후 2차 PR에서 제거 예정 ──
+        // 마이그레이션 메뉴가 이 값들을 읽어 Condition(InputCondition)을 만든다. 신규 링크는 Condition을 직접 설정.
         [FormerlySerializedAs("Input")]
-        public ComboInput Attack    = ComboInput.None;  // 요구 공격 입력 (None = 공격 없음)
+        public ComboInput Attack    = ComboInput.None;  // [legacy] 요구 공격 입력
         [FormerlySerializedAs("Move")]
-        public MoveDir    Direction = MoveDir.Any;       // 요구 방향 입력 (Any = 상관없음)
-        // true면 Attack 키가 "지금 눌려있을(held) 때" 조건 충족 — 누름 버퍼(짧은 선입력) 대신 홀드 상태를 본다.
-        // 차지 루프용: OnEnd 자기-루프 + RequireHeld + EntryOffset → E 누르고 있는 동안 구간 반복.
-        // Attack이 None/Any면 무시(홀드 개념 없음). 키 추적은 PlayerStateMachine이 SetHeld로 하는 입력만.
-        public bool RequireHeld = false;
+        public MoveDir    Direction = MoveDir.Any;       // [legacy] 요구 방향 입력
+        public bool RequireHeld = false;                 // [legacy] 홀드 차지 여부
 
         [Header("Timing — 언제 평가할지")]
         public LinkTiming Timing = LinkTiming.WhenMatched;
