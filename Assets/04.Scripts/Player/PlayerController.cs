@@ -18,7 +18,7 @@ namespace ZZZ.Player
     }
 
     [RequireComponent(typeof(CharacterController))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : MonoBehaviour, IConfigMover
     {
         [Header("Locomotion")]
         [SerializeField] private float _rotationSpeed = 15f;

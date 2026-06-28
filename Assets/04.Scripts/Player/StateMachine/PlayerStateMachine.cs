@@ -13,7 +13,7 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(PlayerAnimatorBridge))]
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerResources))]
-    public class PlayerStateMachine : MonoBehaviour
+    public class PlayerStateMachine : MonoBehaviour, IConfigSignals
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
@@ -79,7 +79,8 @@ namespace ZZZ.Player.StateMachine
             var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();   // 거리 분기용 (PlayerController.Awake 순서와 무관하게 직접 획득)
 
             _ctx   = new PlayerStateContext(controller, animator, cc, transform);
-            _state = new ConfigState(_ctx, this, _startConfig);
+            var condCtx = new PlayerConditionContext(_ctx, this);
+            _state = new ConfigState(_ctx, this, condCtx, _startConfig);
 
             // 협력 객체 조립 — 트리거는 인스펙터에서 만들어진 인스턴스에 런타임 의존만 주입(Init).
             var registry = new ConfigRegistry(_startConfig, _configs);

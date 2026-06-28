@@ -9,10 +9,10 @@ namespace ZZZ.Player.StateMachine.States
     // 모든 동작(걷기/콤보/회피/피격 등)을 이 한 클래스 + config로 표현한다 — 전이는 전부 config가 관리.
     public class ConfigState
     {
-        private readonly PlayerStateContext Ctx;
-        private readonly PlayerStateMachine Machine;
-        private readonly AnimationConfig    _homeConfig;   // 진입/복귀 기본 config
-        private readonly SectionContext     _sc;           // 섹션 모듈에 넘기는 핸들 묶음
+        private readonly IConfigContext  Ctx;
+        private readonly IConfigSignals  Signals;
+        private readonly AnimationConfig _homeConfig;   // 진입/복귀 기본 config
+        private readonly SectionContext  _sc;           // 섹션 모듈에 넘기는 핸들 묶음
 
         private AnimationConfig _config;   // 현재 구동 중 config
         private int             _active;   // 현재 클립 인덱스
@@ -40,38 +40,21 @@ namespace ZZZ.Player.StateMachine.States
             return link.Condition;
         }
 
-        public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine,
-            AnimationConfig homeConfig)
+        // 캐릭터(플레이어/몬스터)별 컨텍스트·신호·조건소스를 주입받는다 — 구상 타입 비의존.
+        public ConfigState(IConfigContext ctx, IConfigSignals signals,
+            ILinkConditionContext condCtx, AnimationConfig homeConfig)
         {
             Ctx         = ctx;
-            Machine     = machine;
+            Signals     = signals;
             _homeConfig = homeConfig;
-            _sc         = new SectionContext { Ctx = ctx, Machine = machine };
-            _condCtx    = new PlayerConditionContext(ctx, machine);
-        }
-
-        // 플레이어 입력/방향을 LinkCondition에 공급하는 어댑터. 몬스터는 별도 컨텍스트를 구현해 주입한다.
-        private sealed class PlayerConditionContext : ILinkConditionContext
-        {
-            private readonly PlayerStateContext _ctx;
-            private readonly PlayerStateMachine _machine;
-            public PlayerConditionContext(PlayerStateContext ctx, PlayerStateMachine machine)
-            { _ctx = ctx; _machine = machine; }
-
-            public bool       HasBufferedInput => _machine.HasBufferedInput;
-            public ComboInput BufferedInput    => _machine.BufferedInput;
-            public bool       IsHeld(ComboInput input) => _machine.IsInputHeld(input);
-            public void       ConsumeInput()   => _machine.ConsumeInput();
-
-            public MoveDir CurrentMoveDir => _ctx.Controller.CurrentMoveDir;
-            public Vector3 InputDir       => _ctx.Controller.MoveDirection;
-            public Vector3 Forward        => _ctx.Transform.forward;
+            _condCtx    = condCtx;
+            _sc         = new SectionContext { Ctx = ctx, Machine = signals };
         }
 
         public void Enter()
         {
             SwitchConfig(_homeConfig, null, 0f);
-            Machine.ConsumeInput();
+            Signals.ConsumeInput();
         }
 
         // 외부 이벤트(피격 등)로 현재 config를 즉시 갈아끼운다.
@@ -246,8 +229,8 @@ namespace ZZZ.Player.StateMachine.States
         {
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
-            Machine.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
-            Machine.ParryActive  = false;    // 섹션 진입 시 패링 해제 — parry 모듈이 윈도우 동안만 다시 켠다
+            Signals.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
+            Signals.ParryActive  = false;    // 섹션 진입 시 패링 해제 — parry 모듈이 윈도우 동안만 다시 켠다
 
             var tc = _config.Clips[_active];
             if (tc.Clip == null) { _notifyFired = null; return; }
@@ -268,14 +251,14 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Animator.ApplyAnimatorSpeed(tc.Speed);
 
             // 이동 방식 적용
-            Ctx.Controller.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
-            Ctx.Controller.SmoothLoopSpeed = tc.SmoothLoopSpeed;   // 루프 전진 평속화 (틱 제거) — 섹션별 토글
-            Ctx.Controller.BackMotionScale = tc.BackMotionScale;   // 후진(-Z) 루트모션 증폭 — 섹션별 배율
-            Ctx.Controller.ExtractRootRotation = tc.SectionTurn;   // 턴 섹션이면 Root yaw를 transform에 적용
-            if (tc.SectionTurn) Ctx.Controller.FlushRootRotation();   // 진입(재진입 포함) 시 회전 추출 baseline/누적 리셋
+            Ctx.Mover.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
+            Ctx.Mover.SmoothLoopSpeed = tc.SmoothLoopSpeed;   // 루프 전진 평속화 (틱 제거) — 섹션별 토글
+            Ctx.Mover.BackMotionScale = tc.BackMotionScale;   // 후진(-Z) 루트모션 증폭 — 섹션별 배율
+            Ctx.Mover.ExtractRootRotation = tc.SectionTurn;   // 턴 섹션이면 Root yaw를 transform에 적용
+            if (tc.SectionTurn) Ctx.Mover.FlushRootRotation();   // 진입(재진입 포함) 시 회전 추출 baseline/누적 리셋
             // 회전 윈도우 초기값 (Update 전 1프레임 일관성) — 이후 매 프레임 UpdateRotationWindows가 갱신
             UpdateRotationWindows(tc, 0f);
-            if (tc.MoveMode == MoveMode.RootMotion) Ctx.Controller.FlushRootPos();
+            if (tc.MoveMode == MoveMode.RootMotion) Ctx.Mover.FlushRootPos();
 
             // 진입 스냅 — 이동 입력이 있으면 그쪽으로 즉시 회전 후(LockRotation이면) 고정.
             // 콤보가 새 섹션으로 진입하는 순간이 곧 "콤보 사이" 재조준 지점이 된다.
@@ -283,35 +266,35 @@ namespace ZZZ.Player.StateMachine.States
             bool facedInput = false;
             if (tc.FaceInputOnEnter)
             {
-                Vector3 inputDir = Ctx.Controller.MoveDirection;   // 카메라 기준 WASD 방향
+                Vector3 inputDir = Ctx.Mover.MoveDirection;   // 카메라 기준 WASD 방향
                 if (inputDir.sqrMagnitude > 0.0001f)
                 {
-                    Ctx.Controller.FaceToward(inputDir);
+                    Ctx.Mover.FaceToward(inputDir);
                     facedInput = true;
                 }
             }
 
             // 타겟 기반 기능 — 이동 워프(EnableTracking)와 타겟 조준(FaceTarget)은 독립 토글.
             // 하나라도 켜져 있으면 적을 찾는다. 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다.
-            Ctx.Controller.ClearWarpTarget();
+            Ctx.Mover.ClearWarpTarget();
             if (tc.MoveMode == MoveMode.RootMotion && (tc.EnableTracking || tc.FaceTarget))
             {
-                var sensor = Ctx.Controller.EnemySensor;
+                var sensor = Ctx.Mover.EnemySensor;
                 var target = sensor != null ? sensor.FindTarget() : null;
                 if (target != null)
                 {
                     // translate = 이동 워프(EnableTracking), face = 타겟 조준(FaceTarget) — 회전은 트래킹과 무관
-                    Ctx.Controller.SetWarpTarget(target, tc.StopDistance,
+                    Ctx.Mover.SetWarpTarget(target, tc.StopDistance,
                         tc.EnableTracking, tc.FaceTarget, tc.FaceTurnSpeed);
                     // 진입 1회 스냅 — FaceWindow가 0부터면 첫 프레임에 즉시 정렬(입력 조준이 있으면 양보).
                     // 이후 FaceWindow 동안의 지속 회전(락온)은 컨트롤러 UpdateWarpFacing이 담당.
                     if (tc.FaceTarget && tc.FaceWindowStart <= 0f && !facedInput)
-                        Ctx.Controller.FaceToward(target.position - Ctx.Transform.position);
+                        Ctx.Mover.FaceToward(target.position - Ctx.Transform.position);
                 }
             }
 
             // 시작 부스트 (0이면 내부에서 해제) — 매 섹션 진입마다 갱신
-            Ctx.Controller.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
+            Ctx.Mover.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
 
             // 섹션 모듈 진입 (i-frame 등) — Warp가 참조할 수 있게 입력 조준 여부 전달
             _sc.FacedInputThisEnter = facedInput;
@@ -335,17 +318,17 @@ namespace ZZZ.Player.StateMachine.States
         // 이동 워프 윈도우 — TrackWindow 안에서만 이동 재조준 작동 (타격 이후 적을 따라 휙 도는 것 방지)
         private void UpdateWarpWindow(TrackClip tc, float ntRaw)
         {
-            if (!tc.EnableTracking) { Ctx.Controller.WarpWindowActive = false; return; }
+            if (!tc.EnableTracking) { Ctx.Mover.WarpWindowActive = false; return; }
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
-            Ctx.Controller.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
+            Ctx.Mover.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
         }
 
         // 타겟 조준 윈도우 — FaceWindow 안에서 컨트롤러가 타겟을 향해 회전. [0,0]이면 진입 1회(스냅), 넓히면 락온.
         private void UpdateFaceWindow(TrackClip tc, float ntRaw)
         {
-            if (!tc.FaceTarget) { Ctx.Controller.FaceWindowActive = false; return; }
+            if (!tc.FaceTarget) { Ctx.Mover.FaceWindowActive = false; return; }
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
-            Ctx.Controller.FaceWindowActive = p >= tc.FaceWindowStart && p <= tc.FaceWindowEnd;
+            Ctx.Mover.FaceWindowActive = p >= tc.FaceWindowStart && p <= tc.FaceWindowEnd;
         }
 
         // 입력 회전 잠금(LockRotation)을 normalizedTime 구간에서만 작동시킨다. End<=Start면 섹션 전체.
@@ -357,9 +340,9 @@ namespace ZZZ.Player.StateMachine.States
             {
                 bool windowed = tc.LockWindowEnd > tc.LockWindowStart;
                 bool locked   = !windowed || (p >= tc.LockWindowStart && p <= tc.LockWindowEnd);
-                Ctx.Controller.AllowRotation = !locked;
+                Ctx.Mover.AllowRotation = !locked;
             }
-            else Ctx.Controller.AllowRotation = true;
+            else Ctx.Mover.AllowRotation = true;
         }
 
         // 섹션 모듈 매 프레임 구동 (i-frame 등). 있는 모듈만 실행.
@@ -396,7 +379,7 @@ namespace ZZZ.Player.StateMachine.States
                     break;
                 default:
                     if (!string.IsNullOrEmpty(notify.EventName))
-                        Ctx.Controller.gameObject.SendMessage(
+                        Ctx.GameObject.SendMessage(
                             notify.EventName, SendMessageOptions.DontRequireReceiver);
                     break;
             }
@@ -406,9 +389,9 @@ namespace ZZZ.Player.StateMachine.States
         public void Exit()
         {
             _notifyFired = null;
-            Ctx.Controller.ClearWarpTarget();
-            Machine.Invulnerable = false;
-            Machine.ParryActive  = false;
+            Ctx.Mover.ClearWarpTarget();
+            Signals.Invulnerable = false;
+            Signals.ParryActive  = false;
         }
 
         // ── 에디터 라이브 모니터용 읽기 전용 노출 ──────────────────
@@ -420,7 +403,7 @@ namespace ZZZ.Player.StateMachine.States
         public float CurrentNormalizedTime =>
             (_config != null && _active >= 0 && _active < _config.Clips.Count)
                 ? SectionNormalizedTime(_config.Clips[_active]) : 0f;
-        public MoveDir CurrentMoveDir        => Ctx.Controller.CurrentMoveDir;
+        public MoveDir CurrentMoveDir        => Ctx.Mover.CurrentMoveDir;
 
         // 현재 섹션(또는 config 공통 GlobalLinks)에 이 공격 입력을 받는 링크가 있는지.
         // 있으면 그 섹션이 입력을 '직접' 처리한다는 뜻 → 전역 폴백 트리거(강화 등)가 윈도우 전에 입력을

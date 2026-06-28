@@ -5,7 +5,7 @@ namespace ZZZ.Player.StateMachine
 {
     // 애니메이터 얇은 래퍼 — config가 클립을 이름으로 재생(Play)하고, 피격 흔들림(additive)을 구동한다.
     [RequireComponent(typeof(Animator))]
-    public class PlayerAnimatorBridge : MonoBehaviour
+    public class PlayerAnimatorBridge : MonoBehaviour, IAnimatorBridge
     {
         [Header("Additive Hit Shake (layer 1)")]
         [SerializeField] private int   _additiveLayer = 1;
