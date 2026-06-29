@@ -584,23 +584,14 @@ namespace ZZZ.Editor.AnimationTool
         private static InputCondition EnsureInput(ClipLink link)
         {
             if (link.Condition is InputCondition ic) return ic;
-            // 미마이그레이션 링크면 레거시 입력 필드를 시드로 (빈 조건 생성 시 값 손실 방지).
-            var created = link.Condition == null
-                ? new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld }
-                : new InputCondition();
+            // 없거나 다른 타입이면 빈 입력 조건을 새로 만들어 채운다.
+            var created = new InputCondition();
             link.Condition = created;
             return created;
         }
 
-        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, null(미마이그레이션)이면 레거시 필드로 합성(비저장).
-        // 비입력 조건(Always/몬스터)이면 null. ※ 레거시 폴백은 2차 PR에서 제거.
-        private static InputCondition ReadInput(ClipLink link)
-        {
-            if (link.Condition is InputCondition ic) return ic;
-            if (link.Condition == null)
-                return new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld };
-            return null;
-        }
+        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, 아니면(Always/몬스터/null) null.
+        private static InputCondition ReadInput(ClipLink link) => link.Condition as InputCondition;
 
         // ── 프레임 단위 입력 헬퍼 ─────────────────────────────────────
         // 데이터는 normalizedTime(0~1)으로 저장하되, 인스펙터에선 클립 프레임 수 기준 정수 프레임으로 표시/편집한다.

@@ -139,14 +139,6 @@ namespace ZZZ
         // null이면 ConfigState가 항상 true(Always)로 취급한다. [SerializeReference] 폴리모픽(SectionModule과 동형).
         [SerializeReference] public LinkCondition Condition;
 
-        // ── 레거시(마이그레이션 전용) — InputCondition으로 이전 후 2차 PR에서 제거 예정 ──
-        // 마이그레이션 메뉴가 이 값들을 읽어 Condition(InputCondition)을 만든다. 신규 링크는 Condition을 직접 설정.
-        [FormerlySerializedAs("Input")]
-        public ComboInput Attack    = ComboInput.None;  // [legacy] 요구 공격 입력
-        [FormerlySerializedAs("Move")]
-        public MoveDir    Direction = MoveDir.Any;       // [legacy] 요구 방향 입력
-        public bool RequireHeld = false;                 // [legacy] 홀드 차지 여부
-
         [Header("Timing — 언제 평가할지")]
         public LinkTiming Timing = LinkTiming.WhenMatched;
         [Range(0f, 1f)] public float WindowStart = 0f;   // 평가 구간 시작 (normalizedTime)
