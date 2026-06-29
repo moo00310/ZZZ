@@ -11,8 +11,6 @@
 **C# 상태 러너(ConfigState) + 데이터 트랙(ScriptableObject) + 커스텀 에디터 툴** 의 3층 구조로 만들고,
 "무엇을 언제 재생할지"를 코드가 아니라 **에셋 편집만으로** 구성할 수 있게 했다.
 
-이 README는 **애니메이션 · 이펙트 · 셰이더** 세 시스템으로 나눠, 각 시스템의 **대표적인 것만** 설명하고
-세부는 링크로 잇는다. 현재는 **애니메이션 시스템**이 핵심 결과물이고, 이펙트·셰이더는 같은 구조 위에서 채워가는 **로드맵**이다.
 
 > 📖 구현 내부 동작·문제해결의 상세는 **[AnimationArchitecture.md](Documentation/AnimationArchitecture.md)**,
 > 자료구조 선택 철학은 **[자료구조_선택.md](Documentation/자료구조_선택.md)** 참고.
@@ -45,20 +43,6 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 | 디버깅·확장 | 그래프가 커지면 추적·확장이 지옥 | 흐름이 데이터 한 곳에 모여 읽힘 |
 | 이 방식의 비용 | — | 스키마를 직접 설계·유지, 블렌딩·시간계산 직접 구현, **추적용 전용 에디터 툴 필요(그래서 만들었다)** |
 
-### 구현물 한눈에
-
-| 영역 | 구현물 | 위치 |
-|------|--------|------|
-| 데이터 전투 시스템 | `AnimationConfig`(섹션·Link·Notify·Module 트랙) + 폴리모픽 전이 조건 `LinkCondition` | `04.Scripts/AnimationConfig.cs` · `LinkCondition.cs` |
-| 공유 러너 | `ConfigState` — config를 파싱해 모든 흐름 구동. **플레이어·몬스터 공용**(인터페이스 `ConfigDriving.cs`에만 의존) | `04.Scripts/Player/StateMachine/States/` · `ConfigDriving.cs` |
-| 상태 코디네이터 | `PlayerStateMachine` + 입력버퍼/피격/회피/패링/강화공격 트리거 | `04.Scripts/Player/StateMachine/` |
-| 몬스터(스캐폴드) | `MonsterStateMachine`(입력 없는 코디네이터) + `MonsterController`/`MonsterContext` — 같은 `ConfigState`로 Idle+Hit 구동 | `04.Scripts/Monster/` |
-| 이동/루트모션 | `PlayerController` — 본에서 직접 추출, 타겟 워프, 섹션 턴 | `04.Scripts/Player/PlayerController.cs` |
-| 섹션 모듈(플러그인) | `WindowModule` 베이스 → `IFrameModule`(무적) / `ParryModule`(패링) | `04.Scripts/Player/StateMachine/Modules/` |
-| 전투 판정 | `EnemySensor`(전방 부채꼴 탐지) / `HitTarget` / `IHittable` + 타격(`MeleeHitter` 센서 기반 / `EffectHitVolume` 이펙트 범위 기반) | `04.Scripts/Combat/` |
-| 카메라 | 커스텀 TPS 카메라 (Cinemachine 미사용) | `04.Scripts/Player/TPSCameraController.cs` |
-| **에디터 툴** | `AnimationConfigTool` — 타임라인 편집·Combo 프리뷰·라이브 모니터 + FBX 클립 추출 | `05.Editor/AnimationTool/` |
-
 ### 대표 결과물 (왜 → 어떻게 → 장단점)
 
 **① `AnimationConfig` — 데이터로 정의·구동하는 전투 런타임**
@@ -67,17 +51,17 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 | 구성요소 | 하는 일 |
 |------|------|
-| [**Links (전이)**](Documentation/AnimationArchitecture.md#cliplink-전이-정의) | "이 섹션에서 → 어떤 입력/타이밍이면 → 어느 config·섹션으로"를 분기. `Timing`(`WhenMatched`/`OnRelease`/`OnEnd`/`OnEndIfMatched`) + `Window`/`EntryOffset`로 콤보·차지·중간진입 제어. 조건은 폴리모픽 `LinkCondition` |
+| [**Links (전이)**](Documentation/AnimationArchitecture.md#cliplink-전이-정의) | "이 섹션에서 → 어떤 입력/타이밍이면 → 어느 config·섹션으로"를 분기. `Timing`(`WhenMatched`/`OnRelease`/`OnEnd`/`OnEndIfMatched`) + `Window`/`EntryOffset`로 콤보·차지·중간진입 제어. 조건은 다형성 `LinkCondition` |
 | [**Notifies**](Documentation/AnimationArchitecture.md#피격-외부-이벤트-진입) | 재생 중 특정 시점에 이벤트/이펙트 발동 (피격 흔들림 신호 등) |
-| [**Modules (플러그인)**](Documentation/AnimationArchitecture.md#섹션-모듈-sectionmodule--기능을-끼워-넣는-플러그인) | `[SerializeReference]` 폴리모픽 — **새 판정/연출 = 클래스 1개 상속**. 무적(`IFrameModule`)·패링(`ParryModule`) 등 |
+| [**Modules (플러그인)**](Documentation/AnimationArchitecture.md#섹션-모듈-sectionmodule--기능을-끼워-넣는-플러그인) | `[SerializeReference]` 다형성 — **새 판정/연출 = 클래스 1개 상속**. 무적(`IFrameModule`)·패링(`ParryModule`) 등 |
 
-→ 전투 콘텐츠 확장이 "에셋 추가 + 섹션 이름 규약"으로 끝난다. 단, 데이터 스키마를 직접 설계·유지해야 하고 폴리모픽 직렬화는 타입 이동/리네임에 취약하다.
+→ 전투 콘텐츠 확장이 "에셋 추가 + 섹션 이름 규약"으로 끝난다. 단, 데이터 스키마를 직접 설계·유지해야 하고 다형성 직렬화는 타입 이동/리네임에 취약하다.
 
 **② `ConfigState` — config를 파싱해 모든 흐름을 굴리는 공유 러너**
 걷기·콤보·강화공격·대시·피격·회피·패링을 **이 한 클래스**가 config를 읽어 구동한다. 별도 State 클래스를
 갈아끼우는 상태머신이 아니라 **config를 갈아끼우는(`SwitchConfig`/`InterruptWith`)** 방식이다.
 
-> **공유 엔진** — `ConfigState`는 플레이어 구상 타입이 아니라 인터페이스(`ConfigDriving.cs`)에만 의존해, **몬스터(Durahan)도 같은 엔진으로 Idle+Hit를 구동**한다(현재 스캐폴드). 전이 조건도 폴리모픽 `LinkCondition`(`InputCondition`/`AlwaysCondition` … 몬스터 거리·체력 등 확장)으로 빠져, 새 조건 = 클래스 1개 추가. 상세 [AnimationArchitecture.md](Documentation/AnimationArchitecture.md#몬스터-공유-엔진-재사용)
+> **공유 엔진** — `ConfigState`는 플레이어 구상 타입이 아니라 인터페이스(`ConfigDriving.cs`)에만 의존해, **몬스터(Durahan)도 같은 엔진으로 Idle+Hit를 구동**한다(현재 스캐폴드). 전이 조건도 다형성 `LinkCondition`(`InputCondition`/`AlwaysCondition` … 몬스터 거리·체력 등 확장)으로 빠져, 새 조건 = 클래스 1개 추가. 상세 [AnimationArchitecture.md](Documentation/AnimationArchitecture.md#몬스터-공유-엔진-재사용)
 
 → 상태가 늘어도 클래스가 안 늘어나고(데이터만 늘어남) 캐릭터 종류가 늘어도 엔진은 하나. 단, 러너 하나가 모든 흐름을 책임져 클래스 자체는 커진다.
 
@@ -127,9 +111,8 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ## 🧭 컨벤션
 
-- **코딩** — `PascalCase`(타입/메서드/프로퍼티) · `_camelCase`(private 필드) · 상수 `UPPER_SNAKE_CASE` · Animator 해시는 `static readonly`로 캐싱 · Unity Object는 `== null`(C# `?.` 금지) · 인스펙터 노출은 `[SerializeField] private`(public 필드 금지) · 네임스페이스 `ZZZ.<모듈>` 필수. → 전체 **[CodingConventions.md](Documentation/CodingConventions.md)**
-- **커밋·브랜치** — Conventional Commits(`feat`/`fix`/`refactor`/`docs`/`chore`) · 한 커밋 = 한 논리 변경(atomic) · `main` 직커밋 금지 → feature 브랜치 → PR → 셀프 리뷰 → **Squash 머지**. → 전체 **[Git_커밋_컨벤션.md](Documentation/Git_커밋_컨벤션.md)**
-- **프로젝트 규칙** — `99.Settings/` URP 에셋 직접 수정 금지(필요 시 새 Profile/RendererData 생성) · `05.Editor/`(에디터 전용)에 런타임 의존성 추가 금지 · VFX/Particle은 Prefab으로 만들어 `02.Effects/`에 저장.
+- **코딩** — [CodingConventions.md](Documentation/CodingConventions.md)
+- **커밋·브랜치** — [Git_커밋_컨벤션.md](Documentation/Git_커밋_컨벤션.md)
 
 ---
 
