@@ -55,4 +55,24 @@ namespace ZZZ
         bool ParryActive  { get; set; }
         void ConsumeInput();
     }
+
+    // 에디터/HUD 라이브 모니터가 읽는 런타임 상태 표면 — 플레이어/몬스터 머신이 공통 구현.
+    // 모니터 툴은 이 인터페이스로만 머신을 다뤄, 씬의 어떤 캐릭터든 골라 추적할 수 있다.
+    public interface ILiveMonitor
+    {
+        AnimationConfig CurrentConfig         { get; }
+        int             CurrentClipIndex      { get; }
+        string          CurrentSection        { get; }
+        float           CurrentNormalizedTime { get; }
+        MoveDir         CurrentMoveDir         { get; }
+    }
+
+    // 입력 버퍼/홀드 모니터 — 입력 있는 머신(플레이어)만 구현. 라이브바가 옵션으로 캐스팅해 표시.
+    // 몬스터처럼 입력이 없는 머신은 ILiveMonitor만 구현하면 된다.
+    public interface IInputMonitor
+    {
+        bool       HasBufferedInput { get; }
+        ComboInput BufferedInput    { get; }
+        bool       IsInputHeld(ComboInput input);
+    }
 }

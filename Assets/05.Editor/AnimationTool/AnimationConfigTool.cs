@@ -88,7 +88,9 @@ namespace ZZZ.Editor.AnimationTool
         private Vector2 _inspScroll;
 
         // ── 라이브 모니터 (플레이 중 런타임 상태 추적) ────────────
-        private PlayerStateMachine _liveMachine;
+        // 씬의 ILiveMonitor 구현체(플레이어/몬스터)를 골라 추적. _liveCandidates는 드롭다운 선택지.
+        private ILiveMonitor              _liveMachine;
+        private readonly List<ILiveMonitor> _liveCandidates = new List<ILiveMonitor>();
         private AnimationConfig    _liveConfig;
         private int                _liveClipIdx = -1;
         private string             _liveSection;
@@ -144,6 +146,7 @@ namespace ZZZ.Editor.AnimationTool
             if (s == PlayModeStateChange.EnteredEditMode)
             {
                 _liveMachine = null;
+                _liveCandidates.Clear();
                 _liveConfig  = null;
                 // Play 중 Follow로 다른 config를 따라갔다면 원래 보던 것으로 복원
                 if (_preplayConfig != null && _preplayConfig != _config)

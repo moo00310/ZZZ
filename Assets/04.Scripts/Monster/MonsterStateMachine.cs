@@ -10,7 +10,7 @@ namespace ZZZ.Monster
     // 부품(Controller/AnimatorBridge/Context)만 몬스터 것이고 ConfigState 본체는 플레이어와 동일.
     [RequireComponent(typeof(MonsterController))]
     [RequireComponent(typeof(HitTarget))]
-    public class MonsterStateMachine : MonoBehaviour, IConfigSignals
+    public class MonsterStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor
     {
         [Header("Configs")]
         [SerializeField] private AnimationConfig _idleConfig;   // 시작/복귀 기본 (home)
@@ -27,6 +27,14 @@ namespace ZZZ.Monster
         public bool Invulnerable { get; set; }
         public bool ParryActive  { get; set; }
         public void ConsumeInput() { }   // 입력 버퍼 없음 → no-op
+
+        // ── ILiveMonitor ── 에디터 라이브 모니터용 읽기 전용 노출 (플레이어와 동일 패턴).
+        // 입력 개념이 없으므로 IInputMonitor는 구현하지 않는다 → 라이브바가 입력 행을 자동 생략.
+        public AnimationConfig CurrentConfig         => _state?.CurrentConfig;
+        public int             CurrentClipIndex      => _state?.ActiveIndex ?? -1;
+        public string          CurrentSection        => _state?.ActiveSection;
+        public float           CurrentNormalizedTime => _state?.CurrentNormalizedTime ?? 0f;
+        public MoveDir         CurrentMoveDir         => _state?.CurrentMoveDir ?? MoveDir.Any;
 
         private void Awake()
         {

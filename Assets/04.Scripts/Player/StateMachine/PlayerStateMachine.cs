@@ -13,7 +13,7 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(AnimatorBridge))]
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerResources))]
-    public class PlayerStateMachine : MonoBehaviour, IConfigSignals
+    public class PlayerStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor, IInputMonitor
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
