@@ -10,6 +10,9 @@ namespace ZZZ
     /// Transform·씬·AnimationMode에 의존하지 않는 순수 계산만 담당 → 단위 테스트 가능.
     /// 월드 변환(TransformDirection)과 스케일 적용은 호출자(루트본/transform을 아는 쪽)가 담당한다.
     /// </summary>
+    // TODO(몬스터 루트모션): 현재 이 코어(flush/경계→cur-prev)가 PlayerController.ComputeRootDeltaLocal에
+    // 런타임용으로 한 벌 더 복제돼 있다(테스트는 이 struct만 검증). 몬스터 루트모션을 붙일 때 양쪽을
+    // 이 헬퍼로 통합해 플레이어·몬스터·에디터 프리뷰가 한 소스를 공유하게 할 것. — [[todo-rootmotion-tracker-unify]]
     public struct RootMotionTracker
     {
         public bool    HasPrev;       // 직전 샘플 유효 여부 (false면 델타 0)

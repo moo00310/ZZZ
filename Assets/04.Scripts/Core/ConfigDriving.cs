@@ -38,13 +38,15 @@ namespace ZZZ
         void Play(string stateName, float crossFade = 0.01f, float fixedTimeOffset = 0f);
     }
 
-    // ConfigState가 접근하는 공유 컴포넌트 묶음(PlayerStateContext의 일반형).
-    public interface IConfigContext
+    // ConfigState가 접근하는 공유 컴포넌트 묶음 — 구상 데이터 홀더.
+    // 인터페이스가 아니라 구상 클래스다: 다형성이 필요한 건 Mover/Animator 둘뿐이고(아래 필드 타입),
+    // '묶음' 자체는 캐릭터마다 바꿔치기할 일이 없다. 플레이어/몬스터가 각자 채워 ConfigState에 넘긴다.
+    public sealed class ConfigContext
     {
-        IConfigMover    Mover      { get; }
-        IAnimatorBridge Animator   { get; }
-        Transform       Transform  { get; }
-        GameObject      GameObject { get; }   // Notify(SendMessage) 대상
+        public IConfigMover    Mover      { get; set; }
+        public IAnimatorBridge Animator   { get; set; }
+        public Transform       Transform  { get; set; }
+        public GameObject      GameObject { get; set; }   // Notify(SendMessage) 대상
     }
 
     // ConfigState가 머신에 보내는 신호 — 무적/패링(섹션 진입 시 리셋, 모듈이 윈도우 동안 재설정),

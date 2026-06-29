@@ -134,9 +134,9 @@ namespace ZZZ
         // 이 지점 이전의 Notify는 발동하지 않는다. ※ E 트리거(InterruptWith) 진입엔 적용 안 됨 — 링크 전이 전용.
         [Range(0f, 1f)] public float EntryOffset = 0f;
 
-        [Header("Condition — 전이 조건 (폴리모픽)")]
+        [Header("Condition — 전이 조건 (다형성)")]
         // 무엇이 충족인지를 정의 — 플레이어 입력(InputCondition) / 무조건(AlwaysCondition) / (몬스터)거리·체력 등.
-        // null이면 ConfigState가 항상 true(Always)로 취급한다. [SerializeReference] 폴리모픽(SectionModule과 동형).
+        // null이면 ConfigState가 항상 true(Always)로 취급한다. [SerializeReference] 다형성 .
         [SerializeReference] public LinkCondition Condition;
 
         [Header("Timing — 언제 평가할지")]

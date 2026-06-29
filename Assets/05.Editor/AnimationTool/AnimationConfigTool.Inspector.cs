@@ -446,7 +446,7 @@ namespace ZZZ.Editor.AnimationTool
                 // Attack=파랑 / Direction=초록 / When=주황. None/Any/기본 타이밍은 생략.
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(34f);
-                var chipIc = ReadInput(link);   // 표시 전용(비저장) — 미마이그레이션이면 레거시 합성
+                var chipIc = ReadInput(link);   // 표시 전용 — InputCondition이 아니면 null
                 if (chipIc != null)
                 {
                     if (chipIc.Attack != ComboInput.None)
@@ -482,7 +482,7 @@ namespace ZZZ.Editor.AnimationTool
                         string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
-                    // 입력 조건 편집 — 시드는 InputCondition(미마이그레이션이면 레거시), 변경 시 EnsureInput에 기록.
+                    // 입력 조건 편집 — 시드는 현재 InputCondition, 변경 시 EnsureInput에 기록.
                     var seedIc = ReadInput(link);
                     ComboInput seedAttack = seedIc?.Attack ?? ComboInput.None;
                     MoveDir    seedDir    = seedIc?.Direction ?? MoveDir.Any;

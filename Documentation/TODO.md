@@ -19,11 +19,10 @@
 
 ## 진행중
 
-- [ ] **ExSpecial 모션 제작 & 연결** — `Attack_ExSpecial_01` 모션 신규 제작. **진입은 배선 완료**(Explode 재생 중 E 재입력 → ExSpecial 링크). 모션·연출만 채우면 됨
 
 ## 예정 (로드맵)
 
-- [ ] **특수 기술(Special)** — 신규 모션 제작 후 기존 콤보/입력 시스템에 배선 (ExSpecial 외 추가 기술)
+- [ ] **몬스터 루트모션/추격** — `MonsterController`의 `IConfigMover` no-op들(`FlushRootPos`/워프 등)을 실제 구현(현재 제자리 재생). **이때 같이**: `PlayerController.ComputeRootDeltaLocal`의 코어 델타 로직과 `RootMotionTracker`(현재 에디터 프리뷰/테스트 전용)의 **중복을 공용 헬퍼로 통합** → 플레이어·몬스터·프리뷰가 한 소스 공유, 기존 `RootMotionTrackerTests`가 런타임 경로까지 검증
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
 - [ ] **노티파이 트랙 확장 (이펙트)** — 본 소켓 바인딩, 구간형 노티파이, 이펙트 풀링. 별도 이펙트 툴은 만들지 않고 **`AnimationConfig`의 Notify 시스템을 확장**해 처리
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거

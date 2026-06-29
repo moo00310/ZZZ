@@ -20,8 +20,15 @@ namespace ZZZ.Monster
         [SerializeField] private string _hitFrontSection = "Hit_Front";
         [SerializeField] private string _hitBackSection  = "Hit_Back";
 
+        [Header("경직 (poise) — A안: 히트 쿨다운")]
+        // 인터럽트 직후 이 시간 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지).
+        // 데미지(HP 감소)는 매 히트 적용되고, '경직 모션 리셋'만 throttle한다.
+        // 후속: C안(Hit config 구간별 슈퍼아머 윈도우)으로 확장 가능 — todo-monster-poise 참고.
+        [SerializeField] private float _hitStunCooldown = 0.3f;
+
         private ConfigState _state;
         private HitTarget   _hitTarget;
+        private float       _nextHitStunTime;
 
         // ── IConfigSignals ── 몬스터는 입력 버퍼/패링 개념이 (아직) 없다.
         public bool Invulnerable { get; set; }
@@ -43,7 +50,13 @@ namespace ZZZ.Monster
             // (인터페이스로 받음 — 추후 MonsterAnimatorBridge로 교체해도 무영향).
             var animator   = GetComponent<IAnimatorBridge>();
 
-            var ctx     = new MonsterContext(controller, animator, transform);
+            var ctx = new ConfigContext
+            {
+                Mover      = controller,
+                Animator   = animator,
+                Transform  = transform,
+                GameObject = gameObject,
+            };
             var condCtx = new MonsterConditionContext();
             _state = new ConfigState(ctx, this, condCtx, _idleConfig);
 
@@ -65,6 +78,10 @@ namespace ZZZ.Monster
         private void OnDamaged(float damage, Vector3 hitPoint)
         {
             if (Invulnerable || _hitConfig == null) return;
+
+            // A안 경직 쿨다운: 창이 안 지났으면 데미지만 들어가고 모션 인터럽트는 건너뛴다.
+            if (Time.time < _nextHitStunTime) return;
+            _nextHitStunTime = Time.time + _hitStunCooldown;
 
             Vector3 to = hitPoint - transform.position;
             to.y = 0f;

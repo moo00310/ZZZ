@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ZZZ
 {
-    // 링크 전이 '조건'의 폴리모픽 베이스 — TrackClip.Modules(SectionModule)와 동형 패턴.
+    // 링크 전이 '조건'의 추상 베이스 — TrackClip.Modules(SectionModule)와 동형 패턴.
     // ClipLink.Condition에 [SerializeReference]로 직렬화된다. 새 조건(거리/체력/AI결정 등) =
     // 이 클래스 상속 1개 추가 (ConfigState/에디터는 안 건드림). 평가에 필요한 질의는 ctx로 받는다.
     //

@@ -80,7 +80,14 @@ namespace ZZZ.Player.StateMachine
 
             _ctx   = new PlayerStateContext(controller, animator, cc, transform);
             var condCtx = new PlayerConditionContext(_ctx, this);
-            _state = new ConfigState(_ctx, this, condCtx, _startConfig);
+            var cfgCtx  = new ConfigContext
+            {
+                Mover      = controller,
+                Animator   = animator,
+                Transform  = transform,
+                GameObject = controller.gameObject,
+            };
+            _state = new ConfigState(cfgCtx, this, condCtx, _startConfig);
 
             // 협력 객체 조립 — 트리거는 인스펙터에서 만들어진 인스턴스에 런타임 의존만 주입(Init).
             var registry = new ConfigRegistry(_startConfig, _configs);

@@ -61,7 +61,7 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 걷기·콤보·강화공격·대시·피격·회피·패링을 **이 한 클래스**가 config를 읽어 구동한다. 별도 State 클래스를
 갈아끼우는 상태머신이 아니라 **config를 갈아끼우는(`SwitchConfig`/`InterruptWith`)** 방식이다.
 
-> **공유 엔진** — `ConfigState`는 플레이어 구상 타입이 아니라 인터페이스(`ConfigDriving.cs`)에만 의존해, **몬스터(Durahan)도 같은 엔진으로 Idle+Hit를 구동**한다(현재 스캐폴드). 전이 조건도 다형성 `LinkCondition`(`InputCondition`/`AlwaysCondition` … 몬스터 거리·체력 등 확장)으로 빠져, 새 조건 = 클래스 1개 추가. 상세 [AnimationArchitecture.md](Documentation/AnimationArchitecture.md#몬스터-공유-엔진-재사용)
+> **공유 엔진** — `ConfigState`는 플레이어 구상 타입이 아니라 인터페이스(`ConfigDriving.cs`)에만 의존해, **몬스터(Durahan)도 같은 엔진으로 Idle+Hit를 구동**한다. 전이 조건도 다형성 `LinkCondition`(`InputCondition`/`AlwaysCondition` … 몬스터 거리·체력 등 확장)으로 빠져, 새 조건 = 클래스 1개 추가. 상세 [AnimationArchitecture.md](Documentation/AnimationArchitecture.md#몬스터-공유-엔진-재사용)
 
 → 상태가 늘어도 클래스가 안 늘어나고(데이터만 늘어남) 캐릭터 종류가 늘어도 엔진은 하나. 단, 러너 하나가 모든 흐름을 책임져 클래스 자체는 커진다.
 

@@ -161,7 +161,7 @@ namespace ZZZ.Editor.AnimationTool
         // 비입력 조건(Always/몬스터)은 AI를 시뮬할 수 없어 Always만 true로 본다.
         private bool ConditionMatches(ClipLink link)
         {
-            var ic = ReadInput(link);   // 미마이그레이션이면 레거시 합성
+            var ic = ReadInput(link);   // InputCondition이 아니면 null
             if (ic != null)
                 return AttackMatches(ic.Attack) && MoveMatches(ic.Direction);
             return link.Condition is AlwaysCondition;
