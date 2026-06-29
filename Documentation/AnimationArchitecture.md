@@ -90,7 +90,7 @@ AnimationConfig
 | `EntryOffset` | 전이 후 대상 섹션을 이 normalizedTime부터 재생 (중간 진입 — 윈드업 스킵 등) |
 
 > 과거에는 조건을 `ClipLink`의 인라인 `Attack`/`Direction`/`RequireHeld` 필드로 들고 있었으나, 다형성 `Condition`(`InputCondition`)으로
-> **이전·제거 완료**했다. -> 인라인 방식은 조건이 늘 때마다 `ClipLink`에 안 쓰는 필드가 쌓이는데,
+> **이전·제거 완료**했다. 인라인 방식은 조건이 늘 때마다 `ClipLink`에 안 쓰는 필드가 쌓이는데,
 > 향후 몬스터 AI 조건(거리·체력·BT 결정 등)까지 받으려면 다형성이 필요했다. 신규 링크는 `Condition`을 직접 설정한다.
 
 ### LinkCondition (전이 조건 — 다형성)
@@ -525,6 +525,66 @@ PlayerStateMachine
 | `MonsterConditionContext` | `ILinkConditionContext` | 입력 개념이 없어 질의가 전부 빈 값. Idle+Hit는 입력 조건이 없어 `Always`/`None`이 자동 통과하고 OnEnd로 복귀 |
 
 - **AnimatorBridge·HitTarget 그대로 재사용** — `MonsterStateMachine`은 `IAnimatorBridge`로 같은 `AnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
+- **경직(poise) A안 — 히트 쿨다운** : 인터럽트 직후 `_hitStunCooldown`(기본 0.3s) 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지). 데미지(HP)는 매 히트 적용되고 '모션 리셋'만 throttle. 후속으로 C안(Hit config 구간별 슈퍼아머 윈도우) 확장 가능.
+- **한계(현 스캐폴드)** — 실제 이동/AI가 없다(제자리 Idle+Hit). 거리/체력 기반 AI 조건이 생기면 `ILinkConditionContext`를 확장하고 몬스터 컨텍스트가 채우면 된다(플레이어 쪽은 새 멤버를 기본값으로). `ConfigState`는 현재 `ZZZ.Player.StateMachine.States`에 있으나 공유 엔진이라 추후 중립 네임스페이스로 이전 가능.
+
+---
+
+## 파일 구조
+
+```
+Assets/04.Scripts/
+├── Core/                            공유 코어 (플레이어·몬스터 엔진)
+│   ├── AnimationConfig.cs           ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
+│   ├── ConfigDriving.cs             ConfigState가 의존하는 공유 인터페이스 (ConfigContext/Mover/AnimatorBridge/Signals + ILiveMonitor/IInputMonitor)
+│   └── LinkCondition.cs             다형성 전이 조건 베이스 + InputCondition/AlwaysCondition + ILinkConditionContext
+│
+├── Combat/
+│   ├── EnemySensor.cs               전방 부채꼴 적 탐지 (워프 타겟 / 거리 분기)
+│   ├── HitTarget.cs                 피격 대상(허수아비/몬스터) — HP 보유, OnDamaged 이벤트
+│   ├── IHittable.cs                 피격 가능 인터페이스
+│   ├── MeleeHitter.cs               OnAttackHit Notify → EnemySensor 범위 안 타격 (센서 기반)
+│   └── EffectHitVolume.cs           공격 이펙트 프리팹에 부착 → 스폰 시 자기 범위(SphereCollider) 타격 (이펙트 범위 기반)
+│
+├── Movement/
+│   └── RootMotionTracker.cs         본 위치 프레임 델타 추출 헬퍼
+│
+├── Monster/                         ★ 몬스터 — 같은 ConfigState 엔진 재사용 (Idle+Hit 스캐폴드)
+│   ├── MonsterStateMachine.cs       입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
+│   ├── MonsterController.cs         IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
+│   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
+│
+└── Player/
+    ├── PlayerController.cs           이동/루트모션(위치=Bip001 / 회전=Root yaw 추출)·워프·섹션턴
+    ├── PlayerResources.cs            플레이어 자원(스태미나 등)
+    ├── PlayerStateHUD.cs             현재 config/섹션/입력 디버그 HUD
+    ├── TPSCameraController.cs        커스텀 TPS 카메라
+    │
+    └── StateMachine/
+        ├── PlayerStateMachine.cs     코디네이터 — 입력버퍼·트리거·config 검색 조립 + facade
+        ├── PlayerStateContext.cs     상태 공유 데이터 (Controller/Animator/CC/Transform)
+        ├── PlayerConditionContext.cs 플레이어 입력/방향을 LinkCondition에 공급 (ILinkConditionContext)
+        ├── AnimatorBridge.cs         Animator 파사드 (Play + additive Hit_Shake) — 플레이어·몬스터 공용
+        ├── PlayerTestTriggers.cs     테스트 입력(H/J/K) 분리 컴포넌트
+        ├── ConfigRegistry.cs         섹션 이름으로 config 검색 (FindWithSection)
+        ├── InputBuffer.cs            선입력 버퍼
+        │
+        ├── States/
+        │   └── ConfigState.cs        ★ 공유 러너 — config로 모든 흐름 구동 (플레이어·몬스터)
+        │
+        ├── Triggers/                 외부/전역 진입 (push)
+        │   ├── HitTrigger.cs             피격 + 패링 쳐냄 분기
+        │   ├── DodgeTrigger.cs           회피 (방향→섹션)
+        │   ├── ParryTrigger.cs           패링 스탠스 진입
+        │   └── Attack_Normal_EnhanceTrigger.cs  강화공격 (방향/거리 분기)
+        │
+        └── Modules/                  섹션 플러그인 (다형성)
+            ├── SectionModule.cs          추상 베이스 (OnEnter/Tick)
+            ├── WindowModule.cs           구간(Start~End) 판정 베이스
+            ├── SectionContext.cs         모듈이 받는 런타임 핸들 묶음
+            ├── IFrameModule.cs           무적 구간(i-frame)
+            └── ParryModule.cs            패링 활성 구간
+```
 
 
 ---

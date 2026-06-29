@@ -584,12 +584,13 @@ namespace ZZZ.Editor.AnimationTool
         private static InputCondition EnsureInput(ClipLink link)
         {
             if (link.Condition is InputCondition ic) return ic;
+            // 없거나 다른 타입이면 빈 입력 조건을 새로 만들어 채운다.
             var created = new InputCondition();
             link.Condition = created;
             return created;
         }
 
-        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, 아니면(Always/몬스터 조건 등) null.
+        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, 아니면(Always/몬스터/null) null.
         private static InputCondition ReadInput(ClipLink link) => link.Condition as InputCondition;
 
         // ── 프레임 단위 입력 헬퍼 ─────────────────────────────────────
