@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ZZZ.Combat
@@ -43,6 +44,31 @@ namespace ZZZ.Combat
             }
             distance = best != null ? bestDist : float.MaxValue;
             return best;
+        }
+
+        // 전방 부채꼴 안의 모든 생존 HitTarget을 results에 채운다 (AoE 타격용). 반환=개수.
+        // 한 적이 콜라이더를 여러 개 가져도 중복 없이 한 번만 담는다.
+        public int FindTargets(List<HitTarget> results)
+        {
+            results.Clear();
+            int count = Physics.OverlapSphereNonAlloc(
+                transform.position, _radius, s_hits, _mask, QueryTriggerInteraction.Collide);
+
+            float halfAngle = _angle * 0.5f;
+            for (int i = 0; i < count; i++)
+            {
+                var target = s_hits[i].GetComponentInParent<HitTarget>();
+                if (target == null || target.CurrentHp <= 0f) continue;
+                if (results.Contains(target)) continue;
+
+                Vector3 to = target.transform.position - transform.position;
+                to.y = 0f;
+                if (to.magnitude < 0.01f) continue;                  // 자기 자신/겹친 위치 제외
+                if (Vector3.Angle(transform.forward, to) > halfAngle) continue;
+
+                results.Add(target);
+            }
+            return results.Count;
         }
 
         private void OnDrawGizmosSelected()

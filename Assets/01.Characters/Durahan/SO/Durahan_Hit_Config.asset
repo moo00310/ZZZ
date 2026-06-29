@@ -40,7 +40,19 @@ MonoBehaviour:
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 1
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 21f584489d598a948ac3ef07883b30d4, type: 2}
+      TargetSection: Monster_Durahan_Ani_Idle
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 7723411236031561847
+      Attack: 0
+      Direction: 0
+      RequireHeld: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Monster_Durahan_Ani_Hit_H_Front
@@ -66,10 +78,34 @@ MonoBehaviour:
     SectionTurn: 0
     TurnWindowStart: 0
     TurnWindowEnd: 1
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 21f584489d598a948ac3ef07883b30d4, type: 2}
+      TargetSection: Monster_Durahan_Ani_Idle
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 7723411236031561848
+      Attack: 0
+      Direction: 0
+      RequireHeld: 0
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
     Modules: []
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7723411236031561847
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411236031561848
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
