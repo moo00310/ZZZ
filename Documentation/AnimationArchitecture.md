@@ -33,14 +33,14 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
     │
     │  단일 ConfigState 보유 → Enter() / Update() 직접 호출
     ▼
-[ ConfigState ]               ← 순수 C# 단일 러너 (상태 클래스 1개)
+[ ConfigState ]               ← 순수 C# 단일 러너 (상태 클래스 1개, 플레이어·몬스터 공용)
     │   · AnimationConfig(Clips + Links)를 파싱·구동
     │   · 걷기 / 콤보 / 강화공격 / 대시 / 회피 / 패링 / 피격을 전부 이 한 클래스로 표현
     │   · Link(전이) · Notify(이벤트) · Module(기능) · 워프/섹션턴 처리
     │
     ├── 클립 재생 ──────────────┐
     │                          ▼
-    │              [ PlayerAnimatorBridge ]  ← Animator 접근 유일 창구 (파사드)
+    │              [ AnimatorBridge ]        ← Animator 접근 유일 창구 (파사드, 플레이어·몬스터 공용)
     │                          │  Play(클립명) = CrossFadeInFixedTime / additive 흔들림
     │                          ▼
     │              [ Unity Animator ]        ← 클립 재생만 (파라미터/Transition 미사용)
@@ -55,6 +55,13 @@ Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
 > **상태 머신 프레임워크가 따로 없다.** `PlayerStateMachine`이 `ConfigState` 인스턴스 **하나**를
 > 들고 직접 `Update()`를 돌린다. 상태 전환(콤보·대시·회피·피격 복귀)은 별도 State 클래스로
 > 갈아끼우는 게 아니라, `ConfigState`가 **config를 갈아끼우는(SwitchConfig)** 방식으로 처리한다.
+
+> **`ConfigState`는 플레이어 전용이 아니다 — 몬스터와 공유하는 엔진이다.** 구상 타입(`PlayerController`/
+> `AnimatorBridge`/`PlayerStateMachine`)에 직접 의존하지 않고, [`ConfigDriving.cs`](../Assets/04.Scripts/ConfigDriving.cs)의
+> 인터페이스 묶음(`IConfigContext`/`IConfigMover`/`IAnimatorBridge`/`IConfigSignals`)과
+> 조건 컨텍스트(`ILinkConditionContext`)에만 의존한다. 플레이어는 `PlayerStateContext`/`PlayerConditionContext`로,
+> 몬스터는 [`MonsterContext`/`MonsterConditionContext`](../Assets/04.Scripts/Monster/)로 같은 엔진을 주입·구동한다.
+> 생성자: `new ConfigState(ctx, signals, condCtx, homeConfig)`. 자세한 몬스터 쪽 사용은 [몬스터(공유 엔진 재사용)](#몬스터-공유-엔진-재사용) 참고.
 
 ---
 
@@ -89,12 +96,26 @@ AnimationConfig
 |------|------|
 | `TargetConfig` | 비면 현재 config 내 전이, 지정 시 그 config로 갈아끼움 |
 | `TargetSection` | 대상 섹션 (비면 복귀 / EntrySection) |
-| `Attack` + `Direction` | 발동 조건 (공격 입력 + 방향 입력, **AND**) |
-| `RequireHeld` | Attack 키가 '지금 눌려있을(held) 때' 충족 — 누름 버퍼 대신 홀드 상태 (차지 루프용) |
+| `Condition` | **무엇이 충족인지** — 폴리모픽 `LinkCondition`(`[SerializeReference]`). null이면 항상 true(Always) 취급 |
 | `Timing` | 언제 평가할지 — `WhenMatched` / `OnRelease` / `OnEnd` / `OnEndIfMatched` |
 | `WindowStart` ~ `WindowEnd` | 평가 구간 (normalizedTime) |
 | `BlendDuration` | 전이 시 CrossFade 시간(초) |
 | `EntryOffset` | 전이 후 대상 섹션을 이 normalizedTime부터 재생 (중간 진입 — 윈드업 스킵 등) |
+
+> ⚠️ 과거의 인라인 `Attack`/`Direction`/`RequireHeld` 필드는 **폴리모픽 `Condition`으로 이전**됐다.
+> 세 필드는 마이그레이션 전용 레거시로만 남아 있다(에디터 메뉴가 읽어 `InputCondition`을 생성, 2차 PR에서 제거 예정).
+
+### LinkCondition (전이 조건 — 폴리모픽)
+
+조건은 `SectionModule`과 동형 패턴으로 `[SerializeReference]` 직렬화된다. "언제 평가/발동할지"(Timing·Window)는
+링크가, "무엇이 충족인지"만 조건이 담당한다. 새 조건(거리/체력/AI 결정 등) = `LinkCondition` 상속 1개 추가
+(`ConfigState`/에디터 본체는 안 건드림). 평가에 필요한 질의는 `ILinkConditionContext`로 주입받는다
+(플레이어=`PlayerConditionContext`, 몬스터=`MonsterConditionContext`).
+
+| 구현 | 의미 |
+|------|------|
+| `InputCondition` | 기존 `Attack`(공격 입력) + `Direction`(방향, `Reverse` 포함) + `RequireHeld`를 흡수. `ReleaseTriggered`(OnRelease 발사)·`Consume`(입력 버퍼 소비)·`AcceptsInput`(폴백 게이트)를 구현 |
+| `AlwaysCondition` | 무조건 true — 몬스터의 "끝나면 idle 복귀"(OnEnd) 같은 가드 없는 전이용 (플레이어 `Attack=None`='입력 없을 때'와는 의미가 다름) |
 
 - **WhenMatched** : 윈도우 구간 안에서 조건 충족 즉시 (콤보 입력 / 방향 이동 / 복귀)
 - **OnRelease** : 윈도우 안에서 Attack 키를 **뗀 순간** (홀드 차지 → 릴리스). 누름 버퍼가 아니라 실제 홀드 상태로 판정
@@ -120,7 +141,7 @@ Layer 1 (Additive)
 
 - 이동(Idle/Walk/Run)도 Blend Tree가 아니라 각 클립을 직접 `Play`로 전환한다.
 - 따라서 Animator 파라미터는 **사용하지 않는다.** (재생 상태는 코드/데이터가 관리)
-- `PlayerAnimatorBridge.Play()`는 `CrossFadeInFixedTime`(초 단위 고정 시간)을 쓴다 →
+- `AnimatorBridge.Play()`는 `CrossFadeInFixedTime`(초 단위 고정 시간)을 쓴다 →
   config의 `BlendDuration`(초)과 단위가 일치. 함께 `ApplyAnimatorSpeed(Speed)`로
   애니 재생 속도를 로직 타임라인과 맞춘다(안 맞추면 전환 딜레이 발생).
 
@@ -439,8 +460,8 @@ ConfigState.InterruptWith(hitConfig, "Hit_{L|H}_{Front|Back}", _hitEntryBlend)
 
 ### 문제와 해결
 
-- **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`PlayerAnimatorBridge.ShakeRoutine`).
-  - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `PlayerAnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절
+- **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`AnimatorBridge.ShakeRoutine`).
+  - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `AnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절
 - **같은 약한 움찔거림만 반복돼 단조로움** → escalation: 연속타 카운트로 약(L) ↔ 강(H) 반응을 교대 재생
 - **연타 stunlock(보조 가드)** → 반응이 충분히 진행되기 전(`_hitReinterruptThreshold`)엔 새 피격을 무시
 
@@ -462,8 +483,8 @@ PlayerStateMachine
                     └── 발동 시 ConsumeInput() 후 TargetConfig/Section으로 전이
 ```
 
-> `ComboInput` = `Normal / Enhanced / Attack_Normal_Enhance / Dodge / Any / None / Parry`.
-> 입력은 누름 버퍼(0.25s)와 별개로 **홀드 상태(`IsHeld`)** 도 추적한다 — `OnRelease`/`RequireHeld`가 이 홀드 상태를 본다 (홀드 차지 → 릴리스). `Attack_Normal_Enhance` 입력 액션은 떼는 콜백을 받으려고 **PassThrough** 타입이다.
+> `ComboInput` = `None / Any / Normal / Strong / Enhance / Dodge / Parry` (`None`·`Any`는 특수 토큰, `Normal`=좌클릭 탭 / `Strong`=좌클릭 홀드 강공 / `Enhance`=E 강화공격).
+> 입력은 누름 버퍼(0.25s)와 별개로 **홀드 상태(`IsHeld`)** 도 추적한다 — `OnRelease`/`RequireHeld`가 이 홀드 상태를 본다 (홀드 차지 → 릴리스). 강화공격(`Enhance`) 입력 액션은 떼는 콜백을 받으려고 **PassThrough** 타입이다.
 
 ### 문제와 해결
 
@@ -510,19 +531,51 @@ PlayerStateMachine
 
 ---
 
+## 몬스터 (공유 엔진 재사용)
+
+**왜** — 피격 반응·복귀 같은 흐름은 플레이어와 똑같이 "config를 읽어 클립을 틀고 OnEnd로 복귀"하는 구조다.
+그래서 몬스터용 상태머신을 새로 짜지 않고 **같은 `ConfigState` 엔진을 재사용**한다. 그러려면 `ConfigState`가
+플레이어 구상 타입에 묶이면 안 되므로, 의존을 [`ConfigDriving.cs`](../Assets/04.Scripts/ConfigDriving.cs)의
+인터페이스로 추출했다(`IConfigContext`/`IConfigMover`/`IAnimatorBridge`/`IConfigSignals` + 조건 `ILinkConditionContext`).
+
+**구성** ([Assets/04.Scripts/Monster/](../Assets/04.Scripts/Monster/))
+
+| 부품 | 구현 인터페이스 | 역할 |
+|------|----------------|------|
+| `MonsterStateMachine` | `IConfigSignals` · `ILiveMonitor` | 입력 없는 코디네이터. `Awake`에서 `new ConfigState(...)` 조립, `Start`에서 `Enter()`, 매 프레임 `Update()`. `HitTarget.OnDamaged` 구독 → 앞/뒤 판정 후 Hit config로 `InterruptWith` |
+| `MonsterController` | `IConfigMover` | v1(Idle+Hit, 제자리)은 `ConfigState`가 세팅하는 값들을 **보관만**(no-op). `FaceToward`만 즉시 회전으로 구현. 루트모션/넉백/추격은 후속 |
+| `MonsterContext` | `IConfigContext` | 몬스터 컴포넌트 묶음 (`PlayerStateContext`의 몬스터판) |
+| `MonsterConditionContext` | `ILinkConditionContext` | 입력 개념이 없어 질의가 전부 빈 값. Idle+Hit는 입력 조건이 없어 `Always`/`None`이 자동 통과하고 OnEnd로 복귀 |
+
+- **AnimatorBridge·HitTarget 그대로 재사용** — `MonsterStateMachine`은 `IAnimatorBridge`로 같은 `AnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
+- **경직(poise) A안 — 히트 쿨다운** : 인터럽트 직후 `_hitStunCooldown`(기본 0.3s) 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지). 데미지(HP)는 매 히트 적용되고 '모션 리셋'만 throttle. 후속으로 C안(Hit config 구간별 슈퍼아머 윈도우) 확장 가능.
+- **한계(현 스캐폴드)** — 실제 이동/AI가 없다(제자리 Idle+Hit). 거리/체력 기반 AI 조건이 생기면 `ILinkConditionContext`를 확장하고 몬스터 컨텍스트가 채우면 된다(플레이어 쪽은 새 멤버를 기본값으로). `ConfigState`는 현재 `ZZZ.Player.StateMachine.States`에 있으나 공유 엔진이라 추후 중립 네임스페이스로 이전 가능.
+
+---
+
 ## 파일 구조
 
 ```
 Assets/04.Scripts/
 ├── AnimationConfig.cs               ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
+├── ConfigDriving.cs                 ConfigState가 의존하는 공유 인터페이스 (IConfigContext/Mover/AnimatorBridge/Signals + ILiveMonitor/IInputMonitor)
+├── LinkCondition.cs                 폴리모픽 전이 조건 베이스 + InputCondition/AlwaysCondition + ILinkConditionContext
 │
 ├── Combat/
 │   ├── EnemySensor.cs               전방 부채꼴 적 탐지 (워프 타겟 / 거리 분기)
-│   ├── HitTarget.cs                 피격 대상(허수아비) — HP 보유
-│   └── IHittable.cs                 피격 가능 인터페이스
+│   ├── HitTarget.cs                 피격 대상(허수아비/몬스터) — HP 보유, OnDamaged 이벤트
+│   ├── IHittable.cs                 피격 가능 인터페이스
+│   ├── MeleeHitter.cs               OnAttackHit Notify → EnemySensor 범위 안 타격 (센서 기반)
+│   └── EffectHitVolume.cs           공격 이펙트 프리팹에 부착 → 스폰 시 자기 범위(SphereCollider) 타격 (이펙트 범위 기반)
 │
 ├── Movement/
 │   └── RootMotionTracker.cs         본 위치 프레임 델타 추출 헬퍼
+│
+├── Monster/                         ★ 몬스터 — 같은 ConfigState 엔진 재사용 (Idle+Hit 스캐폴드)
+│   ├── MonsterStateMachine.cs       입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
+│   ├── MonsterController.cs         IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
+│   ├── MonsterContext.cs            IConfigContext 구현 (몬스터 컴포넌트 묶음)
+│   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
 │
 └── Player/
     ├── PlayerController.cs           이동/루트모션(위치=Bip001 / 회전=Root yaw 추출)·워프·섹션턴
@@ -535,13 +588,14 @@ Assets/04.Scripts/
     └── StateMachine/
         ├── PlayerStateMachine.cs     코디네이터 — 입력버퍼·트리거·config 검색 조립 + facade
         ├── PlayerStateContext.cs     상태 공유 데이터 (Controller/Animator/CC/Transform)
-        ├── PlayerAnimatorBridge.cs   Animator 파사드 (Play + additive Hit_Shake)
+        ├── PlayerConditionContext.cs 플레이어 입력/방향을 LinkCondition에 공급 (ILinkConditionContext)
+        ├── AnimatorBridge.cs         Animator 파사드 (Play + additive Hit_Shake) — 플레이어·몬스터 공용
         ├── PlayerTestTriggers.cs     테스트 입력(H/J/K) 분리 컴포넌트
         ├── ConfigRegistry.cs         섹션 이름으로 config 검색 (FindWithSection)
         ├── InputBuffer.cs            선입력 버퍼
         │
         ├── States/
-        │   └── ConfigState.cs        ★ 단일 러너 — config로 모든 흐름 구동
+        │   └── ConfigState.cs        ★ 공유 러너 — config로 모든 흐름 구동 (플레이어·몬스터)
         │
         ├── Triggers/                 외부/전역 진입 (push)
         │   ├── HitTrigger.cs             피격 + 패링 쳐냄 분기

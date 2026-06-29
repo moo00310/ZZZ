@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ZZZ
 {
     // ConfigState(애니메이션 config 러너)가 캐릭터에 요구하는 추상 표면들.
-    // 플레이어(PlayerController/PlayerAnimatorBridge/PlayerStateMachine)와 몬스터가 각자 구현해
+    // 플레이어(PlayerController/AnimatorBridge/PlayerStateMachine)와 몬스터가 각자 구현해
     // 같은 ConfigState 엔진을 공유한다. ConfigState는 이 인터페이스들에만 의존(구상 타입 비의존).
 
     // 이동/회전/루트모션/타겟 표면 — ConfigState.PlayActive 및 매 프레임 윈도우 갱신이 호출.
@@ -54,5 +54,25 @@ namespace ZZZ
         bool Invulnerable { get; set; }
         bool ParryActive  { get; set; }
         void ConsumeInput();
+    }
+
+    // 에디터/HUD 라이브 모니터가 읽는 런타임 상태 표면 — 플레이어/몬스터 머신이 공통 구현.
+    // 모니터 툴은 이 인터페이스로만 머신을 다뤄, 씬의 어떤 캐릭터든 골라 추적할 수 있다.
+    public interface ILiveMonitor
+    {
+        AnimationConfig CurrentConfig         { get; }
+        int             CurrentClipIndex      { get; }
+        string          CurrentSection        { get; }
+        float           CurrentNormalizedTime { get; }
+        MoveDir         CurrentMoveDir         { get; }
+    }
+
+    // 입력 버퍼/홀드 모니터 — 입력 있는 머신(플레이어)만 구현. 라이브바가 옵션으로 캐스팅해 표시.
+    // 몬스터처럼 입력이 없는 머신은 ILiveMonitor만 구현하면 된다.
+    public interface IInputMonitor
+    {
+        bool       HasBufferedInput { get; }
+        ComboInput BufferedInput    { get; }
+        bool       IsInputHeld(ComboInput input);
     }
 }

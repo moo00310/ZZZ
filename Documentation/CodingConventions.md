@@ -12,7 +12,11 @@
 | 04.Scripts/Player/StateMachine/States | `ZZZ.Player.StateMachine.States` |
 | 04.Scripts/Player/Debug | `ZZZ.Player.Debugging` |
 | 04.Scripts/Combat | `ZZZ.Combat` |
+| 04.Scripts/Monster | `ZZZ.Monster` |
 | 05.Editor/AnimationTool | `ZZZ.Editor.AnimationTool` |
+
+> `ConfigDriving.cs` / `LinkCondition.cs`(공유 인터페이스·조건)와 `AnimationConfig.cs`는 루트 `ZZZ`.
+> `StateMachine` 하위(States/Triggers/Modules)는 전부 `ZZZ.Player.StateMachine`을 쓴다(폴더별로 더 쪼개지 않음).
 
 ---
 
