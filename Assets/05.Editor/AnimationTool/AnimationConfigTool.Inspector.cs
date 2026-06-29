@@ -446,7 +446,7 @@ namespace ZZZ.Editor.AnimationTool
                 // Attack=파랑 / Direction=초록 / When=주황. None/Any/기본 타이밍은 생략.
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(34f);
-                var chipIc = ReadInput(link);   // 표시 전용(비저장) — 미마이그레이션이면 레거시 합성
+                var chipIc = ReadInput(link);   // 표시 전용 — InputCondition이 아니면 null
                 if (chipIc != null)
                 {
                     if (chipIc.Attack != ComboInput.None)
@@ -482,7 +482,7 @@ namespace ZZZ.Editor.AnimationTool
                         string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
-                    // 입력 조건 편집 — 시드는 InputCondition(미마이그레이션이면 레거시), 변경 시 EnsureInput에 기록.
+                    // 입력 조건 편집 — 시드는 현재 InputCondition, 변경 시 EnsureInput에 기록.
                     var seedIc = ReadInput(link);
                     ComboInput seedAttack = seedIc?.Attack ?? ComboInput.None;
                     MoveDir    seedDir    = seedIc?.Direction ?? MoveDir.Any;
@@ -584,23 +584,13 @@ namespace ZZZ.Editor.AnimationTool
         private static InputCondition EnsureInput(ClipLink link)
         {
             if (link.Condition is InputCondition ic) return ic;
-            // 미마이그레이션 링크면 레거시 입력 필드를 시드로 (빈 조건 생성 시 값 손실 방지).
-            var created = link.Condition == null
-                ? new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld }
-                : new InputCondition();
+            var created = new InputCondition();
             link.Condition = created;
             return created;
         }
 
-        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, null(미마이그레이션)이면 레거시 필드로 합성(비저장).
-        // 비입력 조건(Always/몬스터)이면 null. ※ 레거시 폴백은 2차 PR에서 제거.
-        private static InputCondition ReadInput(ClipLink link)
-        {
-            if (link.Condition is InputCondition ic) return ic;
-            if (link.Condition == null)
-                return new InputCondition { Attack = link.Attack, Direction = link.Direction, RequireHeld = link.RequireHeld };
-            return null;
-        }
+        // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, 아니면(Always/몬스터 조건 등) null.
+        private static InputCondition ReadInput(ClipLink link) => link.Condition as InputCondition;
 
         // ── 프레임 단위 입력 헬퍼 ─────────────────────────────────────
         // 데이터는 normalizedTime(0~1)으로 저장하되, 인스펙터에선 클립 프레임 수 기준 정수 프레임으로 표시/편집한다.

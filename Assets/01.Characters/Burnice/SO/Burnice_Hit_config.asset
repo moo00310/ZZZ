@@ -45,9 +45,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000000
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -55,9 +54,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000001
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
@@ -95,9 +93,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000002
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
@@ -105,9 +102,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000003
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -145,9 +141,8 @@ MonoBehaviour:
       TargetSection: 
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000004
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
@@ -155,9 +150,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000005
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -195,9 +189,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.02
       EntryOffset: 0
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000006
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
@@ -205,9 +198,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+      Condition:
+        rid: 7723411300000000007
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -220,4 +212,52 @@ MonoBehaviour:
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7723411300000000000
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000001
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000002
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000003
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000004
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000005
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000006
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000007
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0

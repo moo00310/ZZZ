@@ -9,7 +9,7 @@ namespace ZZZ.Player.StateMachine.States
     // 모든 동작(걷기/콤보/회피/피격 등)을 이 한 클래스 + config로 표현한다 — 전이는 전부 config가 관리.
     public class ConfigState
     {
-        private readonly IConfigContext  Ctx;
+        private readonly ConfigContext   Ctx;
         private readonly IConfigSignals  Signals;
         private readonly AnimationConfig _homeConfig;   // 진입/복귀 기본 config
         private readonly SectionContext  _sc;           // 섹션 모듈에 넘기는 핸들 묶음
@@ -25,23 +25,12 @@ namespace ZZZ.Player.StateMachine.States
         // 링크 조건(LinkCondition) 평가용 컨텍스트 — 플레이어 입력/방향 질의를 공급한다.
         private readonly ILinkConditionContext _condCtx;
 
-        // 링크 조건 접근. Condition이 비어 있으면(아직 마이그레이션 안 한 레거시 에셋) 레거시 입력 필드로
-        // 즉석 InputCondition을 합성해 캐싱한다 — 마이그레이션 메뉴 실행 전에도 플레이가 깨지지 않게.
-        // 마이그레이션/신규 링크 후엔 이 폴백에 도달하지 않으며, 2차 PR에서 레거시 필드와 함께 제거한다.
-        private static LinkCondition Cond(ClipLink link)
-        {
-            if (link.Condition != null) return link.Condition;
-            link.Condition = new InputCondition
-            {
-                Attack      = link.Attack,
-                Direction   = link.Direction,
-                RequireHeld = link.RequireHeld,
-            };
-            return link.Condition;
-        }
+        // 링크 조건 접근. 모든 링크는 Condition을 갖지만, 비어 있는(가드 없는) 링크는 Always로 취급한다.
+        private static readonly AlwaysCondition s_always = new AlwaysCondition();
+        private static LinkCondition Cond(ClipLink link) => link.Condition ?? s_always;
 
         // 캐릭터(플레이어/몬스터)별 컨텍스트·신호·조건소스를 주입받는다 — 구상 타입 비의존.
-        public ConfigState(IConfigContext ctx, IConfigSignals signals,
+        public ConfigState(ConfigContext ctx, IConfigSignals signals,
             ILinkConditionContext condCtx, AnimationConfig homeConfig)
         {
             Ctx         = ctx;
@@ -86,8 +75,9 @@ namespace ZZZ.Player.StateMachine.States
 
             var tc = _config.Clips[_active];
 
-            // 섹션 자체 경과 시간으로 nt 계산 (CrossFade 중 애니메이터가 옛 클립 시간을
-            // 반환하는 문제 회피 → 전환마다 0부터 다시 시작)
+            // 섹션 진입 후 경과 시간으로 nt를 직접 계산한다 — 섹션 타임라인의 0점을 코드가 소유하기 위해서다.
+            // Animator 상태 시간은 같은 섹션 재진입(A→B→A) 시 0이 아닌 이전 지점에서 이어지고, EntryOffset
+            // (중간 진입)도 통제하기 어렵다. _clipTime은 진입 시 0(또는 offset)으로 리셋되므로 항상 섹션 기준이다.
             _clipTime += Time.deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 

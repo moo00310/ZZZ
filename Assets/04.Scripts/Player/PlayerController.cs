@@ -363,6 +363,9 @@ namespace ZZZ.Player
         }
 
         // Bip001 수평 델타 계산 — 루프 wrap/섹션 진입 baseline 처리 + 루프 전진 평속화(SmoothLoopSpeed).
+        // TODO(몬스터 루트모션): 아래 baseline/wrap→(cur-prev) 코어는 RootMotionTracker.NextDelta와 동일 로직의
+        // 복제다(이쪽은 wrap을 Animator normalizedTime으로 검출). 몬스터 루트모션 작업 시 코어를 RootMotionTracker로
+        // 위임하고 SmoothLoopSpeed 등 플레이어 전용 처리만 위에 남길 것 — 통합 후 RootMotionTrackerTests가 런타임도 커버.
         private Vector3 ComputeRootDeltaLocal(Vector3 currentPos, bool transitioning)
         {
             // 루프 클립이 끝(≈1)에서 처음(≈0)으로 되감기면 baked 위치가 뒤로 점프 → 그 프레임은 버린다.

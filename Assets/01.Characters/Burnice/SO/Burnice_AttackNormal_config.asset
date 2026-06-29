@@ -47,9 +47,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561794
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5555556
       WindowEnd: 1
@@ -59,9 +56,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561795
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5565517
       WindowEnd: 1
@@ -71,9 +65,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561796
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -121,9 +112,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561797
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -133,9 +121,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561829
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -145,9 +130,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561830
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -157,9 +139,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561831
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -195,9 +174,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561818
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.6056338
       WindowEnd: 1
@@ -207,9 +183,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561819
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5988245
       WindowEnd: 1
@@ -219,9 +192,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561820
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -256,10 +226,7 @@ MonoBehaviour:
       BlendDuration: 0.2
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+        rid: 7723411300000000000
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -268,10 +235,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000001
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -280,10 +244,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000002
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -292,10 +253,7 @@ MonoBehaviour:
       BlendDuration: 0.1
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+        rid: 7723411300000000003
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -331,9 +289,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561821
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.67901236
       WindowEnd: 1
@@ -343,9 +298,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561822
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.67722195
       WindowEnd: 1
@@ -355,9 +307,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561823
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -392,10 +341,7 @@ MonoBehaviour:
       BlendDuration: 0.1
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+        rid: 7723411300000000004
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -404,10 +350,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000005
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -416,10 +359,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000006
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -428,10 +368,7 @@ MonoBehaviour:
       BlendDuration: 0.1
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+        rid: 7723411300000000007
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -467,9 +404,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561836
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.5802469
       WindowEnd: 1
@@ -479,9 +413,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561837
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.583812
       WindowEnd: 1
@@ -491,9 +422,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561838
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -528,10 +456,7 @@ MonoBehaviour:
       BlendDuration: 0.2
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+        rid: 7723411300000000008
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -540,10 +465,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000009
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -552,10 +474,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000010
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -564,10 +483,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+        rid: 7723411300000000011
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -603,9 +519,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561839
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.60655737
       WindowEnd: 1
@@ -615,9 +528,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561840
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.602494
       WindowEnd: 1
@@ -627,9 +537,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561841
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -665,9 +572,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561842
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -677,9 +581,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561843
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -689,9 +590,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561844
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -701,9 +599,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411236031561845
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -738,10 +633,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000012
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -750,10 +642,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 4
-      Direction: 0
-      RequireHeld: 1
+        rid: 7723411300000000013
       Timing: 0
       WindowStart: 0.53521127
       WindowEnd: 1
@@ -788,10 +677,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000014
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -800,10 +686,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
+        rid: 7723411300000000015
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -812,10 +695,7 @@ MonoBehaviour:
       BlendDuration: 0.1
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
+        rid: 7723411300000000016
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -824,10 +704,7 @@ MonoBehaviour:
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
-        rid: -2
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
+        rid: 7723411300000000017
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -972,6 +849,114 @@ MonoBehaviour:
         Direction: 0
         RequireHeld: 0
     - rid: 7723411236031561845
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000000
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000001
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000002
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000003
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000004
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000005
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000006
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000007
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000008
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000009
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000010
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000011
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411300000000012
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000013
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 4
+        Direction: 0
+        RequireHeld: 1
+    - rid: 7723411300000000014
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000015
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411300000000016
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411300000000017
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Attack: 0
