@@ -63,7 +63,9 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 **동작** — 별도 State 클래스를 갈아끼우는 상태머신이 아니라, **config를 갈아끼우는(`SwitchConfig`/`InterruptWith`)** 방식. 섹션 진입 후 경과시간으로 normalizedTime을 직접 계산해 Link/Notify/Module 윈도우를 평가한다. (과거의 `IState`/`StateBase`/`StateMachine` 프레임워크와 하드코딩 State는 모두 제거·통합)
 
-- **장점** — 상태가 늘어도 클래스가 안 늘어난다(데이터만 늘어남). 전이 로직이 한 곳에 모여 디버깅이 단순.
+> **공유 엔진** — `ConfigState`는 플레이어 구상 타입이 아니라 인터페이스(`ConfigDriving.cs`)에만 의존해, **몬스터(Durahan)도 같은 엔진으로 Idle+Hit를 구동**한다(현재 스캐폴드). 전이 조건도 폴리모픽 `LinkCondition`(`InputCondition`/`AlwaysCondition` … 몬스터 거리·체력 등 확장)으로 빠져, 새 조건 = 클래스 1개 추가다. 자세한 내용은 [AnimationArchitecture.md](Documentation/AnimationArchitecture.md#몬스터-공유-엔진-재사용) 참고.
+
+- **장점** — 상태가 늘어도 클래스가 안 늘어난다(데이터만 늘어남). 전이 로직이 한 곳에 모여 디버깅이 단순. 캐릭터 종류가 늘어도 엔진은 하나.
 - **단점** — 러너 하나가 모든 흐름을 책임지므로 이 클래스 자체는 커지고, 특수 케이스가 늘면 분기 비용이 생긴다.
 
 ### 3. `AnimationConfigTool` — config를 시각 편집하는 에디터 툴 ★ 핵심 결과물

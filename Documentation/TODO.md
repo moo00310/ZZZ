@@ -2,6 +2,9 @@
 
 ## 최근 완료
 
+- [x] **`ConfigState` 공유 엔진화** — 플레이어 구상 타입 의존을 인터페이스(`ConfigDriving.cs`: `IConfigContext`/`IConfigMover`/`IAnimatorBridge`/`IConfigSignals`)로 추출. 전이 조건도 폴리모픽 `LinkCondition`(`InputCondition`/`AlwaysCondition`)으로 분리(`ILinkConditionContext` 주입). `PlayerAnimatorBridge` → `AnimatorBridge`로 공용화
+- [x] **몬스터(Durahan) 스캐폴드** — 같은 `ConfigState`로 Idle+Hit 구동(`MonsterStateMachine`/`MonsterController`/`MonsterContext`/`MonsterConditionContext`). 피격 시 앞/뒤 분기 후 Hit config 인터럽트, 경직 A안(히트 쿨다운). 라이브 모니터 다중 캐릭터 추적
+- [x] **플레이어 공격 → 몬스터 피격 파이프라인** — `MeleeHitter`(센서 범위 기반) / `EffectHitVolume`(이펙트 범위 기반, A안)로 `HitTarget.TakeDamage` 호출
 - [x] **패링(Parry)** — `ParryModule`(활성 윈도우) + `ParryTrigger`(push 진입). 활성 중 적 공격이 닿으면 `HitTrigger`가 피격 대신 쳐냄(`ParryAid_L/H`)으로 분기. i-frame('무시')과 대칭('반격으로 응수')
 - [x] **강화공격(Attack_Normal_Enhance)** — 방향(앞W/뒤S) 우선 → 중립이면 적과의 거리(근/중/원)로 진입 섹션 분기. 콤보 링크가 못 받은 입력의 전역 폴백 트리거
 
