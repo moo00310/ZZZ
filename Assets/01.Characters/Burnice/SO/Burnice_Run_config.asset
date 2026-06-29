@@ -45,6 +45,8 @@ MonoBehaviour:
       TargetSection: Run_End
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710282
       Attack: 0
       Direction: 1
       RequireHeld: 0
@@ -55,6 +57,8 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0.05
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710283
       Attack: 0
       Direction: 7
       RequireHeld: 0
@@ -91,6 +95,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710284
       Attack: 0
       Direction: 1
       RequireHeld: 0
@@ -101,6 +107,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.2
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710285
       Attack: 0
       Direction: 2
       RequireHeld: 0
@@ -137,6 +145,8 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
       BlendDuration: 0
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710286
       Attack: 0
       Direction: 7
       RequireHeld: 0
@@ -147,6 +157,8 @@ MonoBehaviour:
       TargetSection: Run_Loop
       BlendDuration: 0
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710287
       Attack: 0
       Direction: 2
       RequireHeld: 0
@@ -157,6 +169,8 @@ MonoBehaviour:
       TargetSection: Run_End
       BlendDuration: 0
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710288
       Attack: 0
       Direction: 1
       RequireHeld: 0
@@ -170,6 +184,8 @@ MonoBehaviour:
     TargetSection: Attack_ExSpecial_02
     BlendDuration: 0.05
     EntryOffset: 0
+    Condition:
+      rid: 7723411238959710289
     Attack: 3
     Direction: 0
     RequireHeld: 0
@@ -180,6 +196,8 @@ MonoBehaviour:
     TargetSection: Attack_Normal_01
     BlendDuration: 0.01
     EntryOffset: 0
+    Condition:
+      rid: 7723411238959710290
     Attack: 2
     Direction: 0
     RequireHeld: 0
@@ -188,4 +206,58 @@ MonoBehaviour:
     WindowEnd: 1
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7723411238959710282
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710283
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 7
+        RequireHeld: 0
+    - rid: 7723411238959710284
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710285
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710286
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 7
+        RequireHeld: 0
+    - rid: 7723411238959710287
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710288
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710289
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710290
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0

@@ -45,6 +45,8 @@ MonoBehaviour:
       TargetSection: Attack_ExSpecial_01_Explode
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710208
       Attack: 4
       Direction: 0
       RequireHeld: 1
@@ -55,6 +57,8 @@ MonoBehaviour:
       TargetSection: Attack_ExSpecial_01_Explode
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710209
       Attack: 0
       Direction: 0
       RequireHeld: 0
@@ -91,6 +95,8 @@ MonoBehaviour:
       TargetSection: Attack_ExSpecial_01_Explode_End
       BlendDuration: 0
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710210
       Attack: 0
       Direction: 0
       RequireHeld: 0
@@ -127,6 +133,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.1
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710211
       Attack: 0
       Direction: 2
       RequireHeld: 0
@@ -137,6 +145,8 @@ MonoBehaviour:
       TargetSection: Attack_ExSpecial_02
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710212
       Attack: 3
       Direction: 0
       RequireHeld: 0
@@ -147,6 +157,8 @@ MonoBehaviour:
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710213
       Attack: 2
       Direction: 0
       RequireHeld: 0
@@ -157,6 +169,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710214
       Attack: 0
       Direction: 1
       RequireHeld: 0
@@ -193,6 +207,8 @@ MonoBehaviour:
       TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_Explode
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710215
       Attack: 0
       Direction: 0
       RequireHeld: 0
@@ -229,6 +245,8 @@ MonoBehaviour:
       TargetSection: 
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710216
       Attack: 0
       Direction: 0
       RequireHeld: 0
@@ -265,6 +283,8 @@ MonoBehaviour:
       TargetSection: Walk_Start
       BlendDuration: 0.1
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710217
       Attack: 0
       Direction: 2
       RequireHeld: 0
@@ -275,6 +295,8 @@ MonoBehaviour:
       TargetSection: Attack_ExSpecial_02
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710218
       Attack: 3
       Direction: 0
       RequireHeld: 0
@@ -285,6 +307,8 @@ MonoBehaviour:
       TargetSection: Attack_Normal_01
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710219
       Attack: 2
       Direction: 0
       RequireHeld: 0
@@ -295,6 +319,8 @@ MonoBehaviour:
       TargetSection: Idle1
       BlendDuration: 0.01
       EntryOffset: 0
+      Condition:
+        rid: 7723411238959710220
       Attack: 0
       Direction: 1
       RequireHeld: 0
@@ -306,4 +332,82 @@ MonoBehaviour:
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7723411238959710208
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 4
+        Direction: 0
+        RequireHeld: 1
+    - rid: 7723411238959710209
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710210
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710211
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710212
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710213
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710214
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710215
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710216
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710217
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710218
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 3
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710219
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
+    - rid: 7723411238959710220
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0

@@ -25,20 +25,11 @@ namespace ZZZ.Player.StateMachine.States
         // 링크 조건(LinkCondition) 평가용 컨텍스트 — 플레이어 입력/방향 질의를 공급한다.
         private readonly ILinkConditionContext _condCtx;
 
-        // 링크 조건 접근. Condition이 비어 있으면(아직 마이그레이션 안 한 레거시 에셋) 레거시 입력 필드로
-        // 즉석 InputCondition을 합성해 캐싱한다 — 마이그레이션 메뉴 실행 전에도 플레이가 깨지지 않게.
-        // 마이그레이션/신규 링크 후엔 이 폴백에 도달하지 않으며, 2차 PR에서 레거시 필드와 함께 제거한다.
-        private static LinkCondition Cond(ClipLink link)
-        {
-            if (link.Condition != null) return link.Condition;
-            link.Condition = new InputCondition
-            {
-                Attack      = link.Attack,
-                Direction   = link.Direction,
-                RequireHeld = link.RequireHeld,
-            };
-            return link.Condition;
-        }
+        // 비어 있는(null) Condition은 무조건 전이(Always)로 취급 — 공유 인스턴스 재사용(무할당, 무상태).
+        private static readonly AlwaysCondition s_always = new AlwaysCondition();
+
+        // 링크 조건 접근. Condition이 null이면 Always로 폴백한다(가드 없는 전이).
+        private static LinkCondition Cond(ClipLink link) => link.Condition ?? s_always;
 
         // 캐릭터(플레이어/몬스터)별 컨텍스트·신호·조건소스를 주입받는다 — 구상 타입 비의존.
         public ConfigState(IConfigContext ctx, IConfigSignals signals,
