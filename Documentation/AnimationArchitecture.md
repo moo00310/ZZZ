@@ -1,18 +1,5 @@
 # 플레이어 애니메이션 아키텍처
 
-## 핵심 철학
-
-> **분기는 C# 코드가, "무엇을 언제 재생할지"는 데이터(Config)가, Animator는 "클립 재생"만 담당**
-
-Animator Controller에 복잡한 Transition/파라미터를 쌓지 않는다.
-- 분기/전이 로직은 `ConfigState`(C#)가 처리하고,
-- 콤보/피격/회피 같은 "전이 흐름"은 `AnimationConfig`(ScriptableObject) **데이터**로 정의하며,
-- Animator는 `CrossFadeInFixedTime(클립명)`으로 클립을 재생하는 역할만 한다.
-
-그 결과 Animator Controller에는 Trigger/Bool/Transition 화살표가 거의 없다.
-
----
-
 ## 전체 구조도
 
 ```
@@ -86,7 +73,7 @@ AnimationConfig
 │     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
 │     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 이벤트/이펙트
-│     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 폴리모픽)
+│     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 다형성)
 └── GlobalLinks : List<ClipLink>   ← 모든 섹션에 적용 (Any State 전이)
 ```
 
@@ -96,16 +83,16 @@ AnimationConfig
 |------|------|
 | `TargetConfig` | 비면 현재 config 내 전이, 지정 시 그 config로 갈아끼움 |
 | `TargetSection` | 대상 섹션 (비면 복귀 / EntrySection) |
-| `Condition` | **무엇이 충족인지** — 폴리모픽 `LinkCondition`(`[SerializeReference]`). null이면 항상 true(Always) 취급 |
+| `Condition` | **무엇이 충족인지** — 다형성 `LinkCondition`(`[SerializeReference]`). null이면 항상 true(Always) 취급 |
 | `Timing` | 언제 평가할지 — `WhenMatched` / `OnRelease` / `OnEnd` / `OnEndIfMatched` |
 | `WindowStart` ~ `WindowEnd` | 평가 구간 (normalizedTime) |
 | `BlendDuration` | 전이 시 CrossFade 시간(초) |
 | `EntryOffset` | 전이 후 대상 섹션을 이 normalizedTime부터 재생 (중간 진입 — 윈드업 스킵 등) |
 
-> ⚠️ 과거의 인라인 `Attack`/`Direction`/`RequireHeld` 필드는 **폴리모픽 `Condition`으로 이전**됐다.
-> 세 필드는 마이그레이션 전용 레거시로만 남아 있다(에디터 메뉴가 읽어 `InputCondition`을 생성, 2차 PR에서 제거 예정).
+> 과거에는 이 조건을 `ClipLink`의 인라인 `Attack`/`Direction`/`RequireHeld` 필드로 들고 있었으나,
+> 다형성 `Condition`(`InputCondition`)으로 **이전·제거 완료**됐다(일회성 마이그레이션 후 레거시 필드 삭제). 신규 링크는 `Condition`을 직접 설정한다.
 
-### LinkCondition (전이 조건 — 폴리모픽)
+### LinkCondition (전이 조건 — 다형성)
 
 조건은 `SectionModule`과 동형 패턴으로 `[SerializeReference]` 직렬화된다. "언제 평가/발동할지"(Timing·Window)는
 링크가, "무엇이 충족인지"만 조건이 담당한다. 새 조건(거리/체력/AI 결정 등) = `LinkCondition` 상속 1개 추가
@@ -350,7 +337,7 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, *
 
 ## 섹션 모듈 (SectionModule) — 기능을 끼워 넣는 플러그인
 
-**기능** — 한 섹션에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **폴리모픽 직렬화**된다.
+**기능** — 한 섹션에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **다형성 직렬화**된다.
 새 연출/판정 기능 = 베이스 상속 1개 추가 (ConfigState 본체는 안 건드림).
 
 **동작** — `ConfigState`가 섹션 진입 시 `OnEnter`, 매 프레임 `Tick`을 호출한다.
@@ -368,7 +355,7 @@ SectionModule (추상)           OnEnter(1회) / Tick(매 프레임)
 `HitTrigger`는 `Invulnerable`이면 피격을 무시(회피 i-frame), `ParryActive`면 쳐냄으로 분기(패링).
 
 - **장점** — 무적·패링처럼 "구간 동안 플래그를 켜는" 판정을 **클래스 1개 + 구간 두 값**으로 추가한다. 툴의 추가 메뉴/구간 편집 UI가 베이스 덕에 자동으로 잡힌다. i-frame('무시')과 parry('응수')가 대칭이라 읽기 쉽다.
-- **단점** — `[SerializeReference]` 폴리모픽은 타입 리네임/이동 시 직렬화가 깨질 수 있고, 모듈 간 실행 순서·상호작용이 늘면 암묵적 의존이 생긴다(현재는 플래그 토글뿐이라 단순).
+- **단점** — `[SerializeReference]` 다형성은 타입 리네임/이동 시 직렬화가 깨질 수 있고, 모듈 간 실행 순서·상호작용이 늘면 암묵적 의존이 생긴다(현재는 플래그 토글뿐이라 단순).
 
 ---
 
@@ -559,7 +546,7 @@ PlayerStateMachine
 Assets/04.Scripts/
 ├── AnimationConfig.cs               ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
 ├── ConfigDriving.cs                 ConfigState가 의존하는 공유 인터페이스 (IConfigContext/Mover/AnimatorBridge/Signals + ILiveMonitor/IInputMonitor)
-├── LinkCondition.cs                 폴리모픽 전이 조건 베이스 + InputCondition/AlwaysCondition + ILinkConditionContext
+├── LinkCondition.cs                 다형성 전이 조건 베이스 + InputCondition/AlwaysCondition + ILinkConditionContext
 │
 ├── Combat/
 │   ├── EnemySensor.cs               전방 부채꼴 적 탐지 (워프 타겟 / 거리 분기)
@@ -603,7 +590,7 @@ Assets/04.Scripts/
         │   ├── ParryTrigger.cs           패링 스탠스 진입
         │   └── Attack_Normal_EnhanceTrigger.cs  강화공격 (방향/거리 분기)
         │
-        └── Modules/                  섹션 플러그인 (폴리모픽)
+        └── Modules/                  섹션 플러그인 (다형성)
             ├── SectionModule.cs          추상 베이스 (OnEnter/Tick)
             ├── WindowModule.cs           구간(Start~End) 판정 베이스
             ├── SectionContext.cs         모듈이 받는 런타임 핸들 묶음
