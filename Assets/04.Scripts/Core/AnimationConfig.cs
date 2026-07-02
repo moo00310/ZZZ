@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
+using ZZZ.Effects;
 
 namespace ZZZ
 {
@@ -201,8 +202,8 @@ namespace ZZZ
         public NotifyType Type;
         [Range(0f, 1f)]
         public float      NormalizedTime;
-        public string     EventName    = "";
-        public GameObject EffectPrefab;
+        public string     EventName = "";
+        public CompositeEffect Effect;   // 재생할 이펙트 조합(원자 1개짜리도 포함) — 스폰/풀링은 EffectService가 담당
     }
 
     public enum NotifyType

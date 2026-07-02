@@ -117,6 +117,8 @@ namespace ZZZ.Editor.AnimationTool
                     Undo.RecordObject(_config, "Move Notify");
                     tc.Notifies[_dragNotifyIdx].NormalizedTime = newN;
                     EditorUtility.SetDirty(_config);
+                    // Effect 탭: 발동 시점이 바뀌었으니 현재 플레이헤드에서 이펙트 재시뮬레이션
+                    if (_activeTab == ToolTab.Effect && !_comboMode) SampleAtTime(_trackTime, false);
                     ev.Use(); Repaint();
                 }
                 // 클립 순서 변경 드래그

@@ -1,0 +1,155 @@
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+using ZZZ.Effects;
+using ZZZ.Editor.Effects;
+
+namespace ZZZ.Editor.EffectTool
+{
+    public partial class EffectTool
+    {
+        // 씬 원점에 조합/원자를 스폰해 ParticleSystem.Simulate로 스크럽 프리뷰한다(에디트 모드 전용).
+        private class PreviewInstance
+        {
+            public GameObject Root;
+            public List<ParticleSystem> TopSystems;   // 최상위 파티클(자식은 withChildren로 딸려감)
+            public float StartDelay;
+        }
+
+        private GameObject _previewRoot;
+        private readonly List<PreviewInstance> _previewInstances = new List<PreviewInstance>();
+        private float  _previewTime;
+        private bool   _previewPlaying;
+        private double _previewLastTime;
+
+        private void DrawPreviewBar(Rect area)
+        {
+            EditorGUI.DrawRect(area, new Color(0.20f, 0.20f, 0.20f));
+            GUILayout.BeginArea(new Rect(area.x + 6f, area.y + 4f, area.width - 12f, area.height - 6f));
+            GUILayout.BeginHorizontal();
+
+            bool hasTarget = _selectedComposite != null;
+            using (new EditorGUI.DisabledScope(!hasTarget || EditorApplication.isPlaying))
+            {
+                if (GUILayout.Button(_previewPlaying ? "⏸ Pause" : "▶ Play", GUILayout.Width(80)))
+                    TogglePreviewPlay();
+                if (GUILayout.Button("■ Stop", GUILayout.Width(64)))
+                    StopPreview();
+
+                float dur = PreviewDuration();
+                float t   = EditorGUILayout.Slider(_previewTime, 0f, dur);
+                if (!Mathf.Approximately(t, _previewTime))
+                {
+                    _previewTime = t;
+                    ScrubPreview(t);
+                }
+                GUILayout.Label($"/ {dur:0.00}s", GUILayout.Width(60));
+            }
+
+            if (EditorApplication.isPlaying)
+                GUILayout.Label("(플레이 모드 — 프리뷰 비활성)", EditorStyles.miniLabel);
+
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        private float PreviewDuration()
+        {
+            if (_selectedComposite != null) return EffectEditorShared.CompositeDuration(_selectedComposite);
+            return 1f;
+        }
+
+        private void TogglePreviewPlay()
+        {
+            if (_previewPlaying) { _previewPlaying = false; return; }
+            EnsurePreviewSpawned();
+            if (_previewRoot == null) return;
+            if (_previewTime >= PreviewDuration()) _previewTime = 0f;
+            _previewPlaying  = true;
+            _previewLastTime = EditorApplication.timeSinceStartup;
+        }
+
+        private void TickPreview()
+        {
+            if (!_previewPlaying) return;
+            double now = EditorApplication.timeSinceStartup;
+            _previewTime += (float)(now - _previewLastTime);
+            _previewLastTime = now;
+
+            float dur = PreviewDuration();
+            if (_previewTime >= dur) _previewTime = 0f;   // 루프 프리뷰
+            ScrubPreview(_previewTime);
+        }
+
+        // 스폰 인스턴스들을 t(글로벌 시간)에 맞춰 시뮬레이션. t < StartDelay면 아직 안 뜬 것으로 숨김.
+        private void ScrubPreview(float t)
+        {
+            if (_previewRoot == null) return;
+            foreach (var inst in _previewInstances)
+            {
+                float local = t - inst.StartDelay;
+                bool active = local >= 0f;
+                if (inst.Root.activeSelf != active) inst.Root.SetActive(active);
+                if (!active) continue;
+
+                foreach (var ps in inst.TopSystems)
+                {
+                    if (ps == null) continue;
+                    ps.Simulate(local, true, true);
+                }
+            }
+            SceneView.RepaintAll();
+        }
+
+        private void EnsurePreviewSpawned()
+        {
+            if (_previewRoot != null) return;
+
+            _previewRoot = new GameObject("~EffectPreview") { hideFlags = HideFlags.DontSave };
+            _previewInstances.Clear();
+
+            if (_selectedComposite != null)
+                foreach (var e in _selectedComposite.Entries)
+                {
+                    if (e == null || e.Prefab == null) continue;
+                    SpawnPreviewInstance(e);
+                }
+
+            if (_previewInstances.Count == 0) { StopPreview(); return; }
+            ScrubPreview(_previewTime);
+        }
+
+        private void SpawnPreviewInstance(CompositeEffectEntry entry)
+        {
+            var go = Instantiate(entry.Prefab, _previewRoot.transform);
+            if (go == null) return;
+            go.hideFlags = HideFlags.DontSave;
+
+            var t = go.transform;
+            t.localPosition    = entry.PositionOffset;
+            t.localEulerAngles = entry.EulerOffset;
+            t.localScale       = entry.Scale;
+
+            // 최상위 파티클만 수집(자식은 Simulate(withChildren)로 딸려감)
+            var top = new List<ParticleSystem>();
+            foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (!EffectEditorShared.HasParticleAncestor(ps.transform, t)) top.Add(ps);
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            _previewInstances.Add(new PreviewInstance { Root = go, TopSystems = top, StartDelay = entry.StartDelay });
+        }
+
+        private void StopPreview()
+        {
+            _previewPlaying = false;
+            _previewInstances.Clear();
+            if (_previewRoot != null)
+            {
+                DestroyImmediate(_previewRoot);
+                _previewRoot = null;
+            }
+        }
+    }
+}
