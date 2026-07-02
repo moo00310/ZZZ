@@ -15,6 +15,12 @@ namespace ZZZ.Editor.AnimationTool
         [SerializeField] private AnimationConfig _config;
         private SerializedObject _serializedConfig;
 
+        // ── 탭 ───────────────────────────────────────────────────
+        // Config = 기존 config 편집 뷰. Effect = 애니와 이펙트를 같이 보며 타이밍/스폰 위치 맞추는 뷰.
+        private enum ToolTab { Config, Effect }
+        [SerializeField] private ToolTab _activeTab = ToolTab.Config;
+        private const float TabH = 20f;
+
         // ── Preview ───────────────────────────────────────────────
         private bool   _isPlaying;
         private float  _trackTime;
@@ -189,13 +195,15 @@ namespace ZZZ.Editor.AnimationTool
         private void OnGUI()
         {
             DrawToolbar();
+            DrawTabBar(new Rect(0, ToolbarH, position.width, TabH));
             if (_config != null && _serializedConfig != null) _serializedConfig.Update();
 
-            var barRect = new Rect(0, ToolbarH, position.width, PlaybarH);
+            float barY = ToolbarH + TabH;
+            var barRect = new Rect(0, barY, position.width, PlaybarH);
             if (EditorApplication.isPlaying) DrawLivebar(barRect);
             else                             DrawPlaybar(barRect);
 
-            float contentY = ToolbarH + PlaybarH;
+            float contentY = barY + PlaybarH;
             float contentH = position.height - contentY;
             // 인스펙터 폭 = 창 너비 비율(클램프) → 큰 창일수록 넓게, 값 잘림 방지
             // 링크 설정 박스가 이 패널 안이라 폭을 넉넉히 — 비율/최소/최대 모두 상향
@@ -204,10 +212,43 @@ namespace ZZZ.Editor.AnimationTool
 
             DrawTimeline(new Rect(0, contentY, timelineW, contentH));
             EditorGUI.DrawRect(new Rect(timelineW, contentY, 1f, contentH), new Color(0.1f, 0.1f, 0.1f));
-            DrawInspector(new Rect(timelineW + 1f, contentY, inspW - 1f, contentH));
+
+            var inspRect = new Rect(timelineW + 1f, contentY, inspW - 1f, contentH);
+            if (_activeTab == ToolTab.Effect) DrawEffectInspector(inspRect);
+            else                              DrawInspector(inspRect);
 
             if (_config != null && _serializedConfig != null)
                 _serializedConfig.ApplyModifiedProperties();
+        }
+
+        // 탭 스트립 — Config / Effect. Effect로 나가면 이펙트 프리뷰 인스턴스를 정리한다.
+        private void DrawTabBar(Rect r)
+        {
+            EditorGUI.DrawRect(r, new Color(0.16f, 0.16f, 0.16f));
+            GUILayout.BeginArea(r);
+            GUILayout.BeginHorizontal();
+            DrawTabButton("Config", ToolTab.Config);
+            DrawTabButton("Effect", ToolTab.Effect);
+            GUILayout.FlexibleSpace();
+            if (_activeTab == ToolTab.Effect)
+                GUILayout.Label("애니 재생하며 Effect Notify 시점에 조합 이펙트를 스폰·시뮬레이션",
+                    EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        private void DrawTabButton(string label, ToolTab tab)
+        {
+            bool on = _activeTab == tab;
+            var prev = GUI.backgroundColor;
+            if (on) GUI.backgroundColor = new Color(0.35f, 0.55f, 0.85f);
+            if (GUILayout.Toggle(on, label, "Button", GUILayout.Width(90f), GUILayout.Height(TabH - 2f)) && !on)
+            {
+                _activeTab = tab;
+                if (tab != ToolTab.Effect) ClearFxPreview();
+                else _fxDirty = true;
+            }
+            GUI.backgroundColor = prev;
         }
     }
 }

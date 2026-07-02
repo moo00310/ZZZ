@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Effects;
 
 namespace ZZZ.Player.StateMachine.States
 {
@@ -365,9 +366,8 @@ namespace ZZZ.Player.StateMachine.States
             switch (notify.Type)
             {
                 case NotifyType.Effect:
-                    if (notify.EffectPrefab != null)
-                        Object.Instantiate(notify.EffectPrefab,
-                            Ctx.Transform.position, Ctx.Transform.rotation);
+                    if (notify.Effect != null)
+                        EffectService.Play(notify.Effect, Ctx.Transform);
                     break;
                 default:
                     if (!string.IsNullOrEmpty(notify.EventName))

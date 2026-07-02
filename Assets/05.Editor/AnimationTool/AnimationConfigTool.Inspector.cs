@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Effects;
 using ZZZ.Player.StateMachine;
 
 namespace ZZZ.Editor.AnimationTool
@@ -753,15 +754,15 @@ namespace ZZZ.Editor.AnimationTool
             var   type   = (NotifyType)EditorGUILayout.EnumPopup("Type",  notify.Type);
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
             string eName = EditorGUILayout.TextField("Event Name",   notify.EventName);
-            GameObject prefab = notify.EffectPrefab;
+            CompositeEffect effect = notify.Effect;
             if (type == NotifyType.Effect)
-                prefab = (GameObject)EditorGUILayout.ObjectField(
-                    "Effect Prefab", notify.EffectPrefab, typeof(GameObject), false);
+                effect = (CompositeEffect)EditorGUILayout.ObjectField(
+                    "Effect", notify.Effect, typeof(CompositeEffect), false);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(_config, "Edit Notify");
                 notify.Type = type; notify.NormalizedTime = normT;
-                notify.EventName = eName; notify.EffectPrefab = prefab;
+                notify.EventName = eName; notify.Effect = effect;
                 EditorUtility.SetDirty(_config);
             }
 
