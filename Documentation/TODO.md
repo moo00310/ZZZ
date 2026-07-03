@@ -7,6 +7,7 @@
 - [x] **플레이어 공격 → 몬스터 피격 파이프라인** — `MeleeHitter`(센서 범위 기반) / `EffectHitVolume`(이펙트 범위 기반, A안)로 `HitTarget.TakeDamage` 호출
 - [x] **패링(Parry)** — `ParryModule`(활성 윈도우) + `ParryTrigger`(push 진입). 활성 중 적 공격이 닿으면 `HitTrigger`가 피격 대신 쳐냄(`ParryAid_L/H`)으로 분기. i-frame('무시')과 대칭('반격으로 응수')
 - [x] **강화공격(Attack_Normal_Enhance)** — 방향(앞W/뒤S) 우선 → 중립이면 적과의 거리(근/중/원)로 진입 섹션 분기. 콤보 링크가 못 받은 입력의 전역 폴백 트리거
+- [x] **이펙트 풀링 시스템 + 전용 툴** — `CompositeEffect`(조합 SO, 프리팹 직접 참조) + `EffectService`/`EffectPool`(프리팹 단위 풀, 자동 반납) + `EffectTool`/AnimationConfigTool **Effect 탭**(애니 프레임 보며 발동 시점·소켓·시차 편집, 소켓 Simulate 프리뷰). `DispatchNotify`의 `Instantiate` → `EffectService.Play` 교체 완료. 상세: [EffectArchitecture.md](EffectArchitecture.md)
 
 ### Attack_Normal_Enhance 리워크 (이번 묶음)
 - [x] **Special → Attack_Normal_Enhance 전면 리네임** — enum / 트리거 클래스 / 입력 액션 / 에디터 툴
@@ -24,7 +25,7 @@
 
 - [ ] **몬스터 루트모션/추격** — `MonsterController`의 `IConfigMover` no-op들(`FlushRootPos`/워프 등)을 실제 구현(현재 제자리 재생). **이때 같이**: `PlayerController.ComputeRootDeltaLocal`의 코어 델타 로직과 `RootMotionTracker`(현재 에디터 프리뷰/테스트 전용)의 **중복을 공용 헬퍼로 통합** → 플레이어·몬스터·프리뷰가 한 소스 공유, 기존 `RootMotionTrackerTests`가 런타임 경로까지 검증
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
-- [ ] **노티파이 트랙 확장 (이펙트)** — 본 소켓 바인딩, 구간형 노티파이, 이펙트 풀링. 별도 이펙트 툴은 만들지 않고 **`AnimationConfig`의 Notify 시스템을 확장**해 처리
+- [ ] **이펙트 시스템 잔여** — 플레이 모드 실전 검증(풀 반납/지연 재생), **구간형(지속) 노티파이**(현재는 시점 발동만 — Looping+Fixed 반납으로 우회 중). 소켓 바인딩·풀링·툴은 완료(위 최근 완료 참조)
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
 
 ## 모바일 빌드 & 최적화 (목표)
@@ -54,7 +55,7 @@
 ### 5) GC / 런타임 메모리 (코드)
 > 런타임 핫패스(전투 로직)는 이미 무할당 양호. 아래만 정리하면 됨.
 - [x] **디버그 HUD 빌드 제외** — `PlayerStateHUD`/`AnimatorLayerHUD`를 `#if UNITY_EDITOR || DEVELOPMENT_BUILD`로 가드. 릴리스에서 빌드 용량 + 매 프레임 OnGUI 문자열 GC 제거
-- [ ] **Notify 이펙트 풀링** — `ConfigState.DispatchNotify`의 `Object.Instantiate(EffectPrefab)`를 오브젝트 풀로 교체. 콤보 반복 발동 시 GC/인스턴스화 비용 누적 → 프리팹별 풀 Get/Release, VFX 재생 끝나면 자동 반납 (위 노티파이 트랙 확장의 '이펙트 풀링'과 동일 작업)
+- [x] **Notify 이펙트 풀링** — `ConfigState.DispatchNotify`의 `Object.Instantiate` → `EffectService.Play`(프리팹별 풀 Get/Release + 자동 반납 + 프리워밍)로 교체 완료. 상세: [EffectArchitecture.md](EffectArchitecture.md)
 - [ ] **`SendMessage` 대체 검토** — 같은 `DispatchNotify`의 `SendMessage(EventName)`는 리플렉션 할당 → 이벤트/델리게이트 디스패치로
 
 ## 발견된 버그
