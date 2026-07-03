@@ -70,13 +70,17 @@ MonoBehaviour:
       WindowEnd: 1
     Notifies:
     - Type: 3
-      NormalizedTime: 0.08592593
+      NormalizedTime: 0.11259259
       EventName: OnAttackHit
       Effect: {fileID: 0}
     - Type: 0
-      NormalizedTime: 0.099
+      NormalizedTime: 0.094814815
       EventName: Effect_Test
       Effect: {fileID: 11400000, guid: f7c5c63a618545e4cb550421960871d2, type: 2}
+    - Type: 0
+      NormalizedTime: 0.2488889
+      EventName: Effect_2
+      Effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
     Modules: []
   - SectionName: Attack_Normal_01_End
     Clip: {fileID: 7400000, guid: 30ce5d6072d6caa47ad1e7e72f7e8d53, type: 2}
