@@ -1,5 +1,9 @@
 # 이펙트 아키텍처
 
+> **용어 안내** — **Notify** = 애니메이션 재생 중 특정 시점에 발동하는 애니메이션 이벤트
+> ([애니메이션 문서](AnimationArchitecture.md) 내부 용어) · **조합**(`CompositeEffect`) = 여러 이펙트
+> 프리팹을 시차·배치와 함께 묶은 에셋 · **Entry** = 조합 안의 프리팹 1개 항목.
+
 ## 전체 구조도
 
 ```
@@ -33,11 +37,11 @@
 | **실행 (Play)** | `CompositeEffect` (SO) | 하나의 연출(예: 폭발)은 화염+연기+파편처럼 **여러 프리팹이 시차를 두고** 터진다. Notify가 이 묶음을 하나로 참조해야 편집·발동이 단순해진다 |
 | **풀링 (Get/Release)** | 프리팹 (GameObject) | 같은 서브 이펙트(예: hit_spark)가 **서로 다른 조합**에서 다른 시차/오프셋으로 재사용된다. 풀을 조합 단위로 잡으면 같은 프리팹 인스턴스가 조합 수만큼 중복 생성된다 |
 
-### 왜 원자(개별 이펙트)용 SO를 따로 두지 않았나
+### 왜 개별 이펙트용 SO를 따로 두지 않았나
 
-초기안은 `EffectDefinition`(원자 1개 = SO 1개) + `CompositeEffect`(조합)의 2단 SO였다.
-그러나 **원자마다 에셋을 만들어 관리하는 비용**이 실익보다 컸다 — 원자의 설정(배치/풀링/반납)은
-대부분 "그 조합 안에서의" 값이지 프리팹의 고유 속성이 아니었다. 그래서 `EffectDefinition`은 폐기하고,
+초기안은 `EffectDefinition`(개별 이펙트 1개 = SO 1개) + `CompositeEffect`(조합)의 2단 SO였다.
+그러나 **개별 이펙트마다 에셋을 만들어 관리하는 비용**이 실익보다 컸다 — 개별 이펙트의 설정(배치/풀링/반납)은
+대부분 "그 조합 안에서의" 값이지 프리팹의 고유 속성이 아니었기 때문이다. 그래서 `EffectDefinition`은 폐기하고,
 `CompositeEffectEntry`가 **프리팹을 직접 참조**하며 설정을 자체 보유한다. 단일 이펙트도 Entry 1개짜리
 조합으로 표현하므로 Notify 쪽엔 타입 분기가 없다.
 
@@ -58,7 +62,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 
 ---
 
-## CompositeEffect — 조합 데이터 (SO)
+## 이펙트 조합 에셋 (CompositeEffect — SO)
 
 [CompositeEffect.cs](../Assets/04.Scripts/Effects/CompositeEffect.cs) — `List<CompositeEffectEntry>` 하나가 전부다.
 
@@ -78,7 +82,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 
 ---
 
-## EffectService — 런타임 진입점
+## 런타임 진입점 (EffectService)
 
 [EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, spawner)` 하나가 공개 API다.
 
@@ -180,7 +184,7 @@ PlayEntry(entry, spawner)
 
 - **발동 시점 편집** — 선택한 Effect Notify의 `NormalizedTime`을 프레임 표시와 함께 슬라이더/마커 드래그로 조정
 - **소켓 프리뷰** — 각 Entry의 발동 시점(`섹션 시작 + NormalizedTime×클립길이 + StartDelay`)에 맞춰
-  조합 원자들을 **캐릭터 소켓 본에 붙여 `Simulate`** — 트랙 스크럽/편집 중에도 현재 플레이헤드에 즉시 반영
+  조합의 개별 이펙트들을 **캐릭터 소켓 본에 붙여 `Simulate`** — 트랙 스크럽/편집 중에도 현재 플레이헤드에 즉시 반영
 - **인라인 조합 편집** — Entry별 소켓/오프셋/시차/풀링 + StartDelay 타임라인 + 풀 개요를 탭 인스펙터에 내장
 - **Combo 프리뷰 모드에선 비활성** — 콤보는 분기·동적 타이밍이라 절대 시간 계산이 불가
 

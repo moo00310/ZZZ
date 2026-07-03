@@ -1,5 +1,9 @@
 # 플레이어 애니메이션 아키텍처
 
+> **용어 안내** — 이 문서(및 코드)의 내부 용어 셋. **섹션** = config 안의 클립 구간(`TrackClip`) ·
+> **Link** = 구간 간 전이 정의(`ClipLink`) · **Notify** = 재생 중 특정 시점에 발동하는 애니메이션 이벤트 ·
+> **Module** = 구간에 붙는 로직 플러그인(`SectionModule`). 상세는 [전투 흐름 데이터 에셋](#전투-흐름-데이터-에셋-animationconfig) 절.
+
 ## 전체 구조도
 
 ```
@@ -52,16 +56,21 @@
 
 ---
 
-## AnimationConfig — 데이터로 정의하는 전이 트랙
+## 전투 흐름 데이터 에셋 (AnimationConfig)
 
 `AnimationConfig`는 "언리얼 엔진의 몽타주 스타일"의 ScriptableObject 트랙이다. 코드 수정 없이
 에셋만 편집해서 콤보/피격/회피 연출을 구성한다.
+
+> **용어** — 한 config는 **클립 구간** 목록으로 이루어진다(코드 타입 `TrackClip`).
+> 이 문서에서 **"섹션"** 은 항상 이 클립 구간 하나를 가리키는 내부 용어다.
+> **"Link"** 는 구간 사이의 **전이 정의**(`ClipLink`), **"Notify"** 는 재생 중 특정 시점에 발동하는
+> **애니메이션 이벤트**(UE AnimNotify에서 딴 이름)다.
 
 ```
 AnimationConfig
 ├── EntrySection            진입 시 재생할 섹션 (빈 값 = 첫 클립)
 ├── LoopTrack / DoneThreshold
-├── Clips : List<TrackClip>     ← 섹션(클립) 목록
+├── Clips : List<TrackClip>     ← 클립 구간("섹션") 목록
 │     ├── SectionName            섹션 식별자
 │     ├── Clip / Speed
 │     ├── MoveMode               None / RootMotion
@@ -72,12 +81,12 @@ AnimationConfig
 │     ├── FaceTarget / FaceWindow / FaceTurnSpeed            타겟 조준 회전(스냅/락온 통합) — 워프와 독립
 │     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
-│     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 이벤트/이펙트
+│     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 애니메이션 이벤트(이펙트/신호)
 │     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 다형성)
 └── GlobalLinks : List<ClipLink>   ← 모든 섹션에 적용 (Any State 전이)
 ```
 
-### ClipLink (전이 정의)
+### 전이 정의 (ClipLink)
 
 | 필드 | 의미 |
 |------|------|
@@ -93,7 +102,7 @@ AnimationConfig
 > **이전·제거 완료**했다. 인라인 방식은 조건이 늘 때마다 `ClipLink`에 안 쓰는 필드가 쌓이는데,
 > 향후 몬스터 AI 조건(거리·체력·BT 결정 등)까지 받으려면 다형성이 필요했다. 신규 링크는 `Condition`을 직접 설정한다.
 
-### LinkCondition (전이 조건 — 다형성)
+### 전이 조건 (LinkCondition) — 다형성
 
 `ClipLink`는 조건을 추상 타입 `LinkCondition`으로 들고, `ConfigState`는 타입을 가리지 않고 `Condition.Matches()`로 평가한다(다형성).
 "언제 평가할지"(Timing·Window)는 링크가, "무엇이 충족인지"만 조건이 담당한다. 새 조건은 `LinkCondition` 상속 1개로 추가한다.
@@ -252,7 +261,7 @@ Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않
 
 ---
 
-## 타겟 워프 & 섹션 턴 (공격 보정)
+## 공격 보정 — 타겟 워프 & 턴 회전 추출
 
 애니 원본만으로는 적을 정확히 못 때리므로, 루트모션 위에 두 가지 보정을 얹는다.
 
@@ -270,7 +279,7 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, *
 - `FaceTurnSpeed` 0 = 즉시(스냅처럼), >0 = 각속도 제한 회전
 - **이동 워프와 독립** — 트래킹 없이 회전만 켤 수 있다. `FaceInputOnEnter`(내 입력 방향 조준)가 있으면 진입 스냅보다 우선.
 
-### 섹션 턴 (SectionTurn) — 루트 회전 추출
+### 턴 회전 추출 (SectionTurn) — 턴 애니로 캐릭터를 실제 회전
 
 턴 애니(예: 180° 뒤돌기, TurnBack)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야
 턴 이후 이동/다음 섹션(run_loop)이 새 방향으로 이어진다. `SectionTurn`을 켠 섹션에서만 작동.
@@ -328,9 +337,9 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, *
 
 ---
 
-## 섹션 모듈 (SectionModule) — 기능을 끼워 넣는 플러그인
+## 구간별 로직 모듈 (SectionModule) — 기능을 끼워 넣는 플러그인
 
-**기능** — 한 섹션에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **다형성 직렬화**된다.
+**기능** — 클립 구간(섹션) 하나에 붙는 기능 단위. `TrackClip.Modules`에 `[SerializeReference]`로 **다형성 직렬화**된다.
 새 연출/판정 기능 = 베이스 상속 1개 추가 (ConfigState 본체는 안 건드림).
 
 **동작** — `ConfigState`가 섹션 진입 시 `OnEnter`, 매 프레임 `Tick`을 호출한다.
