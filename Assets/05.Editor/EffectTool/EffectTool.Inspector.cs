@@ -68,6 +68,8 @@ namespace ZZZ.Editor.EffectTool
                 {
                     EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("StartDelay"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("Duration"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("PlaybackSpeed"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("Socket"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("PositionOffset"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
@@ -97,6 +99,8 @@ namespace ZZZ.Editor.EffectTool
                 var e = entries.GetArrayElementAtIndex(n);
                 e.FindPropertyRelative("Prefab").objectReferenceValue = null;
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
+                e.FindPropertyRelative("Duration").floatValue = 0f;
+                e.FindPropertyRelative("PlaybackSpeed").floatValue = 1f;
                 e.FindPropertyRelative("Socket").stringValue = "";
                 e.FindPropertyRelative("PositionOffset").vector3Value = Vector3.zero;
                 e.FindPropertyRelative("EulerOffset").vector3Value = Vector3.zero;

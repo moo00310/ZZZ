@@ -66,6 +66,8 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 |------------|------|
 | `Prefab` | 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 번들) |
 | `StartDelay` | 이 조합 안에서의 상대 시차(초) |
+| `Duration` | 방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 **방출만 멈추고** 잔여 파티클은 자연 소멸 → `ParticleStopped`면 이어서 자동 반납. **Looping 이펙트를 조합마다 다른 길이로** 쓸 수 있다 |
+| `PlaybackSpeed` | 재생 속도 배율 — 프리팹에 구운 `simulationSpeed`에 곱해진다(원본은 캐시로 보존, 풀 재사용 시 매 재생 재적용). 전체 길이도 1/배율로 축소 |
 | `Socket` | 붙일 본/소켓 이름 (빈값 = 스포너 원점). 스포너 계층에서 이름으로 재귀 검색 |
 | `PositionOffset` / `EulerOffset` / `Scale` | 소켓 기준 로컬 배치 |
 | `FollowSpawner` | true = 소켓에 부모로 붙어 따라감 / false = 스폰 순간 위치에 분리(투사체 잔상 등) |
@@ -90,7 +92,7 @@ PlayEntry(entry, spawner)
     ├── GetOrCreatePool(prefab)      풀이 없으면 생성 (Prewarm 수행) — lazy
     ├── pool.Get()                   재사용 or 신규 인스턴스
     ├── FindSocket → PlaceInstance   소켓 본 검색 + FollowSpawner에 따라 부착/분리 배치
-    ├── PooledEffectHandle.Bind      반납 방식 바인딩 (매 재생마다)
+    ├── PooledEffectHandle.Bind      재생 제어(PlaybackSpeed 적용·Duration 방출 컷 예약) + 반납 방식 바인딩 (매 재생마다)
     └── SetActive + RestartParticles 루트 파티클만 Play(true) → 자식은 내부 Start Delay로 순차 재생
 ```
 
@@ -113,6 +115,10 @@ PlayEntry(entry, spawner)
 |-------------|------|
 | `ParticleStopped` | 인스턴스 안의 **최상위 ParticleSystem 전부**(다른 파티클의 자식이 아닌 것)에 [ParticleStopRelay](../Assets/04.Scripts/Effects/ParticleStopRelay.cs)를 붙여 각자의 Stop 콜백을 받고, **전부 멈추면** 카운트다운이 끝나 반납 |
 | `Fixed` | `Lifetime`초 뒤 강제 반납 (Looping 등 자동 정지가 없는 이펙트용) |
+
+핸들은 반납 외에 **Entry별 재생 제어**도 담당한다 — 풀 인스턴스가 Entry 간 공유되므로, Entry마다 달라지는
+값은 매 `Bind`에서 적용한다: `PlaybackSpeed`(프리팹 원본 `simulationSpeed` 캐시 × 배율),
+`Duration`(경과 시 `Stop(StopEmitting)` — 방출만 끊고 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결).
 
 **왜 릴레이가 필요한가** — Unity의 `OnParticleSystemStopped` 메시지는 ParticleSystem이 붙은
 **그 GameObject에게만** 오고 부모로 전파되지 않는다. 프리팹 루트엔 파티클이 없고 여러 자식
@@ -161,7 +167,7 @@ PlayEntry(entry, spawner)
 | 영역 | 기능 |
 |------|------|
 | 목록 (`List`) | 프로젝트의 모든 `CompositeEffect` 브라우징 + New Composite 생성 |
-| 타임라인 (`Timeline`) | Entry `StartDelay`를 시간축 막대로 표시 — **드래그로 시차를 데이터에 굽는다** |
+| 타임라인 (`Timeline`) | Entry를 시간축 막대로 표시 — **막대 드래그 = `StartDelay`(시차), 우측 엣지 드래그 = `Duration`(방출 컷)** 을 데이터에 굽는다. 막대 길이는 `PlaybackSpeed`/`Duration` 반영 |
 | 인스펙터 (`Inspector`) | Entry별 프리팹/배치/풀링/반납 편집 |
 | 씬 프리뷰 (`Preview`) | `ParticleSystem.Simulate` 스크럽으로 플레이 진입 없이 조합 연출 확인 |
 | 풀 개요 (`Pool`) | 플레이 중 프리팹별 풀 상태(Free/Live/Created/Max) 모니터 |

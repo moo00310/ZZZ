@@ -57,7 +57,7 @@ namespace ZZZ.Effects
 
             var handle = instance.GetComponent<PooledEffectHandle>();
             if (handle == null) handle = instance.AddComponent<PooledEffectHandle>();
-            handle.Bind(pool, entry.Despawn, entry.Lifetime);
+            handle.Bind(pool, entry);
 
             instance.SetActive(true);
             RestartParticles(instance);

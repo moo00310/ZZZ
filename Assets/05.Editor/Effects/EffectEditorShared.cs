@@ -29,6 +29,16 @@ namespace ZZZ.Editor.Effects
             return max;
         }
 
+        // Entry의 유효 재생 길이(초) — 프리팹 원래 길이에 PlaybackSpeed(배율)와 Duration(방출 컷)을 반영한 근사.
+        // (Duration 컷 후 잔여 파티클 소멸 꼬리는 무시한다 — 타임라인 표시/프리뷰용)
+        public static float EntryDuration(CompositeEffectEntry e)
+        {
+            if (e == null || e.Prefab == null) return 0f;
+            float speed   = e.PlaybackSpeed > 0f ? e.PlaybackSpeed : 1f;
+            float natural = PrefabDuration(e.Prefab) / speed;
+            return e.Duration > 0f ? Mathf.Min(natural, e.Duration) : natural;
+        }
+
         public static float CompositeDuration(CompositeEffect c)
         {
             if (c == null) return 0f;
@@ -36,7 +46,7 @@ namespace ZZZ.Editor.Effects
             foreach (var e in c.Entries)
             {
                 if (e == null || e.Prefab == null) continue;
-                float end = e.StartDelay + PrefabDuration(e.Prefab);
+                float end = e.StartDelay + EntryDuration(e);
                 if (end > max) max = end;
             }
             return Mathf.Max(max, 0.5f);
@@ -128,19 +138,27 @@ namespace ZZZ.Editor.Effects
 
                 if (e != null && e.Prefab != null)
                 {
-                    float dur  = Mathf.Max(PrefabDuration(e.Prefab), 0.05f);
+                    float dur  = Mathf.Max(EntryDuration(e), 0.05f);
                     float barX = timeX + e.StartDelay * pxPerSec;
                     float barW = Mathf.Max(dur * pxPerSec, 8f);
                     var barRect = new Rect(barX, y + 3f, barW, rowH - 6f);
 
                     Color col = BarColors[i % BarColors.Length];
-                    if (dragEntry == i) col = Color.Lerp(col, Color.white, 0.3f);
+                    if (dragEntry == i || dragEntry == ResizeId(i)) col = Color.Lerp(col, Color.white, 0.3f);
                     EditorGUI.DrawRect(barRect, col);
-                    GUI.Label(new Rect(barX + 3f, y + 3f, barW - 4f, rowH - 6f),
-                        $"{e.StartDelay:0.##}s", EditorStyles.whiteMiniLabel);
 
+                    string info = $"{e.StartDelay:0.##}s";
+                    if (e.Duration > 0f) info += $" ▸{e.Duration:0.##}s";
+                    if (e.PlaybackSpeed > 0f && !Mathf.Approximately(e.PlaybackSpeed, 1f)) info += $" ×{e.PlaybackSpeed:0.##}";
+                    GUI.Label(new Rect(barX + 3f, y + 3f, barW - 4f, rowH - 6f), info, EditorStyles.whiteMiniLabel);
+
+                    // 우측 엣지 = Duration 리사이즈 그립 (이동 드래그보다 먼저 처리해 이벤트를 선점)
+                    var gripRect = new Rect(barRect.xMax - 5f, barRect.y, 10f, barRect.height);
+                    EditorGUI.DrawRect(new Rect(barRect.xMax - 3f, barRect.y, 3f, barRect.height), new Color(1f, 1f, 1f, 0.35f));
+                    HandleBarResize(c, i, gripRect, barX, pxPerSec, ref dragEntry);
                     HandleBarDrag(c, i, barRect, timeX, pxPerSec, ref dragEntry, ref grabDx);
-                    EditorGUIUtility.AddCursorRect(barRect, MouseCursor.SlideArrow);
+                    EditorGUIUtility.AddCursorRect(gripRect, MouseCursor.ResizeHorizontal);
+                    EditorGUIUtility.AddCursorRect(new Rect(barRect.x, barRect.y, barRect.width - 5f, barRect.height), MouseCursor.SlideArrow);
                 }
                 y += rowH;
             }
@@ -160,6 +178,44 @@ namespace ZZZ.Editor.Effects
                     onRulerScrub(Mathf.Max(0f, (ev.mousePosition.x - timeX) / pxPerSec));
                     ev.Use();
                 }
+            }
+        }
+
+        // 리사이즈 드래그는 이동(양수 index)과 같은 dragEntry 상태를 공유하되 음수로 인코딩해 구분한다 (-1 = 없음).
+        private static int ResizeId(int index) => -2 - index;
+
+        // 막대 우측 엣지 드래그 → Entry.Duration(방출 컷)을 굽는다. 원래 길이 이상으로 늘리면 0(자연 길이)으로 복귀.
+        private static void HandleBarResize(CompositeEffect c, int index, Rect gripRect, float barX, float pxPerSec,
+            ref int dragEntry)
+        {
+            int id = ResizeId(index);
+            var e = Event.current;
+            switch (e.type)
+            {
+                case EventType.MouseDown:
+                    if (e.button == 0 && gripRect.Contains(e.mousePosition))
+                    {
+                        dragEntry = id;
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseDrag:
+                    if (dragEntry == id)
+                    {
+                        var entry = c.Entries[index];
+                        float d = (e.mousePosition.x - barX) / pxPerSec;
+                        if (e.control || e.command) d = Mathf.Round(d * 20f) / 20f;   // 0.05s 스냅
+                        float speed   = entry.PlaybackSpeed > 0f ? entry.PlaybackSpeed : 1f;
+                        float natural = PrefabDuration(entry.Prefab) / speed;
+                        Undo.RecordObject(c, "Edit Effect Duration");
+                        entry.Duration = d >= natural - 0.01f ? 0f : Mathf.Max(0.05f, d);
+                        EditorUtility.SetDirty(c);
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseUp:
+                    if (dragEntry == id) { dragEntry = -1; e.Use(); }
+                    break;
             }
         }
 
