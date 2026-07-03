@@ -26,6 +26,12 @@ namespace ZZZ.Effects
         public GameObject Prefab;                    // 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 포함)
         public float      StartDelay = 0f;            // 이 조합 안에서의 상대 시차(초)
 
+        [Header("Playback")]
+        [Tooltip("방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 방출을 멈추고 잔여 파티클은 자연 소멸 — Looping 이펙트를 조합마다 다른 길이로 쓸 수 있다")]
+        public float Duration      = 0f;
+        [Tooltip("재생 속도 배율. 프리팹에 구운 simulationSpeed에 곱해지며, 전체 길이도 1/배율로 줄어든다")]
+        public float PlaybackSpeed = 1f;
+
         [Header("Placement")]
         public string  Socket         = "";           // 붙일 본/소켓 이름 (빈값=스폰 원점)
         public Vector3 PositionOffset = Vector3.zero;

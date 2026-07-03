@@ -54,7 +54,7 @@ namespace ZZZ.Editor.AnimationTool
 
                 float clipDur = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                 float fire    = GetClipStartTime(a.ClipIdx) + a.Notify.NormalizedTime * clipDur + a.Entry.StartDelay;
-                float atomDur = Mathf.Max(EffectEditorShared.PrefabDuration(a.Entry.Prefab), 0.05f);
+                float atomDur = Mathf.Max(EffectEditorShared.EntryDuration(a.Entry), 0.05f);
                 float local   = time - fire;
 
                 bool active = local >= 0f && local <= atomDur;
@@ -62,8 +62,9 @@ namespace ZZZ.Editor.AnimationTool
                 if (!active) continue;
 
                 ApplyFxTransform(a);   // 오프셋/스케일 편집 실시간 반영
+                float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
                 foreach (var ps in a.Top)
-                    if (ps != null) ps.Simulate(Mathf.Min(local, atomDur), true, true);
+                    if (ps != null) ps.Simulate(Mathf.Min(local, atomDur) * speed, true, true);
             }
             SceneView.RepaintAll();
         }
@@ -243,7 +244,7 @@ namespace ZZZ.Editor.AnimationTool
             if (notify.Effect != null)
             {
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("조합 내부 시차 (막대 드래그 = StartDelay)", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField("조합 내부 시차 (막대 드래그 = StartDelay · 우측 엣지 = Duration)", EditorStyles.miniBoldLabel);
                 float tlH = 22f + notify.Effect.Entries.Count * 20f;
                 Rect tl = GUILayoutUtility.GetRect(10f, tlH, GUILayout.ExpandWidth(true));
 
@@ -333,6 +334,8 @@ namespace ZZZ.Editor.AnimationTool
 
                     // 실시간 필드
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("StartDelay"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("Duration"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("PlaybackSpeed"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("PositionOffset"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
@@ -365,6 +368,8 @@ namespace ZZZ.Editor.AnimationTool
                 var e = entries.GetArrayElementAtIndex(n);
                 e.FindPropertyRelative("Prefab").objectReferenceValue = null;
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
+                e.FindPropertyRelative("Duration").floatValue = 0f;
+                e.FindPropertyRelative("PlaybackSpeed").floatValue = 1f;
                 e.FindPropertyRelative("Socket").stringValue = "";
                 e.FindPropertyRelative("PositionOffset").vector3Value = Vector3.zero;
                 e.FindPropertyRelative("EulerOffset").vector3Value = Vector3.zero;

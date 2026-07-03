@@ -13,7 +13,7 @@ namespace ZZZ.Editor.EffectTool
         {
             public GameObject Root;
             public List<ParticleSystem> TopSystems;   // 최상위 파티클(자식은 withChildren로 딸려감)
-            public float StartDelay;
+            public CompositeEffectEntry Entry;        // 시차/재생 길이/속도 등 프리뷰에 반영할 설정
         }
 
         private GameObject _previewRoot;
@@ -87,15 +87,18 @@ namespace ZZZ.Editor.EffectTool
             if (_previewRoot == null) return;
             foreach (var inst in _previewInstances)
             {
-                float local = t - inst.StartDelay;
+                float local = t - inst.Entry.StartDelay;
                 bool active = local >= 0f;
                 if (inst.Root.activeSelf != active) inst.Root.SetActive(active);
                 if (!active) continue;
 
+                // PlaybackSpeed는 시뮬 시간 압축으로, Duration은 유효 길이 클램프로 근사
+                float speed = inst.Entry.PlaybackSpeed > 0f ? inst.Entry.PlaybackSpeed : 1f;
+                float dur   = Mathf.Max(EffectEditorShared.EntryDuration(inst.Entry), 0.05f);
                 foreach (var ps in inst.TopSystems)
                 {
                     if (ps == null) continue;
-                    ps.Simulate(local, true, true);
+                    ps.Simulate(Mathf.Min(local, dur) * speed, true, true);
                 }
             }
             SceneView.RepaintAll();
@@ -138,7 +141,7 @@ namespace ZZZ.Editor.EffectTool
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
 
-            _previewInstances.Add(new PreviewInstance { Root = go, TopSystems = top, StartDelay = entry.StartDelay });
+            _previewInstances.Add(new PreviewInstance { Root = go, TopSystems = top, Entry = entry });
         }
 
         private void StopPreview()
