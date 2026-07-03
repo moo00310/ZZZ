@@ -12,7 +12,8 @@
 "무엇을 언제 재생할지"를 코드가 아니라 **에셋 편집만으로** 구성할 수 있게 했다.
 
 
-> 📖 구현 내부 동작·문제해결의 상세는 **[AnimationArchitecture.md](Documentation/AnimationArchitecture.md)**,
+> 📖 구현 내부 동작·문제해결의 상세는 **[AnimationArchitecture.md](Documentation/AnimationArchitecture.md)** ·
+> **[EffectArchitecture.md](Documentation/EffectArchitecture.md)**,
 > 자료구조 선택 철학은 **[자료구조_선택.md](Documentation/자료구조_선택.md)** 참고.
 > 코딩·커밋 컨벤션은 아래 [컨벤션](#-컨벤션) 절, 진행 중 작업·로드맵은 **[TODO.md](Documentation/TODO.md)**.
 
@@ -85,15 +86,56 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ---
 
-## ✨ 이펙트 시스템 — 로드맵 (진행 예정)
+## ✨ 이펙트 시스템 — 조합 실행 + 프리팹 풀링
 
-전투 타격 연출 담당. 현재는 **타격 판정 스캐폴드**까지 와 있다: 공격 이펙트 프리팹에 붙인 `EffectHitVolume`가
-스폰 순간 자기 범위(SphereCollider) 안의 대상을 때린다 — **이펙트 비주얼 범위 = 타격 범위**.
+전투 타격 연출 담당. 애니메이션의 Notify(발동 시점)에서 출발해 **풀링 런타임 + 전용 에디터 툴**까지 구현했다.
 
-**방향** — 별도 이펙트 툴을 새로 만들지 않고 **`AnimationConfig`의 Notify 시스템을 확장**해 처리한다:
-본 소켓 바인딩 · 구간형(지속) 노티파이 · 이펙트 오브젝트 풀링(반복 스폰 GC 절감, 모바일 대비).
+### 핵심 아이디어 — 실행은 조합 단위, 풀링은 프리팹 단위
 
-> → 상세 계획·체크리스트: **[TODO.md](Documentation/TODO.md)**
+```
+┌────────────────────────────────────────────────────────────────┐
+│  무엇을 언제      →  AnimationConfig의 Notify  (발동 시점만 안다) │
+│  어떤 연출 묶음   →  CompositeEffect  (SO — 프리팹들 + 시차/배치) │
+│  꺼내고 돌려놓기  →  EffectService + EffectPool  (프리팹 단위 풀)  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+하나의 연출(폭발 = 화염+연기+파편)은 여러 프리팹이 시차를 두고 터지지만, 같은 서브 이펙트(hit_spark)는
+여러 연출이 재사용한다. 그래서 **실행(Play)은 조합(SO) 단위, 풀(Get/Release)은 프리팹 단위**로 분리했다 —
+같은 프리팹을 다른 조합이 다른 시차/배치로 써도 풀은 공유된다.
+
+### 대표 결과물 (왜 → 어떻게 → 장단점)
+
+**① `CompositeEffect` — 프리팹 직접 참조 조합 데이터 (SO)**
+원자(개별 이펙트)마다 SO를 만드는 초기안(`EffectDefinition`)은 에셋 관리 비용이 실익보다 커서 폐기하고,
+각 Entry가 **프리팹을 직접 참조**하며 시차(`StartDelay`)·배치(소켓/오프셋/추종)·풀링(프리워밍/상한)·반납 설정을 자체 보유한다.
+단일 이펙트도 Entry 1개짜리 조합이라 Notify 쪽 타입 분기가 없다.
+→ 에셋 수·편집 동선 최소화. 단, 프리팹 공유 시 풀 설정은 최초 생성 Entry 값을 따른다.
+
+**② `EffectService` + `EffectPool` — 풀링 런타임 (GC 절감, 모바일 대비)**
+`ConfigState.DispatchNotify`의 `Instantiate`를 [EffectService.Play](Documentation/EffectArchitecture.md#effectservice--런타임-진입점)로
+교체 — 프리팹별 풀에서 꺼내 소켓 본에 배치하고, 재생이 끝나면 **자동 반납**한다
+([PooledEffectHandle](Documentation/EffectArchitecture.md#자동-반납--pooledeffecthandle--particlestoprelay):
+최상위 파티클 전부 정지 감지 / Lifetime 강제 반납). 프리워밍으로 첫 스폰 히칭을 막고 `MaxSize`로 피크만 흡수한다.
+
+**③ `EffectTool` + AnimationConfigTool "Effect" 탭 — 전용 에디터 툴**
+
+| 기능 | 설명 |
+|------|------|
+| [**EffectTool**](Documentation/EffectArchitecture.md#effecttool-zzzeffect-tool--조합-전용-편집-창) (`ZZZ/Effect Tool`) | 조합 브라우징 · Entry 편집 · **StartDelay 타임라인 드래그** · 씬 Simulate 프리뷰 · 풀 개요 모니터 |
+| [**Effect 탭**](Documentation/EffectArchitecture.md#animationconfigtool-effect-탭--애니와-같은-시간축에서-편집) (AnimationConfigTool) | 이펙트 타이밍의 기준은 애니 프레임 — **애니 프리뷰를 보면서** 발동 시점·소켓·오프셋·시차를 조정, 캐릭터 소켓 본에 이펙트를 Simulate로 겹쳐 확인 |
+
+### 함께 구현된 것
+
+- **타격 판정** — 공격 이펙트 프리팹의 `EffectHitVolume`가 스폰 순간 자기 범위(SphereCollider)를 때린다: **이펙트 비주얼 범위 = 타격 범위** (스폰이 Notify라 타격 타이밍도 애니 데이터를 따름)
+- **화염 이펙트(FX_FlameBurst)** — 파티클 시간에 맞춰 셰이더 `_Progress`를 구동하는 `EffectProgressDriver` (`MaterialPropertyBlock`으로 인스턴스 격리 — 풀 재사용과 맞물림)
+
+### 대표 문제해결
+
+- [파티클 정지 콜백이 부모로 전파 안 됨 → 최상위 파티클마다 릴레이 부착](Documentation/EffectArchitecture.md#자동-반납--pooledeffecthandle--particlestoprelay)
+- [static 서비스의 지연 재생 / Enter Play Mode static 잔존 / 풀 무한 성장 등](Documentation/EffectArchitecture.md#문제와-해결)
+
+> → 구조·경계·반납 메커니즘 상세: **[EffectArchitecture.md](Documentation/EffectArchitecture.md)** · 남은 항목(구간형 노티파이 등)은 **[TODO.md](Documentation/TODO.md)**
 
 ---
 
@@ -118,6 +160,6 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ## 🧱 기술 스택 (현재 실제로 쓰는 것만)
 
-`Unity` · `URP` · `C#` · `Input System(신형)` · `Custom Editor (IMGUI EditorWindow)` · `ScriptableObject 데이터 설계` · `직접 구현한 루트모션 / TPS 카메라`
+`Unity` · `URP` · `C#` · `Input System(신형)` · `Custom Editor (IMGUI EditorWindow)` · `ScriptableObject 데이터 설계` · `직접 구현한 루트모션 / TPS 카메라` · `이펙트 오브젝트 풀링`
 
-> 이펙트(Notify 확장) · 툰 셰이더 / RenderFeature · 모바일 빌드 · Addressables 는 **로드맵(미구현)** 이라 위 스택에서 제외했다.
+> 툰 셰이더 / RenderFeature · 모바일 빌드 · Addressables 는 **로드맵(미구현)** 이라 위 스택에서 제외했다.
