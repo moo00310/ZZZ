@@ -46,19 +46,19 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ### 대표 결과물 (왜 → 어떻게 → 장단점)
 
-**① `AnimationConfig` — 데이터로 정의·구동하는 전투 런타임**
+**① 전투 흐름 데이터 에셋 (`AnimationConfig`)**
 코드 수정 없이 ScriptableObject 에셋만 편집해 전투 흐름을 구성하는 데이터 시스템(언리얼 "애님 몽타주"와 비슷한 트랙).
-한 config는 섹션(`TrackClip`) 목록을 갖고, 각 섹션에 아래 3종을 데이터로 매단다.
+한 config는 **클립 구간**(내부 용어 "섹션", `TrackClip`) 목록을 갖고, 각 구간에 아래 3종을 데이터로 매단다.
 
 | 구성요소 | 하는 일 |
 |------|------|
-| [**Links (전이)**](Documentation/AnimationArchitecture.md#cliplink-전이-정의) | "이 섹션에서 → 어떤 입력/타이밍이면 → 어느 config·섹션으로"를 분기. `Timing`(`WhenMatched`/`OnRelease`/`OnEnd`/`OnEndIfMatched`) + `Window`/`EntryOffset`로 콤보·차지·중간진입 제어. 조건은 다형성 `LinkCondition` |
-| [**Notifies**](Documentation/AnimationArchitecture.md#피격-외부-이벤트-진입) | 재생 중 특정 시점에 이벤트/이펙트 발동 (피격 흔들림 신호 등) |
-| [**Modules (플러그인)**](Documentation/AnimationArchitecture.md#섹션-모듈-sectionmodule--기능을-끼워-넣는-플러그인) | `[SerializeReference]` 다형성 — **새 판정/연출 = 클래스 1개 상속**. 무적(`IFrameModule`)·패링(`ParryModule`) 등 |
+| [**전이 정의 (Link)**](Documentation/AnimationArchitecture.md#전이-정의-cliplink) | "이 구간에서 → 어떤 입력/타이밍이면 → 어느 config·구간으로"를 분기. `Timing`(`WhenMatched`/`OnRelease`/`OnEnd`/`OnEndIfMatched`) + `Window`/`EntryOffset`로 콤보·차지·중간진입 제어. 조건은 다형성 `LinkCondition` |
+| [**애니메이션 이벤트 (Notify)**](Documentation/AnimationArchitecture.md#피격-외부-이벤트-진입) | 재생 중 특정 시점에 이벤트/이펙트 발동 (피격 흔들림 신호 등) |
+| [**구간 로직 모듈 (Module)**](Documentation/AnimationArchitecture.md#구간별-로직-모듈-sectionmodule--기능을-끼워-넣는-플러그인) | `[SerializeReference]` 다형성 — **새 판정/연출 = 클래스 1개 상속**. 무적(`IFrameModule`)·패링(`ParryModule`) 등 |
 
 → 전투 콘텐츠 확장이 "에셋 추가 + 섹션 이름 규약"으로 끝난다. 단, 데이터 스키마를 직접 설계·유지해야 하고 다형성 직렬화는 타입 이동/리네임에 취약하다.
 
-**② `ConfigState` — config를 파싱해 모든 흐름을 굴리는 공유 러너**
+**② 단일 상태 러너 (`ConfigState`) — 데이터를 해석해 모든 흐름을 구동하는 공유 엔진**
 걷기·콤보·강화공격·대시·피격·회피·패링을 **이 한 클래스**가 config를 읽어 구동한다. 별도 State 클래스를
 갈아끼우는 상태머신이 아니라 **config를 갈아끼우는(`SwitchConfig`/`InterruptWith`)** 방식이다.
 
@@ -66,7 +66,7 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 → 상태가 늘어도 클래스가 안 늘어나고(데이터만 늘어남) 캐릭터 종류가 늘어도 엔진은 하나. 단, 러너 하나가 모든 흐름을 책임져 클래스 자체는 커진다.
 
-**③ `AnimationConfigTool` — config를 시각 편집하는 에디터 툴 ★ 핵심 결과물**
+**③ 커스텀 에디터 툴 (`AnimationConfigTool`) — 타임라인 편집·콤보 프리뷰 ★ 핵심 결과물**
 `AnimationConfig`를 코드 없이 편집하는 커스텀 EditorWindow(IMGUI). "데이터로 분리해 흐름이 안 보인다"는 단점을 정면으로 메운다.
 
 | 기능 | 설명 |
@@ -80,7 +80,7 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 각 시스템에서 부딪힌 **문제와 해결**은 `AnimationArchitecture.md`의 해당 "문제와 해결"에 정리.
 
 - [루트모션 — Unity 기본 대신 본에서 직접 추출 & "튐" 버그 6종](Documentation/AnimationArchitecture.md#루트모션-직접-구현)
-- [타겟 워프 & 섹션 턴 — 애니 원본으로 적을 못 맞추는 문제 보정](Documentation/AnimationArchitecture.md#타겟-워프--섹션-턴-공격-보정)
+- [공격 보정(타겟 워프 & 턴 회전) — 애니 원본으로 적을 못 맞추는 문제 보정](Documentation/AnimationArchitecture.md#공격-보정--타겟-워프--턴-회전-추출)
 - [피격 — additive 레이어로 반응 포즈 위에 흔들림 얹기 & 반응 escalation](Documentation/AnimationArchitecture.md#피격-외부-이벤트-진입)
 - [회피 / 패링 — i-frame은 '무시', 패링은 '반격으로 응수' (대칭 설계)](Documentation/AnimationArchitecture.md#회피-dodge--evade)
 
@@ -88,7 +88,7 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ## ✨ 이펙트 시스템 — 조합 실행 + 프리팹 풀링
 
-전투 타격 연출 담당. 애니메이션의 Notify(발동 시점)에서 출발해 **풀링 런타임 + 전용 에디터 툴**까지 구현했다.
+전투 타격 연출 담당. 애니메이션 이벤트(Notify — 발동 시점)에서 출발해 **풀링 런타임 + 전용 에디터 툴**까지 구현했다.
 
 ### 핵심 아이디어 — 실행은 조합 단위, 풀링은 프리팹 단위
 
@@ -106,19 +106,19 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 
 ### 대표 결과물 (왜 → 어떻게 → 장단점)
 
-**① `CompositeEffect` — 프리팹 직접 참조 조합 데이터 (SO)**
-원자(개별 이펙트)마다 SO를 만드는 초기안(`EffectDefinition`)은 에셋 관리 비용이 실익보다 커서 폐기하고,
+**① 이펙트 조합 에셋 (`CompositeEffect`) — 프리팹 직접 참조 (SO)**
+개별 이펙트마다 SO를 만드는 초기안(`EffectDefinition`)은 에셋 관리 비용이 실익보다 커서 폐기하고,
 각 Entry가 **프리팹을 직접 참조**하며 재생(시차·방출 지속·속도 배율)·배치(소켓/오프셋/추종)·풀링(프리워밍/상한)·반납 설정을 자체 보유한다 — 같은 프리팹을 조합마다 다르게 재생.
 단일 이펙트도 Entry 1개짜리 조합이라 Notify 쪽 타입 분기가 없다.
 → 에셋 수·편집 동선 최소화. 단, 프리팹 공유 시 풀 설정은 최초 생성 Entry 값을 따른다.
 
-**② `EffectService` + `EffectPool` — 풀링 런타임 (GC 절감, 모바일 대비)**
-`ConfigState.DispatchNotify`의 `Instantiate`를 [EffectService.Play](Documentation/EffectArchitecture.md#effectservice--런타임-진입점)로
+**② 풀링 런타임 (`EffectService` + `EffectPool`) — GC 절감, 모바일 대비**
+`ConfigState.DispatchNotify`의 `Instantiate`를 [EffectService.Play](Documentation/EffectArchitecture.md#런타임-진입점-effectservice)로
 교체 — 프리팹별 풀에서 꺼내 소켓 본에 배치하고, 재생이 끝나면 **자동 반납**한다
 ([PooledEffectHandle](Documentation/EffectArchitecture.md#자동-반납--pooledeffecthandle--particlestoprelay):
 최상위 파티클 전부 정지 감지 / Lifetime 강제 반납). 프리워밍으로 첫 스폰 히칭을 막고 `MaxSize`로 피크만 흡수한다.
 
-**③ `EffectTool` + AnimationConfigTool "Effect" 탭 — 전용 에디터 툴**
+**③ 이펙트 전용 에디터 툴 (`EffectTool` + AnimationConfigTool "Effect" 탭)**
 
 | 기능 | 설명 |
 |------|------|
