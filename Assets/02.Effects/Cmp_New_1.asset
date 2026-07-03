@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bfa81667f6201a54f8454b3433546da5, type: 3}
-  m_Name: Cmp_New
+  m_Name: Cmp_New_1
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0
     Duration: 0.5
-    PlaybackSpeed: 1
+    PlaybackSpeed: 0.5
     Socket: 
-    PositionOffset: {x: 0, y: 0.5, z: 1.2}
-    EulerOffset: {x: 20, y: 0, z: 0}
-    Scale: {x: 1, y: 1, z: 1}
+    PositionOffset: {x: 0, y: 0.5, z: 1}
+    EulerOffset: {x: 0, y: 0, z: 0}
+    Scale: {x: 1.2, y: 1.2, z: 1.2}
     FollowSpawner: 0
     PrewarmCount: 4
     MaxSize: 0

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 6403730617641942213}
   - component: {fileID: 4263145317643100803}
   - component: {fileID: 7455316632286766021}
-  - component: {fileID: 6141910152119986723}
   m_Layer: 0
   m_Name: Dom
   m_TagString: Untagged
@@ -118,7 +117,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 2
+      scalar: 3
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -4911,22 +4910,3 @@ MonoBehaviour:
   _syncToDuration: 1
   _duration: 10
   _clamp: 1
---- !u!320 &6141910152119986723
-PlayableDirector:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1738888438281591883}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_PlayableAsset: {fileID: 11400000, guid: 640c6314329ff78419d08ca2df8eb5bb, type: 2}
-  m_InitialState: 1
-  m_WrapMode: 2
-  m_DirectorUpdateMode: 1
-  m_InitialTime: 0
-  m_SceneBindings:
-  - key: {fileID: -2339467624292738962, guid: 640c6314329ff78419d08ca2df8eb5bb, type: 2}
-    value: {fileID: 0}
-  m_ExposedReferences:
-    m_References: []
