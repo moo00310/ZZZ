@@ -472,6 +472,9 @@ namespace ZZZ.Editor.AnimationTool
 
                 if (expanded)
                 {
+                    // ── 조건 타입 (다형성) — 타입 교체는 즉시 반영(아래 입력 필드 write-back과 분리) ──
+                    DrawConditionTypePicker(link);
+
                     EditorGUI.BeginChangeCheck();
 
                     // ── 대상 ──
@@ -483,20 +486,21 @@ namespace ZZZ.Editor.AnimationTool
                         string.IsNullOrEmpty(link.TargetSection) ? "(End/Entry)" : link.TargetSection));
                     int newIdx = EditorGUILayout.Popup("→ Section", curIdx, ShortAll(sectionOptions));
 
-                    // 입력 조건 편집 — 시드는 현재 InputCondition, 변경 시 EnsureInput에 기록.
-                    var seedIc = ReadInput(link);
-                    ComboInput seedAttack = seedIc?.Attack ?? ComboInput.None;
-                    MoveDir    seedDir    = seedIc?.Direction ?? MoveDir.Any;
-                    bool       seedHeld   = seedIc?.RequireHeld ?? false;
-
-                    var attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, seedAttack);
-                    // 특정 공격 키일 때만 의미 — 그 키가 '눌려있는 동안' 조건 충족 (차지 루프용)
-                    bool requireHeld = seedHeld;
-                    if (attack != ComboInput.None && attack != ComboInput.Any)
-                        requireHeld = EditorGUILayout.Toggle(
-                            new GUIContent("  Require Held", "체크 시 이 키가 '지금 눌려있을(held) 때' 충족 (누름 버퍼 대신 홀드). OnEnd 자기-루프+EntryOffset과 함께 차지 루프"),
-                            seedHeld);
-                    var dir    = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, seedDir);
+                    // 입력 조건 편집 — Condition이 InputCondition일 때만 노출(다형성). 타 타입(Always 등)은 필드 없음.
+                    InputCondition curIc = link.Condition as InputCondition;
+                    ComboInput attack      = curIc?.Attack      ?? ComboInput.None;
+                    MoveDir    dir         = curIc?.Direction   ?? MoveDir.Any;
+                    bool       requireHeld = curIc?.RequireHeld ?? false;
+                    if (curIc != null)
+                    {
+                        attack = (ComboInput)ColoredEnum(new GUIContent("Attack"), k_chipAttack, attack);
+                        // 특정 공격 키일 때만 의미 — 그 키가 '눌려있는 동안' 조건 충족 (차지 루프용)
+                        if (attack != ComboInput.None && attack != ComboInput.Any)
+                            requireHeld = EditorGUILayout.Toggle(
+                                new GUIContent("  Require Held", "체크 시 이 키가 '지금 눌려있을(held) 때' 충족 (누름 버퍼 대신 홀드). OnEnd 자기-루프+EntryOffset과 함께 차지 루프"),
+                                requireHeld);
+                        dir = (MoveDir)ColoredEnum(new GUIContent("Direction"), k_chipDir, dir);
+                    }
                     var timing = (LinkTiming)ColoredEnum(
                         new GUIContent("When", TimingHelp(link.Timing)), k_chipWhen, link.Timing);
 
@@ -530,10 +534,12 @@ namespace ZZZ.Editor.AnimationTool
                         Undo.RecordObject(_config, "Edit Link");
                         link.TargetConfig  = targetCfg;
                         link.TargetSection = newIdx == 0 ? "" : sectionOptions[newIdx];
-                        var ic = EnsureInput(link);
-                        ic.Attack          = attack;
-                        ic.RequireHeld     = requireHeld;
-                        ic.Direction       = dir;
+                        if (curIc != null)   // 입력 조건일 때만 입력 필드 반영 — 타 타입(Always/몬스터) 클로버링 금지
+                        {
+                            curIc.Attack      = attack;
+                            curIc.RequireHeld = requireHeld;
+                            curIc.Direction   = dir;
+                        }
                         link.Timing        = timing;
                         link.WindowStart   = ws;
                         link.WindowEnd     = we;
@@ -580,15 +586,43 @@ namespace ZZZ.Editor.AnimationTool
             WindowEnd     = s.WindowEnd,
         };
 
-        // 에디터는 현재 입력 조건(InputCondition) 편집 UI만 제공 — link.Condition을 InputCondition으로 다룬다.
-        // 없거나 다른 타입이면 새로 만들어 채운다(향후 몬스터 조건 타입 추가 시 타입 선택 UI로 확장).
-        private static InputCondition EnsureInput(ClipLink link)
+        // ── 조건 타입(다형성) 선택 ──────────────────────────────────
+        // LinkCondition 하위 타입을 팝업으로 나열해 링크마다 조건 타입을 고른다. 타입 교체는 새 인스턴스로
+        // 즉시 반영(입력 필드 write-back과 분리) — 그래야 Always/몬스터 조건이 InputCondition으로 덮이지 않는다.
+        private void DrawConditionTypePicker(ClipLink link)
         {
-            if (link.Condition is InputCondition ic) return ic;
-            // 없거나 다른 타입이면 빈 입력 조건을 새로 만들어 채운다.
-            var created = new InputCondition();
-            link.Condition = created;
-            return created;
+            EnsureConditionTypes();
+            // Condition이 null이면 런타임 Always 폴백과 동일하므로 Always로 표시한다.
+            Type cur = link.Condition != null ? link.Condition.GetType() : typeof(AlwaysCondition);
+            int idx = 0;
+            for (int i = 0; i < s_condTypes.Length; i++)
+                if (s_condTypes[i] == cur) { idx = i; break; }
+
+            int sel = EditorGUILayout.Popup(
+                new GUIContent("Condition", "전이 조건 타입 (다형성) — 타입에 따라 아래 필드가 달라진다"),
+                idx, s_condNames);
+            if (sel != idx)
+            {
+                Undo.RecordObject(_config, "Change Condition Type");
+                link.Condition = (LinkCondition)Activator.CreateInstance(s_condTypes[sel]);
+                EditorUtility.SetDirty(_config);
+            }
+        }
+
+        // LinkCondition 구상 타입 + 표시 이름(MenuName) 캐시 — TypeCache로 1회 수집(타입명순 안정 정렬).
+        private static Type[]   s_condTypes;
+        private static string[] s_condNames;
+        private static void EnsureConditionTypes()
+        {
+            if (s_condTypes != null) return;
+            var types = new List<Type>();
+            foreach (var t in TypeCache.GetTypesDerivedFrom<LinkCondition>())
+                if (!t.IsAbstract) types.Add(t);
+            types.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+            s_condTypes = types.ToArray();
+            s_condNames = new string[s_condTypes.Length];
+            for (int i = 0; i < s_condTypes.Length; i++)
+                s_condNames[i] = ((LinkCondition)Activator.CreateInstance(s_condTypes[i])).MenuName;
         }
 
         // 표시/시드용 입력 조건 읽기 — Condition이 InputCondition이면 그것, 아니면(Always/몬스터/null) null.
