@@ -116,10 +116,10 @@ namespace ZZZ.Editor.AnimationTool
             new Color(0.9f, 0.30f, 0.90f),
         };
 
-        [MenuItem("ZZZ/Animation Config Tool")]
+        [MenuItem("ZZZ/Config Tool")]
         public static void Open()
         {
-            var w = GetWindow<AnimationConfigTool>("Anim Config Tool");
+            var w = GetWindow<AnimationConfigTool>("Config Tool");
             w.minSize = new Vector2(640f, 480f);
         }
 
@@ -221,13 +221,13 @@ namespace ZZZ.Editor.AnimationTool
                 _serializedConfig.ApplyModifiedProperties();
         }
 
-        // 탭 스트립 — Config / Effect. Effect로 나가면 이펙트 프리뷰 인스턴스를 정리한다.
+        // 탭 스트립 — Animation / Effect. Effect로 나가면 이펙트 프리뷰 인스턴스를 정리한다.
         private void DrawTabBar(Rect r)
         {
             EditorGUI.DrawRect(r, new Color(0.16f, 0.16f, 0.16f));
             GUILayout.BeginArea(r);
             GUILayout.BeginHorizontal();
-            DrawTabButton("Config", ToolTab.Config);
+            DrawTabButton("Animation", ToolTab.Config);
             DrawTabButton("Effect", ToolTab.Effect);
             GUILayout.FlexibleSpace();
             if (_activeTab == ToolTab.Effect)

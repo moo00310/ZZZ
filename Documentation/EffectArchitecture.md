@@ -233,5 +233,5 @@ Assets/05.Editor/
 ## 남은 것 / 로드맵
 
 - **구간형(지속) 노티파이** — 현재 Notify는 시점 발동. `[Start, End]` 구간 동안 유지되는 이펙트는 미지원 (Looping + `Fixed` 반납으로 우회 가능)
-- **`SendMessage` 대체** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 이벤트/델리게이트로 교체 검토
+- **`SendMessage` → 이벤트 릴레이** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 캐릭터별 이벤트 릴레이(강타입 `event Action<string>`, 인스턴스 스코프)로 교체 예정 ([TODO.md](TODO.md))
 - **Addressables 전환** — 모바일 대비, 스킬 VFX를 사용 직전 로드/종료 후 Release ([TODO.md](TODO.md) 모바일 절)

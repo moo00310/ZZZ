@@ -1,22 +1,5 @@
 # ZZZ Unity Project — TODO.md
 
-## 최근 완료
-
-- [x] **`ConfigState` 공유 엔진화** — 플레이어 구상 타입 의존을 인터페이스(`ConfigDriving.cs`: `IConfigContext`/`IConfigMover`/`IAnimatorBridge`/`IConfigSignals`)로 추출. 전이 조건도 다형성 `LinkCondition`(`InputCondition`/`AlwaysCondition`)으로 분리(`ILinkConditionContext` 주입). `PlayerAnimatorBridge` → `AnimatorBridge`로 공용화
-- [x] **몬스터(Durahan) 스캐폴드** — 같은 `ConfigState`로 Idle+Hit 구동(`MonsterStateMachine`/`MonsterController`/`MonsterContext`/`MonsterConditionContext`). 피격 시 앞/뒤 분기 후 Hit config 인터럽트, 경직 A안(히트 쿨다운). 라이브 모니터 다중 캐릭터 추적
-- [x] **플레이어 공격 → 몬스터 피격 파이프라인** — `MeleeHitter`(센서 범위 기반) / `EffectHitVolume`(이펙트 범위 기반, A안)로 `HitTarget.TakeDamage` 호출
-- [x] **패링(Parry)** — `ParryModule`(활성 윈도우) + `ParryTrigger`(push 진입). 활성 중 적 공격이 닿으면 `HitTrigger`가 피격 대신 쳐냄(`ParryAid_L/H`)으로 분기. i-frame('무시')과 대칭('반격으로 응수')
-- [x] **강화공격(Attack_Normal_Enhance)** — 방향(앞W/뒤S) 우선 → 중립이면 적과의 거리(근/중/원)로 진입 섹션 분기. 콤보 링크가 못 받은 입력의 전역 폴백 트리거
-- [x] **이펙트 풀링 시스템 + 전용 툴** — `CompositeEffect`(조합 SO, 프리팹 직접 참조) + `EffectService`/`EffectPool`(프리팹 단위 풀, 자동 반납) + `EffectTool`/AnimationConfigTool **Effect 탭**(애니 프레임 보며 발동 시점·소켓·시차 편집, 소켓 Simulate 프리뷰). `DispatchNotify`의 `Instantiate` → `EffectService.Play` 교체 완료. 상세: [EffectArchitecture.md](EffectArchitecture.md)
-
-### Attack_Normal_Enhance 리워크 (이번 묶음)
-- [x] **Special → Attack_Normal_Enhance 전면 리네임** — enum / 트리거 클래스 / 입력 액션 / 에디터 툴
-- [x] **링크 타이밍·조건 확장** — `OnWindowMiss → OnRelease`(키 릴리스, 홀드 상태 기준), `RequireHeld`(홀드 차지 루프), `EntryOffset`(중간 프레임 진입), `OnEndIfMatched`
-- [x] **타겟 조준 통합(FaceTarget)** — Snap/Lock-on을 `FaceWindow` 하나로, 이동 워프(`EnableTracking`)와 **독립 토글**
-- [x] **트리거 4종 데이터화** — `[Serializable]`로 각자 설정 보유 → `PlayerStateMachine` 인스펙터 폴드 노출 (런타임 의존은 `Init`)
-- [x] **모듈 추가 드롭다운** — 등록된 `SectionModule` 타입 자동 나열 (`WindowModule` 베이스로 구간 편집 일반화)
-- [x] **에디터 정리** — 콤보 입력 단일 드롭다운, 라이브 `Held` 표시, 프리뷰 전용 Bip/RM 자동감지 시 숨김
-- [x] **Explode에서 E 재입력 → `Attack_ExSpecial_01`** (Explode 섹션 링크), 임시 더블탭 코드 제거
 
 ## 진행중
 
@@ -56,7 +39,10 @@
 > 런타임 핫패스(전투 로직)는 이미 무할당 양호. 아래만 정리하면 됨.
 - [x] **디버그 HUD 빌드 제외** — `PlayerStateHUD`/`AnimatorLayerHUD`를 `#if UNITY_EDITOR || DEVELOPMENT_BUILD`로 가드. 릴리스에서 빌드 용량 + 매 프레임 OnGUI 문자열 GC 제거
 - [x] **Notify 이펙트 풀링** — `ConfigState.DispatchNotify`의 `Object.Instantiate` → `EffectService.Play`(프리팹별 풀 Get/Release + 자동 반납 + 프리워밍)로 교체 완료. 상세: [EffectArchitecture.md](EffectArchitecture.md)
-- [ ] **`SendMessage` 대체 검토** — 같은 `DispatchNotify`의 `SendMessage(EventName)`는 리플렉션 할당 → 이벤트/델리게이트 디스패치로
+- [ ] **`SendMessage` → 이벤트 릴레이** — `DispatchNotify`의 `default` 분기(`Ctx.GameObject.SendMessage(EventName, DontRequireReceiver)`, Camera/Sound/Custom 공용)를 **캐릭터별 이벤트 릴레이**(강타입 `event Action<string>`)로 교체. SendMessage 단점: 리플렉션 비용 / 오타 조용한 실패 / 타입 안전성 없음.
+  - 왜 릴레이(전역 버스 아님): Notify 연출은 대부분 그 캐릭터 자신이 반응(피격·사운드) → 인스턴스별 릴레이면 그 캐릭터를 직접 구독해 **인스턴스 구분·`Source` 필터 불필요**, 전역 정적 상태 없음(캐릭터와 함께 GC). 제약: 데이터는 공유 SO(`TrackNotify`)라 페이로드는 문자열 `EventName` 유지(**UnityEvent 불가**).
+  - 구현: 캐릭터에 릴레이 컴포넌트(`event Action<string> OnNotify`) → `ConfigState`가 `ConfigContext`의 릴레이 참조로 발행. 구독자(사운드/카메라/피격 핸들러)는 같은 캐릭터에서 `OnEnable`/`OnDisable`로 구독·해제. `ConfigContext.GameObject`(SendMessage 전용)를 **릴레이 참조로 교체** → 설정처 `MonsterStateMachine`/`PlayerStateMachine` 2곳 수정.
+  - 남는 숙제: 구독 리스너가 없으면 무동작 → 실제 연출 붙일 때 함께 구현. 한 이벤트를 여러 캐릭터/전역 시스템이 들어야 하면 그때 이벤트 버스·SO 이벤트 채널로 승격.
 
 ## 발견된 버그
 
