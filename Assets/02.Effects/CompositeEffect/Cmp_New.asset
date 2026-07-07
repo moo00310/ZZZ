@@ -14,27 +14,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
-    StartDelay: 0
+    StartDelay: 0.0275
     Duration: 0.5
     PlaybackSpeed: 1
     Socket: 
     PositionOffset: {x: 0, y: 0.5, z: 1.2}
     EulerOffset: {x: 20, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
-    FollowSpawner: 0
+    FollowSpawner: 1
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
     PrewarmCount: 4
     MaxSize: 0
     Despawn: 0
     Lifetime: 0
-  - Prefab: {fileID: 0}
+  - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
     StartDelay: 0
-    Duration: 0
+    Duration: 0.2
     PlaybackSpeed: 1
-    Socket: 
-    PositionOffset: {x: 0, y: 0, z: 0}
-    EulerOffset: {x: 0, y: 0, z: 0}
+    Socket: Bip001 Prop2
+    PositionOffset: {x: -0.2, y: -0.2, z: 0}
+    EulerOffset: {x: 0, y: 17, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 0
+    ParentToSpawnerRoot: 1
+    IgnoreSocketRotation: 1
     PrewarmCount: 4
     MaxSize: 0
     Despawn: 0

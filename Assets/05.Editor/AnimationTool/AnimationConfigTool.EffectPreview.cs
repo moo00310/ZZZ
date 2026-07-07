@@ -20,6 +20,13 @@ namespace ZZZ.Editor.AnimationTool
             public int ClipIdx;
             public TrackNotify Notify;
             public CompositeEffectEntry Entry;
+
+            // ParentToSpawnerRoot 프리뷰용 — 발동(활성 진입) 순간 소켓 포즈를 루트 로컬로 캡처해 고정.
+            // 손 스윙(이후 프레임의 소켓 이동)을 따라가지 않고 캐릭터 루트만 따라가게 한다(런타임과 동일).
+            public Transform  Socket;
+            public bool       Captured;
+            public Vector3    CapPos;
+            public Quaternion CapRot;
         }
 
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
@@ -59,9 +66,9 @@ namespace ZZZ.Editor.AnimationTool
 
                 bool active = local >= 0f && local <= atomDur;
                 if (a.Root.activeSelf != active) a.Root.SetActive(active);
-                if (!active) continue;
+                if (!active) { a.Captured = false; continue; }   // 비활성 → 다음 활성 진입 때 다시 캡처
 
-                ApplyFxTransform(a);   // 오프셋/스케일 편집 실시간 반영
+                PlaceFxAtom(a);   // 오프셋/스케일 편집 실시간 반영 (ParentToSpawnerRoot는 캡처 포즈로 고정)
                 float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
                 foreach (var ps in a.Top)
                     if (ps != null) ps.Simulate(Mathf.Min(local, atomDur) * speed, true, true);
@@ -94,7 +101,10 @@ namespace ZZZ.Editor.AnimationTool
 
         private void SpawnFxAtom(int clipIdx, TrackNotify notify, CompositeEffectEntry entry)
         {
-            Transform parent = FindSocket(entry.Socket);
+            Transform socket = FindSocket(entry.Socket);
+            // ParentToSpawnerRoot: 소켓 위치에서 스폰하되 부모는 캐릭터 루트(_target). 배치는 매 프레임 PlaceFxAtom가.
+            bool toRoot = entry.ParentToSpawnerRoot && _target != null;
+            Transform parent = toRoot ? _target.transform : socket;
 
             var go = Instantiate(entry.Prefab, parent);
             go.hideFlags = HideFlags.DontSave;
@@ -106,8 +116,8 @@ namespace ZZZ.Editor.AnimationTool
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
 
-            var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry };
-            ApplyFxTransform(a);
+            var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry, Socket = socket };
+            if (!toRoot) ApplyFxTransform(a);   // 루트 부모형은 활성 진입 시 캡처해 배치
             go.SetActive(false);
             _fxAtoms.Add(a);
         }
@@ -118,6 +128,58 @@ namespace ZZZ.Editor.AnimationTool
             t.localPosition    = a.Entry.PositionOffset;
             t.localEulerAngles = a.Entry.EulerOffset;
             t.localScale       = a.Entry.Scale;
+        }
+
+        // 런타임 PlaceInstance와 동일한 규칙으로 프리뷰 배치.
+        // ParentToSpawnerRoot: 활성 진입(≈발동) 순간의 소켓 포즈(+오프셋)를 루트 로컬로 캡처해 고정 →
+        // 이후 프레임에서 손(소켓)이 움직여도 따라가지 않고, 캐릭터 루트(_target)만 따라간다.
+        private void PlaceFxAtom(FxPreviewAtom a)
+        {
+            if (a.Entry.ParentToSpawnerRoot && _target != null)
+            {
+                Transform root = _target.transform;
+                if (!a.Captured)
+                {
+                    Transform socket = a.Socket != null ? a.Socket : root;
+                    // 회전 기준 프레임 — 런타임 PlaceInstance와 동일. IgnoreSocketRotation이면 캐릭터 루트(_target) 기준.
+                    Quaternion frame = a.Entry.IgnoreSocketRotation ? root.rotation : socket.rotation;
+                    Vector3    wpos = a.Entry.IgnoreSocketRotation
+                        ? socket.position + frame * a.Entry.PositionOffset
+                        : socket.TransformPoint(a.Entry.PositionOffset);
+                    Quaternion wrot = frame * Quaternion.Euler(a.Entry.EulerOffset);
+                    a.CapPos   = root.InverseTransformPoint(wpos);
+                    a.CapRot   = Quaternion.Inverse(root.rotation) * wrot;
+                    a.Captured = true;
+                }
+                var t = a.Root.transform;
+                t.localPosition = a.CapPos;
+                t.localRotation = a.CapRot;
+                t.localScale    = a.Entry.Scale;
+                return;
+            }
+            ApplyFxTransform(a);
+        }
+
+        // Entry 접힘 상태는 조합별로 SessionState에 저장 — 스크립트 재컴파일(도메인 리로드)에도 유지된다.
+        // (일반 필드는 리로드마다 초기화되어 접었던 게 다시 펼쳐지는 게 불편했음)
+        private string FxCollapseKey =>
+            _fxComposite != null ? "ACT.fxCollapse." + _fxComposite.GetInstanceID() : null;
+
+        private void LoadEntryCollapse()
+        {
+            _fxEntryCollapsed.Clear();
+            string key = FxCollapseKey;
+            if (key == null) return;
+            string s = SessionState.GetString(key, "");
+            if (string.IsNullOrEmpty(s)) return;
+            foreach (var tok in s.Split(','))
+                if (int.TryParse(tok, out int idx)) _fxEntryCollapsed.Add(idx);
+        }
+
+        private void SaveEntryCollapse()
+        {
+            string key = FxCollapseKey;
+            if (key != null) SessionState.SetString(key, string.Join(",", _fxEntryCollapsed));
         }
 
         private Transform FindSocket(string socketName)
@@ -152,73 +214,11 @@ namespace ZZZ.Editor.AnimationTool
             _fxDirty = true;
         }
 
-        // ── Effect 탭 인스펙터 ────────────────────────────────────
-        private void DrawEffectInspector(Rect area)
+        // ── Effect 편집 섹션 (Notify 인스펙터 안에 인라인) ─────────
+        // Notify 타입이 Effect일 때 DrawNotifyInspector에서 호출된다. 발동 시점/구간끝은
+        // 상위 인스펙터(프레임 필드)에서 이미 편집하므로 여기선 '조합(Composite)' 편집만 담당.
+        private void DrawEffectSection(TrackClip clip, TrackNotify notify)
         {
-            EditorGUI.DrawRect(area, new Color(0.2f, 0.2f, 0.2f));
-            GUILayout.BeginArea(new Rect(area.x + 8f, area.y + 6f, area.width - 16f, area.height - 12f));
-            _inspScroll = EditorGUILayout.BeginScrollView(_inspScroll);
-
-            EditorGUILayout.LabelField("Effect Sync", EditorStyles.boldLabel);
-
-            if (_target == null || _config == null)
-            {
-                EditorGUILayout.HelpBox("상단에서 Target(캐릭터)과 Config를 지정하세요.", MessageType.Info);
-                EndEffectInspector();
-                return;
-            }
-            if (_comboMode)
-            {
-                EditorGUILayout.HelpBox("Combo 모드에선 이펙트 프리뷰가 비활성입니다.\n" +
-                    "Play 바의 Combo 토글을 끄고 순차 모드로 보세요.", MessageType.Warning);
-                EndEffectInspector();
-                return;
-            }
-
-            EditorGUILayout.LabelField($"스폰 인스턴스: {_fxAtoms.Count}개", EditorStyles.miniLabel);
-            if (GUILayout.Button("Rebuild Effects")) _fxDirty = true;
-            EditorGUILayout.Space(4f);
-
-            bool valid = _selectedNotify >= 0 && _notifyClipIdx >= 0 && _notifyClipIdx < _config.Clips.Count
-                         && _selectedNotify < _config.Clips[_notifyClipIdx].Notifies.Count;
-            if (!valid)
-            {
-                EditorGUILayout.HelpBox("타임라인에서 Effect Notify(아이콘 E)를 선택하면 여기서 편집합니다.",
-                    MessageType.None);
-                EndEffectInspector();
-                return;
-            }
-
-            var clip   = _config.Clips[_notifyClipIdx];
-            var notify = clip.Notifies[_selectedNotify];
-
-            EditorGUILayout.LabelField(
-                $"{Short(clip.Clip != null ? clip.Clip.name : "(clip)")}  ·  Notify #{_selectedNotify}",
-                EditorStyles.miniBoldLabel);
-
-            if (notify.Type != NotifyType.Effect)
-            {
-                EditorGUILayout.HelpBox("선택한 Notify가 Effect 타입이 아닙니다.", MessageType.Info);
-                EndEffectInspector();
-                return;
-            }
-
-            // 발동 시점 — 애니 프레임 기준
-            EditorGUI.BeginChangeCheck();
-            float nt = EditorGUILayout.Slider("발동 시점 (0~1)", notify.NormalizedTime, 0f, 1f);
-            if (EditorGUI.EndChangeCheck())
-            {
-                Undo.RecordObject(_config, "Edit Notify Time");
-                notify.NormalizedTime = nt;
-                EditorUtility.SetDirty(_config);
-            }
-            if (clip.Clip != null && clip.Clip.frameRate > 0f)
-            {
-                int frame = Mathf.RoundToInt(notify.NormalizedTime * clip.Clip.length * clip.Clip.frameRate);
-                int total = Mathf.RoundToInt(clip.Clip.length * clip.Clip.frameRate);
-                EditorGUILayout.LabelField(" ", $"{frame} / {total} f");
-            }
-
             // 조합 참조 + 새 조합 생성
             EditorGUILayout.BeginHorizontal();
             EditorGUI.BeginChangeCheck();
@@ -241,23 +241,32 @@ namespace ZZZ.Editor.AnimationTool
             }
             EditorGUILayout.EndHorizontal();
 
-            if (notify.Effect != null)
+            if (notify.Effect == null)
             {
-                EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("조합 내부 시차 (막대 드래그 = StartDelay · 우측 엣지 = Duration)", EditorStyles.miniBoldLabel);
-                float tlH = 22f + notify.Effect.Entries.Count * 20f;
-                Rect tl = GUILayoutUtility.GetRect(10f, tlH, GUILayout.ExpandWidth(true));
-
-                float clipDur2 = clip.Clip != null ? clip.Clip.length / Mathf.Max(0.01f, clip.Speed) : 0f;
-                float fireBase = GetClipStartTime(_notifyClipIdx) + notify.NormalizedTime * clipDur2;
-                float local    = _trackTime - fireBase;
-                float ph = (local >= 0f && local <= EffectEditorShared.CompositeDuration(notify.Effect)) ? local : -1f;
-                EffectEditorShared.DrawStartDelayTimeline(tl, notify.Effect, ref _fxTlDragEntry, ref _fxTlGrabDx, ph, null);
-
-                EditorGUILayout.Space(4f);
-                DrawCompositeEntries(notify.Effect);
+                EditorGUILayout.HelpBox("CompositeEffect를 지정하거나 New로 생성하세요.", MessageType.Info);
+                return;
             }
-            else EditorGUILayout.HelpBox("CompositeEffect를 지정하거나 New로 생성하세요.", MessageType.Info);
+
+            if (_comboMode)
+                EditorGUILayout.HelpBox("Combo 모드에선 씬 이펙트 프리뷰가 꺼집니다. 순차 모드로 보세요.",
+                    MessageType.None);
+            else if (_target == null)
+                EditorGUILayout.HelpBox("상단에서 Target(캐릭터)을 지정하면 씬에서 미리보기됩니다.",
+                    MessageType.None);
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("조합 내부 시차 (막대 드래그 = StartDelay · 우측 엣지 = Duration)", EditorStyles.miniBoldLabel);
+            float tlH = 22f + notify.Effect.Entries.Count * 20f;
+            Rect tl = GUILayoutUtility.GetRect(10f, tlH, GUILayout.ExpandWidth(true));
+
+            float clipDur2 = clip.Clip != null ? clip.Clip.length / Mathf.Max(0.01f, clip.Speed) : 0f;
+            float fireBase = GetClipStartTime(_notifyClipIdx) + notify.NormalizedTime * clipDur2;
+            float local    = _trackTime - fireBase;
+            float ph = (local >= 0f && local <= EffectEditorShared.CompositeDuration(notify.Effect)) ? local : -1f;
+            EffectEditorShared.DrawStartDelayTimeline(tl, notify.Effect, ref _fxTlDragEntry, ref _fxTlGrabDx, ph, null);
+
+            EditorGUILayout.Space(4f);
+            DrawCompositeEntries(notify.Effect);
 
             // 풀 개요 (플레이 모드)
             EditorGUILayout.Space(6f);
@@ -272,14 +281,6 @@ namespace ZZZ.Editor.AnimationTool
             if (Event.current.type == EventType.Repaint && !EditorApplication.isPlaying
                 && !_comboMode && AnimationMode.InAnimationMode())
                 UpdateEffectPreview(_trackTime);
-
-            EndEffectInspector();
-        }
-
-        private void EndEffectInspector()
-        {
-            EditorGUILayout.EndScrollView();
-            GUILayout.EndArea();
         }
 
         // 조합 Entry들 — 프리팹 + 스폰 위치(소켓/오프셋/스케일) + 조합 내 시차 + 풀링/반납.
@@ -290,6 +291,7 @@ namespace ZZZ.Editor.AnimationTool
             {
                 _fxComposite   = composite;
                 _fxCompositeSO = new SerializedObject(composite);
+                LoadEntryCollapse();   // 조합별 접힘 상태 복원 (도메인 리로드에도 유지)
             }
             _fxCompositeSO.Update();
 
@@ -308,7 +310,11 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.BeginHorizontal();
                 bool expanded = !_fxEntryCollapsed.Contains(i);
                 bool newExp = EditorGUILayout.Foldout(expanded, $"#{i}  {title}   @{delay:0.##}s", true);
-                if (newExp != expanded) { if (newExp) _fxEntryCollapsed.Remove(i); else _fxEntryCollapsed.Add(i); }
+                if (newExp != expanded)
+                {
+                    if (newExp) _fxEntryCollapsed.Remove(i); else _fxEntryCollapsed.Add(i);
+                    SaveEntryCollapse();   // 접힘 상태 세션 저장 (재컴파일에도 유지)
+                }
                 GUILayout.FlexibleSpace();
                 GUI.backgroundColor = new Color(0.8f, 0.35f, 0.35f);
                 if (GUILayout.Button("✕", GUILayout.Width(24)))
@@ -340,10 +346,14 @@ namespace ZZZ.Editor.AnimationTool
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("FollowSpawner"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("ParentToSpawnerRoot"),
+                        new GUIContent("Parent To Spawner Root", "손 위치에서 스폰하되 캐릭터 루트에 붙임 — 손 스윙 무시, 캐릭터 이동/방향만 따라감"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
+                        new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
 
                     // 풀링/반납 — 접기
                     bool poolFold = _fxPoolFold.Contains(i);
-                    bool newPool = EditorGUILayout.Foldout(poolFold, "풀링/반납 설정", true);
+                    bool newPool = EditorGUILayout.Foldout(poolFold, "반납 설정", true);
                     if (newPool != poolFold) { if (newPool) _fxPoolFold.Add(i); else _fxPoolFold.Remove(i); }
                     if (newPool)
                     {
@@ -375,8 +385,8 @@ namespace ZZZ.Editor.AnimationTool
                 e.FindPropertyRelative("EulerOffset").vector3Value = Vector3.zero;
                 e.FindPropertyRelative("Scale").vector3Value = Vector3.one;
                 e.FindPropertyRelative("FollowSpawner").boolValue = false;
-                e.FindPropertyRelative("PrewarmCount").intValue = 4;
-                e.FindPropertyRelative("MaxSize").intValue = 0;
+                e.FindPropertyRelative("ParentToSpawnerRoot").boolValue = false;
+                e.FindPropertyRelative("IgnoreSocketRotation").boolValue = false;
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
                 _fxCompositeSO.ApplyModifiedProperties();

@@ -204,6 +204,19 @@ namespace ZZZ
         public float      NormalizedTime;
         public string     EventName = "";
         public CompositeEffect Effect;   // 재생할 이펙트 조합(원자 1개짜리도 포함) — 스폰/풀링은 EffectService가 담당
+
+        // 구간(Interval) 이펙트 — End > NormalizedTime이면 [NormalizedTime, End] 동안 '유지'되는 지속 연출.
+        // 시작 시점에 스폰해 계속 방출하다가 End에서(또는 섹션 이탈/캔슬 시) 방출을 멈춘다 —
+        // 트레일/오라/차지처럼 '한 시점'이 아니라 '구간'에 걸리는 이펙트용. End<=Time = 기존 단발(point).
+        // Effect 타입에만 의미. 프리팹은 루프 방출 + DespawnMode.ParticleStopped 권장(정지 후 자연 소멸).
+        [Range(0f, 1f)]
+        public float EndNormalizedTime = 0f;
+
+        // 고정(Lock): 켜지면 타임라인에서 드래그로 시점이 밀리지 않는다 — 값이 확정된 Notify를
+        // 실수로 옮기는 사고 방지용. 선택/편집(인스펙터)·삭제는 그대로 가능, 이동만 막는다.
+        public bool Locked = false;
+
+        public bool IsInterval => EndNormalizedTime > NormalizedTime;
     }
 
     public enum NotifyType

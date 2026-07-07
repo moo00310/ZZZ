@@ -35,6 +35,13 @@ namespace ZZZ.Effects
             return _free.Count > 0 ? _free.Pop() : CreateInstance();
         }
 
+        // free 인스턴스를 count까지 보충(이미 충분하면 무동작). 상한(maxSize)이 있으면 그 안에서만.
+        public void Prewarm(int count)
+        {
+            while (_free.Count < count && (_maxSize <= 0 || _created < _maxSize))
+                _free.Push(CreateInstance());
+        }
+
         // MaxSize(0=무제한) 초과분은 반납 시점에 파괴 — 풀이 무한정 커지지 않게.
         public void Release(GameObject instance)
         {

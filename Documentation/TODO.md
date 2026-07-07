@@ -36,9 +36,6 @@
 - [ ] 텍스처 압축(ASTC)·해상도 정리, 이펙트 파티클 수 예산 설정
 
 ### 5) GC / 런타임 메모리 (코드)
-> 런타임 핫패스(전투 로직)는 이미 무할당 양호. 아래만 정리하면 됨.
-- [x] **디버그 HUD 빌드 제외** — `PlayerStateHUD`/`AnimatorLayerHUD`를 `#if UNITY_EDITOR || DEVELOPMENT_BUILD`로 가드. 릴리스에서 빌드 용량 + 매 프레임 OnGUI 문자열 GC 제거
-- [x] **Notify 이펙트 풀링** — `ConfigState.DispatchNotify`의 `Object.Instantiate` → `EffectService.Play`(프리팹별 풀 Get/Release + 자동 반납 + 프리워밍)로 교체 완료. 상세: [EffectArchitecture.md](EffectArchitecture.md)
 - [ ] **`SendMessage` → 이벤트 릴레이** — `DispatchNotify`의 `default` 분기(`Ctx.GameObject.SendMessage(EventName, DontRequireReceiver)`, Camera/Sound/Custom 공용)를 **캐릭터별 이벤트 릴레이**(강타입 `event Action<string>`)로 교체. SendMessage 단점: 리플렉션 비용 / 오타 조용한 실패 / 타입 안전성 없음.
   - 왜 릴레이(전역 버스 아님): Notify 연출은 대부분 그 캐릭터 자신이 반응(피격·사운드) → 인스턴스별 릴레이면 그 캐릭터를 직접 구독해 **인스턴스 구분·`Source` 필터 불필요**, 전역 정적 상태 없음(캐릭터와 함께 GC). 제약: 데이터는 공유 SO(`TrackNotify`)라 페이로드는 문자열 `EventName` 유지(**UnityEvent 불가**).
   - 구현: 캐릭터에 릴레이 컴포넌트(`event Action<string> OnNotify`) → `ConfigState`가 `ConfigContext`의 릴레이 참조로 발행. 구독자(사운드/카메라/피격 핸들러)는 같은 캐릭터에서 `OnEnable`/`OnDisable`로 구독·해제. `ConfigContext.GameObject`(SendMessage 전용)를 **릴레이 참조로 교체** → 설정처 `MonsterStateMachine`/`PlayerStateMachine` 2곳 수정.

@@ -37,11 +37,17 @@ namespace ZZZ.Effects
         public Vector3 PositionOffset = Vector3.zero;
         public Vector3 EulerOffset    = Vector3.zero;
         public Vector3 Scale          = Vector3.one;
-        public bool    FollowSpawner  = false;        // true=부모에 붙어 따라감, false=스폰 위치에 분리
+        public bool    FollowSpawner  = false;        // true=소켓(부모)에 붙어 따라감, false=스폰 위치에 분리
+        // 켜면: 소켓(손/무기 본) 위치·방향에서 스폰하되 부모는 스포너 루트(캐릭터)로 붙인다.
+        // → 손 스윙(빠른 회전)은 무시하고 캐릭터 이동/방향만 따라감. FollowSpawner보다 우선.
+        public bool    ParentToSpawnerRoot = false;
+        // 켜면: 소켓의 '위치'만 쓰고 '회전'은 무시한다(월드 기준). 손/무기 본에 회전이 구워져 있어
+        // EulerOffset 조준이 어려울 때 — EulerOffset이 월드 회전으로 직접 먹고, PositionOffset도 월드축.
+        // (FollowSpawner=소켓 부모 모드에선 무효 — 그땐 소켓 회전을 계속 따라감)
+        public bool    IgnoreSocketRotation = false;
 
-        [Header("Pooling")]
-        public int PrewarmCount = 4;                  // 로드 시 미리 생성(첫 스폰 히칭/GC 방지) — 프리팹당 최초 1회
-        public int MaxSize      = 0;                  // 풀 상한(0=무제한). 같은 프리팹 공유 시 최초 생성값 사용
+        // 풀 프리웜/상한은 엔트리가 아니라 캐릭터의 EffectPrewarmer 컴포넌트에서 프리팹 단위로 설정한다
+        // (풀은 프리팹 단위 전역 공유 — 엔트리별로 두면 산발적이라 중앙화). 미프리웜 프리팹은 온디맨드 생성(무제한).
 
         [Header("Despawn")]
         public DespawnMode Despawn  = DespawnMode.ParticleStopped;

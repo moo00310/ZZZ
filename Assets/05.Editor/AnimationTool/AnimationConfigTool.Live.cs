@@ -42,6 +42,9 @@ namespace ZZZ.Editor.AnimationTool
                          FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                 if (mb is ILiveMonitor m) _liveCandidates.Add(m);
 
+            // 이름순 정렬 — 숫자키 매핑이 프레임마다 안 흔들리게 고정 (예: Burnice=1, Durahan=2)
+            _liveCandidates.Sort((a, b) => string.Compare(LiveName(a), LiveName(b), StringComparison.Ordinal));
+
             if (_liveMachine == null || !_liveCandidates.Contains(_liveMachine))
                 _liveMachine = _liveCandidates.Count > 0 ? _liveCandidates[0] : null;
         }
@@ -139,22 +142,46 @@ namespace ZZZ.Editor.AnimationTool
 
             if (count == 1)
             {
-                GUILayout.Label(LiveName(_liveCandidates[0]), EditorStyles.miniBoldLabel,
+                GUILayout.Label("1: " + LiveName(_liveCandidates[0]), EditorStyles.miniBoldLabel,
                     GUILayout.Width(120));
                 return;
             }
 
             int cur = _liveCandidates.IndexOf(_liveMachine);
             var names = new string[count];
-            for (int i = 0; i < count; i++) names[i] = LiveName(_liveCandidates[i]);
+            for (int i = 0; i < count; i++) names[i] = $"{i + 1}: {LiveName(_liveCandidates[i])}";   // 숫자키 매핑 표시
 
             int next = EditorGUILayout.Popup(Mathf.Max(cur, 0), names, GUILayout.Width(140));
             if (next != cur && next >= 0 && next < count)
             {
-                _liveMachine = _liveCandidates[next];
-                // 새 대상으로 즉시 전환 — Follow면 다음 갱신에서 그 머신의 config로 창이 따라간다
-                _liveConfig = null;
+                SelectLiveCandidate(next);
             }
+            GUILayout.Label("(1~4)", EditorStyles.miniLabel, GUILayout.Width(40));
+        }
+
+        // ── 숫자키(1~4)로 추적 대상 전환 — 게임(Game View)에 포커스가 있어도 작동 ──
+        // 게임 창 입력은 '플레이 루프'에서만 잡히므로, 런타임 폴러(LiveTargetHotkey)가 잡아둔 값을 여기서 읽는다.
+        // (에디터 루프에서 직접 키보드를 읽으면 Game View 입력을 못 봄)
+        private void PollLiveHotkeys()
+        {
+            int idx = ZZZ.Debugging.LiveTargetHotkey.Pressed;
+            if (idx < 0) return;
+            ZZZ.Debugging.LiveTargetHotkey.Pressed = -1;   // 소비
+            SelectLiveByIndex(idx);
+        }
+
+        private void SelectLiveByIndex(int idx)
+        {
+            RefreshLiveCandidates();
+            if (idx < 0 || idx >= _liveCandidates.Count) return;
+            SelectLiveCandidate(idx);
+        }
+
+        private void SelectLiveCandidate(int idx)
+        {
+            _liveMachine = _liveCandidates[idx];
+            _liveConfig  = null;   // 새 대상으로 즉시 전환 — Follow면 다음 갱신에서 그 머신 config로 창이 따라간다
+            Repaint();
         }
     }
 }

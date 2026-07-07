@@ -23,37 +23,46 @@ namespace ZZZ.Effects
         }
 
         // 조합 안의 각 Entry를 자기 StartDelay만큼 지연시켜 재생한다. 지연 중 spawner가 파괴되면 스킵.
-        public static void Play(CompositeEffect composite, Transform spawner)
+        // trackForStop=true(구간 이펙트)일 때만 정지용 EffectHandle을 할당해 반환한다 —
+        // 단발(point) 재생은 핸들 없이(무할당) 스폰만 하고 null을 반환한다(전투 스폰 GC 회피).
+        public static EffectHandle Play(CompositeEffect composite, Transform spawner, bool trackForStop = false)
         {
-            if (composite == null || spawner == null) return;
+            if (composite == null || spawner == null) return null;
 
+            var handle = trackForStop ? new EffectHandle() : null;
             foreach (CompositeEffectEntry entry in composite.Entries)
             {
                 if (entry == null || entry.Prefab == null) continue;
 
                 if (entry.StartDelay <= 0f)
                 {
-                    PlayEntry(entry, spawner);
+                    // PlayEntry는 항상 호출(스폰). handle?.Add(PlayEntry(...))로 쓰면 handle이 null(단발)일 때
+                    // null-조건 연산자가 인자까지 통째로 건너뛰어 스폰 자체가 안 되므로, 반드시 먼저 호출한다.
+                    var spawned = PlayEntry(entry, spawner);
+                    handle?.Add(spawned);
                 }
                 else
                 {
                     var e = entry;   // 클로저 캡처
+                    var h = handle;
                     GetRunner().Delay(entry.StartDelay, () =>
                     {
                         if (spawner == null) return;   // 지연 중 스포너가 파괴된 경우
-                        PlayEntry(e, spawner);
+                        var spawned = PlayEntry(e, spawner);
+                        h?.Add(spawned);   // 이미 Stop됐으면 핸들이 즉시 정지 처리
                     });
                 }
             }
+            return handle;
         }
 
-        private static GameObject PlayEntry(CompositeEffectEntry entry, Transform spawner)
+        private static PooledEffectHandle PlayEntry(CompositeEffectEntry entry, Transform spawner)
         {
-            EffectPool pool     = GetOrCreatePool(entry.Prefab, entry.PrewarmCount, entry.MaxSize);
+            EffectPool pool     = GetOrCreatePool(entry.Prefab);
             GameObject instance = pool.Get();
 
             Transform anchor = FindSocket(spawner, entry.Socket);
-            PlaceInstance(instance, entry, anchor);
+            PlaceInstance(instance, entry, anchor, spawner);
 
             var handle = instance.GetComponent<PooledEffectHandle>();
             if (handle == null) handle = instance.AddComponent<PooledEffectHandle>();
@@ -61,22 +70,38 @@ namespace ZZZ.Effects
 
             instance.SetActive(true);
             RestartParticles(instance);
-            return instance;
+            return handle;
         }
 
         // 풀 개요 모니터(에디터 툴)용 읽기 전용 스냅샷. Play 모드에서만 의미 있음.
         public static IEnumerable<EffectPool> DebugPools =>
             s_pools != null ? s_pools.Values : System.Linq.Enumerable.Empty<EffectPool>();
 
-        private static EffectPool GetOrCreatePool(GameObject prefab, int prewarm, int maxSize)
+        // 온디맨드 풀 획득 — 프리웜 안 된 프리팹은 여기서 무제한(상한 0)으로 생성된다.
+        private static EffectPool GetOrCreatePool(GameObject prefab)
         {
             if (s_pools == null) ResetState();
             if (!s_pools.TryGetValue(prefab, out EffectPool pool))
             {
-                pool = new EffectPool(prefab, prewarm, maxSize, GetPoolRoot());
+                pool = new EffectPool(prefab, 0, 0, GetPoolRoot());
                 s_pools[prefab] = pool;
             }
             return pool;
+        }
+
+        // 캐릭터의 EffectPrewarmer가 로드 시 호출 — 프리팹 단위 전역 풀을 미리 채운다(첫 스폰 히칭/GC 방지).
+        // 이미 있는 풀이면 free 인스턴스를 count까지 보충한다(여러 캐릭터가 같은 프리팹을 프리웜해도 안전).
+        // 상한(maxSize)은 풀 최초 생성 시에만 적용(프리팹 단위 공유라 최초값 유지).
+        public static void Prewarm(GameObject prefab, int count, int maxSize)
+        {
+            if (prefab == null) return;
+            if (s_pools == null) ResetState();
+            if (!s_pools.TryGetValue(prefab, out EffectPool pool))
+            {
+                pool = new EffectPool(prefab, count, maxSize, GetPoolRoot());
+                s_pools[prefab] = pool;
+            }
+            else pool.Prewarm(count);
         }
 
         private static Transform GetPoolRoot()
@@ -114,20 +139,46 @@ namespace ZZZ.Effects
             return null;
         }
 
-        private static void PlaceInstance(GameObject instance, CompositeEffectEntry entry, Transform anchor)
+        private static void PlaceInstance(GameObject instance, CompositeEffectEntry entry, Transform anchor, Transform spawnerRoot)
         {
             Transform t = instance.transform;
+
+            // 스폰 월드 포즈.
+            // 회전 기준 프레임: 기본은 소켓(본) 회전. IgnoreSocketRotation이면 본에 구워진 회전 대신
+            // 스포너 루트(캐릭터 facing)를 기준으로 삼는다 — 월드 절대가 아니라 '캐릭터 기준'으로 조준되어
+            // 캐릭터가 돌면 이펙트도 함께 돈다. offset/euler 모두 이 프레임 기준.
+            Quaternion frame = (entry.IgnoreSocketRotation && spawnerRoot != null)
+                ? spawnerRoot.rotation
+                : anchor.rotation;
+            Vector3 spawnPos = entry.IgnoreSocketRotation
+                ? anchor.position + frame * entry.PositionOffset
+                : anchor.TransformPoint(entry.PositionOffset);
+            Quaternion spawnRot = frame * Quaternion.Euler(entry.EulerOffset);
+
+            // 소켓(손) 위치·방향에서 스폰하되 부모는 스포너 루트(캐릭터)로 — 손 스윙은 무시, 캐릭터 이동/방향만 따라감.
+            // 발사/빔처럼 "손에서 나가지만 손 스윙에 휘둘리면 안 되고, 캐릭터는 따라와야" 하는 이펙트용.
+            if (entry.ParentToSpawnerRoot && spawnerRoot != null)
+            {
+                t.SetParent(null, true);
+                t.position = spawnPos;
+                t.rotation = spawnRot;
+                t.SetParent(spawnerRoot, true);   // worldPositionStays=true → 손 스폰 위치 유지, 이후 루트를 따라감
+                t.localScale = entry.Scale;
+                return;
+            }
+
             if (entry.FollowSpawner)
             {
                 t.SetParent(anchor, false);
                 t.localPosition    = entry.PositionOffset;
                 t.localEulerAngles = entry.EulerOffset;
+                // (IgnoreSocketRotation은 소켓에 부모로 붙는 이 모드엔 무효 — 소켓 회전을 계속 따라감)
             }
             else
             {
                 t.SetParent(null, true);
-                t.position = anchor.TransformPoint(entry.PositionOffset);
-                t.rotation = anchor.rotation * Quaternion.Euler(entry.EulerOffset);
+                t.position = spawnPos;
+                t.rotation = spawnRot;
             }
             t.localScale = entry.Scale;
         }

@@ -64,19 +64,43 @@ namespace ZZZ.Editor.AnimationTool
                     float barX   = LabelW + startT * _pxPerSec - _scrollX;
                     float barW   = dur * _pxPerSec;
 
-                    // Notify 클릭 우선
+                    // Notify 클릭 — 허용 반경(±NotifyHitRadius) 안의 마커를 후보로 모은다.
+                    // 겹쳐 있으면 같은 자리를 다시 클릭할 때마다 다음 마커로 순환 선택(cycle)해
+                    // 스택된 Notify도 하나씩 집을 수 있게 한다.
                     if (tc.Clip != null)
                     {
+                        _notifyHitBuf.Clear();
                         for (int ni = 0; ni < tc.Notifies.Count; ni++)
                         {
                             float mx = barX + tc.Notifies[ni].NormalizedTime * barW;
-                            if (Mathf.Abs(ev.mousePosition.x - mx) <= 7f)
+                            if (Mathf.Abs(ev.mousePosition.x - mx) <= NotifyHitRadius)
+                                _notifyHitBuf.Add(ni);
+                        }
+                        if (_notifyHitBuf.Count > 0)
+                        {
+                            int pick;
+                            int curPos = (_notifyClipIdx == i) ? _notifyHitBuf.IndexOf(_selectedNotify) : -1;
+                            if (curPos >= 0)
+                                pick = _notifyHitBuf[(curPos + 1) % _notifyHitBuf.Count];   // 다음 후보로 순환
+                            else
                             {
-                                _selectedClip = i; _selectedNotify = ni; _notifyClipIdx = i;
-                                _draggingNotify = true; _dragNotifyClip = i; _dragNotifyIdx = ni;
-                                hitSomething = true;
-                                break;
+                                // 첫 클릭: 가장 가까운 마커
+                                pick = _notifyHitBuf[0];
+                                float best = float.MaxValue;
+                                foreach (int ni in _notifyHitBuf)
+                                {
+                                    float dx = Mathf.Abs(ev.mousePosition.x - (barX + tc.Notifies[ni].NormalizedTime * barW));
+                                    if (dx < best) { best = dx; pick = ni; }
+                                }
                             }
+
+                            _selectedClip = i; _selectedNotify = pick; _notifyClipIdx = i;
+                            // 고정된 Notify는 선택만 하고 드래그(이동)는 시작하지 않는다.
+                            if (!tc.Notifies[pick].Locked)
+                            {
+                                _draggingNotify = true; _dragNotifyClip = i; _dragNotifyIdx = pick;
+                            }
+                            hitSomething = true;
                         }
                     }
 
@@ -118,7 +142,7 @@ namespace ZZZ.Editor.AnimationTool
                     tc.Notifies[_dragNotifyIdx].NormalizedTime = newN;
                     EditorUtility.SetDirty(_config);
                     // Effect 탭: 발동 시점이 바뀌었으니 현재 플레이헤드에서 이펙트 재시뮬레이션
-                    if (_activeTab == ToolTab.Effect && !_comboMode) SampleAtTime(_trackTime, false);
+                    if (EffectPreviewActive) SampleAtTime(_trackTime, false);
                     ev.Use(); Repaint();
                 }
                 // 클립 순서 변경 드래그
@@ -179,6 +203,44 @@ namespace ZZZ.Editor.AnimationTool
 
                     if (ev.mousePosition.y < rowY || ev.mousePosition.y >= rowY + ClipH) continue;
                     if (ev.mousePosition.x < barX  || ev.mousePosition.x > barX + barW)  continue;
+
+                    // 기존 Notify 위에서 우클릭이면 → 잠금 토글/삭제 메뉴 (가장 가까운 마커 기준)
+                    int   hitNi = -1;
+                    float hitDx = NotifyHitRadius;
+                    for (int ni = 0; ni < tc.Notifies.Count; ni++)
+                    {
+                        float nmx = barX + tc.Notifies[ni].NormalizedTime * barW;
+                        float ndx = Mathf.Abs(ev.mousePosition.x - nmx);
+                        if (ndx <= hitDx) { hitDx = ndx; hitNi = ni; }
+                    }
+                    if (hitNi >= 0)
+                    {
+                        int capHitI = i; int capHitNi = hitNi;
+                        var n = tc.Notifies[hitNi];
+                        var nmenu = new GenericMenu();
+                        nmenu.AddItem(new GUIContent(n.Locked ? "Unlock (이동 잠금 해제)" : "Lock (이동 잠금)"),
+                            n.Locked, () =>
+                        {
+                            Undo.RecordObject(_config, "Toggle Notify Lock");
+                            _config.Clips[capHitI].Notifies[capHitNi].Locked =
+                                !_config.Clips[capHitI].Notifies[capHitNi].Locked;
+                            EditorUtility.SetDirty(_config);
+                            Repaint();
+                        });
+                        nmenu.AddSeparator("");
+                        nmenu.AddItem(new GUIContent("Delete Notify"), false, () =>
+                        {
+                            Undo.RecordObject(_config, "Delete Notify");
+                            _config.Clips[capHitI].Notifies.RemoveAt(capHitNi);
+                            if (_selectedNotify == capHitNi && _notifyClipIdx == capHitI) _selectedNotify = -1;
+                            EditorUtility.SetDirty(_config);
+                            _serializedConfig = new SerializedObject(_config);
+                            Repaint();
+                        });
+                        nmenu.ShowAsContext();
+                        ev.Use();
+                        break;
+                    }
 
                     float normT = barW > 0f ? Mathf.Clamp01((ev.mousePosition.x - barX) / barW) : 0f;
                     int capI = i; float capN = normT;
