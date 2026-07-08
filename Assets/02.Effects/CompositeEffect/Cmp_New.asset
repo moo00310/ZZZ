@@ -43,3 +43,16 @@ MonoBehaviour:
     MaxSize: 0
     Despawn: 0
     Lifetime: 0
+  - Prefab: {fileID: 0}
+    StartDelay: 0
+    Duration: 0
+    PlaybackSpeed: 1
+    Socket: 
+    PositionOffset: {x: 0, y: 0, z: 0}
+    EulerOffset: {x: 0, y: 0, z: 0}
+    Scale: {x: 1, y: 1, z: 1}
+    FollowSpawner: 0
+    PrewarmCount: 4
+    MaxSize: 0
+    Despawn: 0
+    Lifetime: 0
