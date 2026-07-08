@@ -26,6 +26,13 @@ namespace ZZZ.Effects
         private float[]          _baseSimSpeeds;
         private float            _appliedSpeed = 1f;
 
+        // 셰이더 노브 오버라이드(MPB)용 캐시 — 프리팹의 선언(EffectParameterSet)과 대상 렌더러.
+        // 인스턴스 구조는 재사용 내내 안 바뀌므로 최초 1회만 수집한다.
+        private EffectParameterSet     _paramSet;
+        private Renderer[]             _renderers;
+        private MaterialPropertyBlock  _mpb;
+        private bool                   _paramCacheInit;
+
         public void Bind(EffectPool pool, CompositeEffectEntry entry)
         {
             _pool = pool;
@@ -34,6 +41,7 @@ namespace ZZZ.Effects
             CancelInvoke();   // 이전 재생의 ReleaseSelf/StopEmitting 예약 취소
 
             ApplyPlaybackSpeed(entry.PlaybackSpeed > 0f ? entry.PlaybackSpeed : 1f);
+            ApplyParamOverrides(entry);
             if (entry.Duration > 0f)
                 Invoke(nameof(StopEmitting), entry.Duration);
 
@@ -70,6 +78,21 @@ namespace ZZZ.Effects
                 main.simulationSpeed = _baseSimSpeeds[i] * speed;
             }
             _appliedSpeed = speed;
+        }
+
+        // 프리팹이 선언한 셰이더 노브를 Entry 오버라이드로 MPB에 얹는다(에디터 프리뷰와 공용 로직).
+        // 인스턴스 구조(선언/렌더러)는 재사용 내내 안 바뀌므로 최초 1회만 수집해 캐시한다.
+        private void ApplyParamOverrides(CompositeEffectEntry entry)
+        {
+            if (!_paramCacheInit)
+            {
+                _paramSet       = GetComponent<EffectParameterSet>();
+                _renderers      = GetComponentsInChildren<Renderer>(true);
+                _mpb            = new MaterialPropertyBlock();
+                _paramCacheInit = true;
+            }
+            if (_paramSet == null) return;
+            EffectParamApplier.Apply(entry, _paramSet, _renderers, _mpb);
         }
 
         // 구간 이펙트가 끝났을 때(또는 섹션 이탈·캔슬) 외부(EffectHandle)에서 부르는 정지 진입점.

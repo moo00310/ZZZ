@@ -24,35 +24,35 @@ MonoBehaviour:
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
-    PrewarmCount: 4
-    MaxSize: 0
     Despawn: 0
     Lifetime: 0
+    ParamOverrides:
+    - ShaderProperty: _Gray
+      Type: 0
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 0
+    - ShaderProperty: _Seed
+      Type: 1
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 1
+    - ShaderProperty: _isGray
+      Type: 0
+      FloatValue: 1
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 0
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
     StartDelay: 0
     Duration: 0.2
     PlaybackSpeed: 1
     Socket: Bip001 Prop2
-    PositionOffset: {x: -0.2, y: -0.2, z: 0}
+    PositionOffset: {x: -0.2, y: 0, z: 0}
     EulerOffset: {x: 0, y: 17, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
-    PrewarmCount: 4
-    MaxSize: 0
     Despawn: 0
     Lifetime: 0
-  - Prefab: {fileID: 0}
-    StartDelay: 0
-    Duration: 0
-    PlaybackSpeed: 1
-    Socket: 
-    PositionOffset: {x: 0, y: 0, z: 0}
-    EulerOffset: {x: 0, y: 0, z: 0}
-    Scale: {x: 1, y: 1, z: 1}
-    FollowSpawner: 0
-    PrewarmCount: 4
-    MaxSize: 0
-    Despawn: 0
-    Lifetime: 0
+    ParamOverrides: []

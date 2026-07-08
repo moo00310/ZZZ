@@ -160,6 +160,34 @@ PlayEntry(entry, spawner)
 - **MaterialPropertyBlock** 으로 렌더러 단위 격리 — 같은 `.mat`을 풀의 여러 인스턴스가 공유해도 값이 안 섞인다 (풀링 전제와 맞물리는 선택)
 - **`[ExecuteAlways]`** — 씬 프리뷰(파티클 패널 Play)에서도 연출이 보인다. 없으면 프리뷰 땐 `_Progress`가 기본값에 멈춰 "셰이더가 안 먹는 것처럼" 보임
 
+## 셰이더 노브 오버라이드 — 조합별 룩
+
+**문제**: 같은 이펙트 프리팹(`Eff_FlameBurst`)을 여러 조합이 돌려쓰는데, 조합마다 색/시드 같은 룩을
+다르게 주고 싶다. 그렇다고 raw 셰이더 프로퍼티를 툴에 통째로 여는 건 이펙트마다 의미가 달라 관심사가
+깨지고, 머티리얼을 복제하면 **프리팹 단위 풀 공유**가 무너진다.
+
+**설계**: 프리팹이 노출할 노브를 스스로 선언하고, 조합은 값만 저장하고, 재생 시 **MaterialPropertyBlock**으로
+적용한다. 머티리얼 복제 없음 → 풀 공유 유지, GC 0.
+
+| 조각 | 역할 | 위치 |
+|------|------|------|
+| [EffectParameterSet](../Assets/04.Scripts/Effects/EffectParameterSet.cs) | 프리팹이 "노출할 셰이더 노브"를 선언(표시명·Reference·타입·기본값·범위). **에디터용 메타데이터** | 프리팹 루트 컴포넌트 |
+| `EffectParamOverride` | 조합 Entry가 저장하는 **이름-값 오버라이드**(sparse — 덮은 것만). MPB 아니라 직렬화 데이터 | `CompositeEffectEntry.ParamOverrides` |
+| [EffectParamApplier](../Assets/04.Scripts/Effects/EffectParamApplier.cs) | 오버라이드(없으면 프리팹 기본값)를 MPB로 렌더러에 적용. **런타임·에디터 프리뷰 공용** | static 헬퍼 |
+
+**핵심 규칙**
+- **선언은 프리팹에서 읽고, 값은 Entry에 쓴다** — 툴은 선택된 프리팹의 `EffectParameterSet`을 읽어 **선언된 노브만** 동적으로 그린다([EffectEditorShared.DrawParamOverrides](../Assets/05.Editor/Effects/EffectEditorShared.cs)). 선언 없는 프리팹엔 아무것도 안 뜬다. 새 노브 추가 = 프리팹 선언만, 툴/Entry 코드 0줄.
+- **`GetPropertyBlock` 기반 읽고-덮어-되쓰기** — [EffectProgressDriver](../Assets/04.Scripts/Combat/EffectProgressDriver.cs)의 `_Progress` 등 같은 렌더러의 다른 MPB 값과 공존(우리 선언 키만 덮음)
+- **선언된 파라미터는 매 적용마다 전부 명시** — 오버라이드 없는 것도 기본값으로 써준다. 풀 인스턴스는 조합 간 공유되므로, 안 그러면 이전 조합의 값이 남는다
+- **매 재생 랜덤(Float)** — `EffectParamOverride.Randomize`가 켜지면 재생마다 범위 내 랜덤값을 굴린다. 렌더러 루프 **전에 1회** 굴려 한 인스턴스의 모든 렌더러가 같은 값. 랜덤은 `Bind`(재생당 1회)에서만(`allowRandomize`), **에디터 프리뷰는 안 굴린다**(매 프레임 호출이라 튐)
+- **프리뷰 실시간 반영** — 두 툴의 프리뷰 시뮬 루프가 같은 `EffectParamApplier`를 불러 인게임과 룩 일치
+
+**셰이더 쪽 전제** (FX_FlameBurst 사례)
+- 노브는 **Boolean/Float 프로퍼티**여야 MPB로 먹는다. **키워드로 만들면 MPB가 못 건드림**
+- Entry 선언의 `ShaderProperty`는 셰이더의 **Reference와 정확히 일치**해야 함(`_isGray` ≠ `_Gray`)
+- 컬러/회색 램프는 **한 텍스처로 합쳐**(위=컬러/아래=회색) `V = lerp(...)`로 골라 **샘플 1회**(샘플러/페치 절반). ⚠️ Unity는 텍스처 **V축이 PNG 상하 반대**라 lerp 값(0.25/0.75)이 뒤집혀 보일 수 있음
+- 얇은 램프 아틀라스(4px)는 **밉맵/압축이 밴드를 섞으므로** Mip Off·Compression None·Wrap Clamp
+
 ---
 
 ## 에디터 툴
@@ -203,12 +231,14 @@ PlayEntry(entry, spawner)
 
 ```
 Assets/04.Scripts/Effects/               런타임
-├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/풀링/반납 설정)
+├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/풀링/반납 + 셰이더 노브 오버라이드)
 ├── EffectService.cs          ★ 진입점 — Play(조합) / 프리팹별 풀 관리 / 소켓 검색·배치
 ├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize)
 ├── EffectServiceRunner.cs    StartDelay 지연 실행용 코루틴 호스트 (풀 루트에 부착)
-├── PooledEffectHandle.cs     인스턴스 자신의 풀 반납 (ParticleStopped 카운트다운 / Fixed)
-└── ParticleStopRelay.cs      최상위 파티클의 Stop 콜백을 핸들로 릴레이
+├── PooledEffectHandle.cs     인스턴스 자신의 풀 반납 (ParticleStopped 카운트다운 / Fixed) + 노브 MPB 적용
+├── ParticleStopRelay.cs      최상위 파티클의 Stop 콜백을 핸들로 릴레이
+├── EffectParameterSet.cs     프리팹이 노출할 셰이더 노브 선언 (에디터 메타데이터)
+└── EffectParamApplier.cs     오버라이드→MPB 적용 (런타임/프리뷰 공용, 매 재생 랜덤 지원)
 
 Assets/04.Scripts/Combat/                이펙트 연동
 ├── EffectHitVolume.cs        스폰 시 자기 범위 타격 (이펙트 범위 = 타격 범위)

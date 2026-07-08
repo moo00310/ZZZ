@@ -18,6 +18,7 @@ namespace ZZZ.Editor.EffectTool
 
         private GameObject _previewRoot;
         private readonly List<PreviewInstance> _previewInstances = new List<PreviewInstance>();
+        private MaterialPropertyBlock _previewMpb;   // 지연 생성 — 역직렬화 중 UnityObject 생성 금지
         private float  _previewTime;
         private bool   _previewPlaying;
         private double _previewLastTime;
@@ -91,6 +92,10 @@ namespace ZZZ.Editor.EffectTool
                 bool active = local >= 0f;
                 if (inst.Root.activeSelf != active) inst.Root.SetActive(active);
                 if (!active) continue;
+
+                // 셰이더 노브 오버라이드 실시간 반영(런타임 Bind와 동일 로직)
+                if (_previewMpb == null) _previewMpb = new MaterialPropertyBlock();
+                EffectParamApplier.Apply(inst.Root, inst.Entry, _previewMpb);
 
                 // PlaybackSpeed는 시뮬 시간 압축으로, Duration은 유효 길이 클램프로 근사
                 float speed = inst.Entry.PlaybackSpeed > 0f ? inst.Entry.PlaybackSpeed : 1f;

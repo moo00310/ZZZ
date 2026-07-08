@@ -22,7 +22,23 @@ MonoBehaviour:
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 1
-    PrewarmCount: 4
-    MaxSize: 0
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
     Despawn: 0
     Lifetime: 0
+    ParamOverrides:
+    - ShaderProperty: _Gray
+      Type: 0
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 0
+    - ShaderProperty: _Seed
+      Type: 1
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 1
+    - ShaderProperty: _isGray
+      Type: 0
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 0

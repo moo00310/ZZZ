@@ -30,6 +30,7 @@ namespace ZZZ.Editor.AnimationTool
         }
 
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
+        private MaterialPropertyBlock _fxMpb;   // 지연 생성 — 역직렬화 중 UnityObject 생성 금지라 필드 이니셜라이저 불가
         private bool _fxDirty = true;
 
         // 인스펙터 편집용
@@ -69,6 +70,8 @@ namespace ZZZ.Editor.AnimationTool
                 if (!active) { a.Captured = false; continue; }   // 비활성 → 다음 활성 진입 때 다시 캡처
 
                 PlaceFxAtom(a);   // 오프셋/스케일 편집 실시간 반영 (ParentToSpawnerRoot는 캡처 포즈로 고정)
+                if (_fxMpb == null) _fxMpb = new MaterialPropertyBlock();
+                EffectParamApplier.Apply(a.Root, a.Entry, _fxMpb);   // 셰이더 노브 오버라이드 실시간 반영
                 float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
                 foreach (var ps in a.Top)
                     if (ps != null) ps.Simulate(Mathf.Min(local, atomDur) * speed, true, true);
@@ -351,6 +354,8 @@ namespace ZZZ.Editor.AnimationTool
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
                         new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
 
+                    EffectEditorShared.DrawParamOverrides(e, prefab);
+
                     // 풀링/반납 — 접기
                     bool poolFold = _fxPoolFold.Contains(i);
                     bool newPool = EditorGUILayout.Foldout(poolFold, "반납 설정", true);
@@ -389,6 +394,7 @@ namespace ZZZ.Editor.AnimationTool
                 e.FindPropertyRelative("IgnoreSocketRotation").boolValue = false;
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
+                e.FindPropertyRelative("ParamOverrides").ClearArray();
                 _fxCompositeSO.ApplyModifiedProperties();
                 _fxDirty = true;
             }
