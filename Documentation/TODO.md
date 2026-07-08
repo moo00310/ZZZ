@@ -8,7 +8,7 @@
 
 - [ ] **몬스터 루트모션/추격** — `MonsterController`의 `IConfigMover` no-op들(`FlushRootPos`/워프 등)을 실제 구현(현재 제자리 재생). **이때 같이**: `PlayerController.ComputeRootDeltaLocal`의 코어 델타 로직과 `RootMotionTracker`(현재 에디터 프리뷰/테스트 전용)의 **중복을 공용 헬퍼로 통합** → 플레이어·몬스터·프리뷰가 한 소스 공유, 기존 `RootMotionTrackerTests`가 런타임 경로까지 검증
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
-- [ ] **이펙트 시스템 잔여** — 플레이 모드 실전 검증(풀 반납/지연 재생), **구간형(지속) 노티파이**(현재는 시점 발동만 — Looping+Fixed 반납으로 우회 중). 소켓 바인딩·풀링·툴은 완료(위 최근 완료 참조)
+- [ ] **이펙트 시스템 잔여** — 플레이 모드 실전 검증(풀 반납/지연 재생/구간 이펙트 트레일). 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료 — 실전 검증만 남음
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
 
 ## 모바일 빌드 & 최적화 (목표)

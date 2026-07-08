@@ -9,16 +9,19 @@
 ```
 [ AnimationConfig — TrackNotify(Type=Effect) ]     ← "무엇을 언제 터뜨릴지"만 안다
     │   Notify는 CompositeEffect(SO) 하나만 참조 — 프리팹/풀/배치를 모른다
-    ▼   ConfigState.DispatchNotify → EffectService.Play(composite, spawner)
+    │   시점(point) Notify = 스폰만 / 구간(interval, End>Start) Notify = [Start,End] 유지
+    ▼   ConfigState.DispatchNotify → EffectService.Play(composite, spawner, trackForStop)
 [ EffectService ]             ← static 런타임 진입점 (AnimConfig가 아는 유일한 이펙트 API)
     │   · 조합의 Entry들을 순회 — StartDelay > 0 이면 EffectServiceRunner(코루틴 호스트)로 지연 재생
     │   · 소켓 본 검색(FindSocket) → 배치(FollowSpawner / 스폰 위치 분리) → 파티클 재시작
+    │   · 구간 이펙트면 스폰된 인스턴스를 EffectHandle에 모아 반환(단발은 null·무할당)
     ▼
-[ EffectPool ]                ← 프리팹 단위 풀 (Get / Release + 프리워밍, MaxSize 초과분 파괴)
+[ EffectPool ]                ← 프리팹 단위 풀 (Get / Release, MaxSize 초과분 파괴)
     │   같은 프리팹을 여러 조합이 써도 풀은 공유된다 (키 = 프리팹 GameObject)
+    │   프리웜은 캐릭터의 EffectPrewarmer가 로드 시 EffectService.Prewarm으로 채움
     ▼
 [ 이펙트 인스턴스 ]
-    ├── PooledEffectHandle        자기 자신의 풀 반납 담당 (ParticleStopped / Fixed)
+    ├── PooledEffectHandle        재생 제어(속도/방출 컷/노브) + 자기 풀 반납 (ParticleStopped / Fixed)
     └── ParticleStopRelay         최상위 ParticleSystem마다 부착 — Stop 콜백을 핸들로 릴레이
 ```
 
@@ -45,9 +48,10 @@
 `CompositeEffectEntry`가 **프리팹을 직접 참조**하며 설정을 자체 보유한다. 단일 이펙트도 Entry 1개짜리
 조합으로 표현하므로 Notify 쪽엔 타입 분기가 없다.
 
-> 트레이드오프 — 같은 프리팹을 쓰는 Entry가 여럿일 때 풀 설정(`PrewarmCount`/`MaxSize`)은
-> **최초로 풀을 만든 Entry의 값**이 쓰인다(풀은 프리팹당 하나). 원자 공통 설정의 "단일 출처"가
-> 없는 대신, 에셋 수가 절반으로 줄고 편집 동선이 조합 하나로 끝난다.
+> 트레이드오프 — Entry는 "그 조합 안에서의" 값(배치/시차/반납/노브)만 들고, 프리팹의 고유 속성인
+> **풀 설정(프리웜 수·상한)은 Entry에서 뺐다**. 풀은 프리팹당 하나뿐인데 Entry마다 풀 설정을 두면
+> "어느 Entry 값이 이기냐"가 모호했기 때문 — 지금은 캐릭터의 [EffectPrewarmer](#풀-프리웜-effectprewarmer)가
+> 프리팹 단위로 한곳에 모아 선언한다(단일 출처). 덕분에 에셋 수가 줄고 편집 동선이 조합 하나로 끝난다.
 
 ### 시차(딜레이)의 두 층위
 
@@ -75,28 +79,34 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `Socket` | 붙일 본/소켓 이름 (빈값 = 스포너 원점). 스포너 계층에서 이름으로 재귀 검색 |
 | `PositionOffset` / `EulerOffset` / `Scale` | 소켓 기준 로컬 배치 |
 | `FollowSpawner` | true = 소켓에 부모로 붙어 따라감 / false = 스폰 순간 위치에 분리(투사체 잔상 등) |
-| `PrewarmCount` | 로드 시 미리 생성(첫 스폰 히칭/GC 방지) — 프리팹당 최초 1회 |
-| `MaxSize` | 풀 상한 (0 = 무제한). 초과분은 반납 시점에 파괴 |
+| `ParentToSpawnerRoot` | 소켓(손/무기 본) 위치·방향에서 스폰하되 **부모는 스포너 루트(캐릭터)** — 손 스윙(빠른 회전)은 무시하고 캐릭터 이동/방향만 따라감(발사/빔용). `FollowSpawner`보다 우선 |
+| `IgnoreSocketRotation` | 소켓의 **위치만** 쓰고 회전은 무시 — 본에 구운 회전 대신 캐릭터 facing 기준으로 조준(`EulerOffset`이 그 프레임 기준으로 먹음). `FollowSpawner`(소켓 부모) 모드에선 무효 |
 | `Despawn` | `ParticleStopped`(파티클 전부 정지 시 자동 반납, 권장) / `Fixed`(Lifetime 초 뒤 강제 반납) |
 | `Lifetime` | `Fixed`일 때만 사용(초) — Looping 등 스스로 안 멈추는 이펙트용 |
+| `ParamOverrides` | 이 조합에서 덮어쓴 셰이더 노브(이름-값, sparse) — [셰이더 노브 오버라이드](#셰이더-노브-오버라이드--조합별-룩) 참조 |
+
+> 풀 프리웜/상한(과거 `PrewarmCount`/`MaxSize`)은 Entry가 아니라 캐릭터의
+> [EffectPrewarmer](#풀-프리웜-effectprewarmer) 컴포넌트에서 프리팹 단위로 설정한다.
 
 ---
 
 ## 런타임 진입점 (EffectService)
 
-[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, spawner)` 하나가 공개 API다.
+[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, spawner, trackForStop=false)`가 공개 API다.
+`trackForStop=true`(구간 이펙트)면 스폰된 인스턴스를 모은 `EffectHandle`을 반환하고, 단발(point)은 무할당으로 `null`을 반환한다.
 
 ```
-Play(composite, spawner)
+Play(composite, spawner, trackForStop)
+    │  trackForStop이면 EffectHandle 1개 할당(아니면 null)
     │  Entry 순회
-    ├── StartDelay ≤ 0  → 즉시 PlayEntry
-    └── StartDelay > 0  → EffectServiceRunner.Delay(코루틴) → PlayEntry
+    ├── StartDelay ≤ 0  → 즉시 PlayEntry → handle?.Add(인스턴스)
+    └── StartDelay > 0  → EffectServiceRunner.Delay(코루틴) → PlayEntry → handle?.Add
                            (지연 중 spawner가 파괴되면 스킵)
 PlayEntry(entry, spawner)
-    ├── GetOrCreatePool(prefab)      풀이 없으면 생성 (Prewarm 수행) — lazy
+    ├── GetOrCreatePool(prefab)      풀이 없으면 온디맨드 생성(상한 0=무제한) — 프리웜은 별도(EffectPrewarmer)
     ├── pool.Get()                   재사용 or 신규 인스턴스
-    ├── FindSocket → PlaceInstance   소켓 본 검색 + FollowSpawner에 따라 부착/분리 배치
-    ├── PooledEffectHandle.Bind      재생 제어(PlaybackSpeed 적용·Duration 방출 컷 예약) + 반납 방식 바인딩 (매 재생마다)
+    ├── FindSocket → PlaceInstance   소켓 본 검색 + FollowSpawner/ParentToSpawnerRoot/IgnoreSocketRotation 배치
+    ├── PooledEffectHandle.Bind      재생 제어(PlaybackSpeed·Duration 방출 컷·노브 MPB) + 반납 방식 바인딩 (매 재생마다)
     └── SetActive + RestartParticles 루트 파티클만 Play(true) → 자식은 내부 Start Delay로 순차 재생
 ```
 
@@ -105,6 +115,49 @@ PlayEntry(entry, spawner)
   [EffectServiceRunner](../Assets/04.Scripts/Effects/EffectServiceRunner.cs)가 대신 돌린다.
 - **Enter Play Mode 대응** — 도메인 리로드를 끈 설정에서도 이전 플레이의 static 풀/러너가 새지 않도록
   `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`에서 상태를 리셋한다.
+
+---
+
+## 풀 프리웜 (EffectPrewarmer)
+
+풀은 프리팹 단위 **전역 공유**(EffectService)라, "무엇을 몇 개 미리 만들지"도 프리팹 단위로 한곳에 모으는 게 자연스럽다.
+[EffectPrewarmer.cs](../Assets/04.Scripts/Effects/EffectPrewarmer.cs)를 캐릭터(스포너)에 붙여, 그 캐릭터가 쓰는
+이펙트 프리팹 + 프리웜 개수·상한을 리스트로 선언하면 `Start`에서 `EffectService.Prewarm(prefab, count, maxSize)`을 호출한다.
+
+| 필드 | 의미 |
+|------|------|
+| `Prefab` | 프리웜할 이펙트 프리팹 |
+| `Count` | 미리 만들어둘 인스턴스 수(첫 스폰 히칭/GC 방지) |
+| `MaxSize` | 풀 상한(0=무제한). **풀 최초 생성 시에만** 적용 |
+
+- **왜 Entry가 아니라 컴포넌트인가** — 풀이 프리팹당 하나뿐이라, 같은 프리팹을 여러 Entry가 써도 프리웜 값은 하나여야 한다.
+  Entry에 두면 "어느 Entry 값이 이기냐"가 모호했다 → 프리팹 단위 선언으로 단일 출처를 만들었다(위 [설계 원칙](#설계-원칙--실행은-조합-단위-풀링은-프리팹-단위) 참조).
+- **중복 안전** — 여러 캐릭터가 같은 프리팹을 프리웜해도 풀은 하나만 만들고 free 인스턴스를 `Count`까지 보충할 뿐이다.
+- **미프리웜 프리팹** — 선언 안 한 프리팹은 첫 재생 때 온디맨드로 풀이 생기고 상한은 무제한(0)이다.
+
+---
+
+## 구간(Interval) 이펙트 — 시점이 아니라 [Start, End]
+
+기본 Notify는 **한 시점**에 터뜨리고 끝이다. 트레일/오라/차지처럼 **구간 동안 유지**되는 연출을 위해
+`TrackNotify`에 `EndNormalizedTime`을 두고, `End > NormalizedTime`이면 **구간 이펙트**로 취급한다(`IsInterval`).
+([AnimationConfig.cs](../Assets/04.Scripts/Core/AnimationConfig.cs) `TrackNotify`)
+
+```
+FireNotifies (ConfigState, 매 프레임)
+    ├── p ≥ NormalizedTime 도달   → DispatchNotify → EffectService.Play(effect, tr, trackForStop: IsInterval)
+    │                               구간이면 반환된 EffectHandle을 _notifyActive[i]에 보관
+    └── p ≥ EndNormalizedTime 도달 → _notifyActive[i].Stop()   방출만 멈춤(잔여 파티클 자연 소멸)
+섹션 이탈·인터럽트·Exit → StopActiveIntervals()  진행 중인 구간 이펙트 전부 Stop (누수 방지)
+```
+
+- **EffectHandle** — [EffectHandle.cs](../Assets/04.Scripts/Effects/EffectHandle.cs)는 한 번의 `Play`로 스폰된
+  인스턴스(지연 StartDelay 엔트리 포함)를 모은 정지용 토큰이다. `Stop()`은 전부 `StopWindowed()`로 **방출만** 끊고,
+  잔여 파티클은 기존 반납 기계(`ParticleStopped`)로 자연 소멸 후 풀로 돌아간다.
+- **늦게 스폰된 엔트리 처리** — StartDelay 엔트리는 나중에 등록된다. 이미 `Stop()`된 뒤 도착한 인스턴스는
+  붙잡지 않고 즉시 정지시킨다(누수 방지).
+- **단발은 무할당** — 시점 Notify는 `trackForStop=false`라 핸들을 만들지 않고 스폰만 한다(전투 스폰 GC 회피).
+- **프리팹 권장 설정** — 구간 이펙트 프리팹은 **루프 방출 + `DespawnMode.ParticleStopped`** (End에서 방출 정지 → 자연 소멸 → 자동 반납).
 
 ---
 
@@ -122,7 +175,9 @@ PlayEntry(entry, spawner)
 
 핸들은 반납 외에 **Entry별 재생 제어**도 담당한다 — 풀 인스턴스가 Entry 간 공유되므로, Entry마다 달라지는
 값은 매 `Bind`에서 적용한다: `PlaybackSpeed`(프리팹 원본 `simulationSpeed` 캐시 × 배율),
-`Duration`(경과 시 `Stop(StopEmitting)` — 방출만 끊고 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결).
+`Duration`(경과 시 `Stop(StopEmitting)` — 방출만 끊고 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결),
+셰이더 노브 MPB(아래 [셰이더 노브 오버라이드](#셰이더-노브-오버라이드--조합별-룩)). 구간 이펙트의 외부 정지 진입점
+`StopWindowed()`도 여기 있다 — `EffectHandle.Stop()`이 불러 방출만 멈춘다(Fixed 모드면 방출 정지 후 즉시 반납).
 
 **왜 릴레이가 필요한가** — Unity의 `OnParticleSystemStopped` 메시지는 ParticleSystem이 붙은
 **그 GameObject에게만** 오고 부모로 전파되지 않는다. 프리팹 루트엔 파티클이 없고 여러 자식
@@ -200,7 +255,7 @@ PlayEntry(entry, spawner)
 |------|------|
 | 목록 (`List`) | 프로젝트의 모든 `CompositeEffect` 브라우징 + New Composite 생성 |
 | 타임라인 (`Timeline`) | Entry를 시간축 막대로 표시 — **막대 드래그 = `StartDelay`(시차), 우측 엣지 드래그 = `Duration`(방출 컷)** 을 데이터에 굽는다. 막대 길이는 `PlaybackSpeed`/`Duration` 반영 |
-| 인스펙터 (`Inspector`) | Entry별 프리팹/배치/풀링/반납 편집 |
+| 인스펙터 (`Inspector`) | Entry별 프리팹/배치/반납/셰이더 노브 편집 (풀 프리웜은 EffectPrewarmer로 분리) |
 | 씬 프리뷰 (`Preview`) | `ParticleSystem.Simulate` 스크럽으로 플레이 진입 없이 조합 연출 확인 |
 | 풀 개요 (`Pool`) | 플레이 중 프리팹별 풀 상태(Free/Live/Created/Max) 모니터 |
 
@@ -213,7 +268,7 @@ PlayEntry(entry, spawner)
 - **발동 시점 편집** — 선택한 Effect Notify의 `NormalizedTime`을 프레임 표시와 함께 슬라이더/마커 드래그로 조정
 - **소켓 프리뷰** — 각 Entry의 발동 시점(`섹션 시작 + NormalizedTime×클립길이 + StartDelay`)에 맞춰
   조합의 개별 이펙트들을 **캐릭터 소켓 본에 붙여 `Simulate`** — 트랙 스크럽/편집 중에도 현재 플레이헤드에 즉시 반영
-- **인라인 조합 편집** — Entry별 소켓/오프셋/시차/풀링 + StartDelay 타임라인 + 풀 개요를 탭 인스펙터에 내장
+- **인라인 조합 편집** — Entry별 소켓/오프셋/시차/반납/노브 + StartDelay 타임라인 + 풀 개요를 탭 인스펙터에 내장
 - **Combo 프리뷰 모드에선 비활성** — 콤보는 분기·동적 타이밍이라 절대 시간 계산이 불가
 
 > 소켓·프리팹 변경은 구조 변경이라 프리뷰 인스턴스를 재생성하고, 오프셋/시차/NormalizedTime은
@@ -231,11 +286,13 @@ PlayEntry(entry, spawner)
 
 ```
 Assets/04.Scripts/Effects/               런타임
-├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/풀링/반납 + 셰이더 노브 오버라이드)
-├── EffectService.cs          ★ 진입점 — Play(조합) / 프리팹별 풀 관리 / 소켓 검색·배치
+├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 셰이더 노브 오버라이드)
+├── EffectService.cs          ★ 진입점 — Play(조합, trackForStop) / Prewarm / 프리팹별 풀 관리 / 소켓 검색·배치
 ├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize)
+├── EffectPrewarmer.cs        캐릭터에 부착 — 프리팹 단위 풀 프리웜/상한 선언 (Start에서 EffectService.Prewarm)
+├── EffectHandle.cs           구간 이펙트 정지 토큰 — 한 Play로 스폰된 인스턴스 묶음을 Stop
 ├── EffectServiceRunner.cs    StartDelay 지연 실행용 코루틴 호스트 (풀 루트에 부착)
-├── PooledEffectHandle.cs     인스턴스 자신의 풀 반납 (ParticleStopped 카운트다운 / Fixed) + 노브 MPB 적용
+├── PooledEffectHandle.cs     인스턴스 재생 제어(속도/방출 컷/노브 MPB) + 풀 반납 (ParticleStopped / Fixed) + StopWindowed
 ├── ParticleStopRelay.cs      최상위 파티클의 Stop 콜백을 핸들로 릴레이
 ├── EffectParameterSet.cs     프리팹이 노출할 셰이더 노브 선언 (에디터 메타데이터)
 └── EffectParamApplier.cs     오버라이드→MPB 적용 (런타임/프리뷰 공용, 매 재생 랜덤 지원)
@@ -262,6 +319,6 @@ Assets/05.Editor/
 
 ## 남은 것 / 로드맵
 
-- **구간형(지속) 노티파이** — 현재 Notify는 시점 발동. `[Start, End]` 구간 동안 유지되는 이펙트는 미지원 (Looping + `Fixed` 반납으로 우회 가능)
+- **구간형(지속) 노티파이** — ✅ 구현됨. `TrackNotify.EndNormalizedTime`로 `[Start, End]` 구간 유지 → [구간 이펙트](#구간interval-이펙트--시점이-아니라-start-end) 참조. 남은 건 플레이 모드 실전 검증(트레일)
 - **`SendMessage` → 이벤트 릴레이** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 캐릭터별 이벤트 릴레이(강타입 `event Action<string>`, 인스턴스 스코프)로 교체 예정 ([TODO.md](TODO.md))
 - **Addressables 전환** — 모바일 대비, 스킬 VFX를 사용 직전 로드/종료 후 Release ([TODO.md](TODO.md) 모바일 절)
