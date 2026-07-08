@@ -72,6 +72,20 @@ namespace ZZZ.Effects
             _appliedSpeed = speed;
         }
 
+        // 구간 이펙트가 끝났을 때(또는 섹션 이탈·캔슬) 외부(EffectHandle)에서 부르는 정지 진입점.
+        // 방출만 멈추고 살아있는 파티클은 자연 소멸시킨다 — ParticleStopped 모드면 소멸 후 자동 반납된다.
+        // Fixed 모드는 자연 정지 콜백이 없으므로 Lifetime 타이머를 기다리지 않고 방출 정지 후 즉시 반납한다.
+        public void StopWindowed()
+        {
+            if (_mode == DespawnMode.Fixed)
+            {
+                StopEmitting();
+                ReleaseSelf();
+                return;
+            }
+            StopEmitting();
+        }
+
         // Entry.Duration 경과 — 방출만 멈춘다. 살아있는 파티클은 자연 소멸하고,
         // ParticleStopped 모드면 전부 소멸한 뒤 Stop 콜백으로 이어서 자동 반납된다.
         private void StopEmitting()

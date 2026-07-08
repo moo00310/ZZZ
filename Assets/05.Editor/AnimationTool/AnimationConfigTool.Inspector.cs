@@ -782,22 +782,46 @@ namespace ZZZ.Editor.AnimationTool
         {
             var notify = tc.Notifies[ni];
             EditorGUILayout.LabelField($"Notify  —  {notify.Type}", EditorStyles.boldLabel);
+
+            // 이 클립의 Notify 목록 — 타임라인에서 겹쳐 집기 어려울 때 여기서 확실히 선택.
+            // (프레임 순으로 정렬해 버튼으로 나열, 현재 선택은 강조)
+            DrawNotifyPicker(tc);
             DrawSeparator();
 
             EditorGUI.BeginChangeCheck();
             var   type   = (NotifyType)EditorGUILayout.EnumPopup("Type",  notify.Type);
+            bool  locked = EditorGUILayout.Toggle(
+                new GUIContent("Lock (이동 잠금)", "켜면 타임라인에서 드래그로 시점이 밀리지 않는다. 선택·편집·삭제는 그대로 가능."),
+                notify.Locked);
+            // Lock 중에도 Time 필드로는 값을 미세 조정할 수 있게 둔다 — 막는 건 '드래그 이동'뿐.
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
             string eName = EditorGUILayout.TextField("Event Name",   notify.EventName);
-            CompositeEffect effect = notify.Effect;
+            float endT = notify.EndNormalizedTime;
             if (type == NotifyType.Effect)
-                effect = (CompositeEffect)EditorGUILayout.ObjectField(
-                    "Effect", notify.Effect, typeof(CompositeEffect), false);
+            {
+                endT = FrameField("구간 끝 (f)",
+                    "0 또는 Time 이하 = 단발. Time보다 크면 그 프레임까지 유지되는 구간 이펙트(트레일/오라). 섹션 이탈·캔슬 시 자동 정지",
+                    tc, notify.EndNormalizedTime);
+                if (endT > normT)
+                    EditorGUILayout.LabelField(" ", "구간 이펙트 (유지 중 방출 → 끝에서 정지)",
+                        EditorStyles.miniLabel);
+            }
             if (EditorGUI.EndChangeCheck())
             {
+                bool typeChanged = type != notify.Type;
                 Undo.RecordObject(_config, "Edit Notify");
                 notify.Type = type; notify.NormalizedTime = normT;
-                notify.EventName = eName; notify.Effect = effect;
+                notify.EventName = eName;
+                notify.EndNormalizedTime = endT; notify.Locked = locked;
                 EditorUtility.SetDirty(_config);
+                if (typeChanged) _fxDirty = true;   // Effect↔다른 타입 전환 시 프리뷰 재생성
+            }
+
+            // Effect 타입이면 조합(Composite) 편집 + 씬 프리뷰를 여기서 인라인으로 (별도 탭 없음)
+            if (notify.Type == NotifyType.Effect)
+            {
+                DrawSeparator();
+                DrawEffectSection(tc, notify);
             }
 
             DrawSeparator();
@@ -812,6 +836,51 @@ namespace ZZZ.Editor.AnimationTool
                 Repaint();
             }
             GUI.backgroundColor = Color.white;
+        }
+
+        // 선택 클립의 모든 Notify를 프레임 순 칩으로 나열 — 겹쳐서 타임라인 클릭이 어려울 때
+        // 여기서 확실히 골라 선택한다. 칩 라벨 = [타입머리글자][프레임], 잠금은 '·' 표기.
+        private void DrawNotifyPicker(TrackClip tc)
+        {
+            if (tc.Notifies.Count <= 1) return;   // 하나뿐이면 굳이 안 그림
+
+            float clipFrames = tc.Clip != null ? tc.Clip.length * 30f : 0f;   // 표시용 프레임(30fps 가정)
+
+            // 프레임 순 인덱스
+            var order = new List<int>(tc.Notifies.Count);
+            for (int k = 0; k < tc.Notifies.Count; k++) order.Add(k);
+            order.Sort((a, b) => tc.Notifies[a].NormalizedTime.CompareTo(tc.Notifies[b].NormalizedTime));
+
+            EditorGUILayout.LabelField($"이 클립의 Notify ({tc.Notifies.Count})", EditorStyles.miniLabel);
+
+            int perRow = Mathf.Max(1, Mathf.FloorToInt((EditorGUIUtility.currentViewWidth - 24f) / 52f));
+            for (int p = 0; p < order.Count; p++)
+            {
+                if (p % perRow == 0) EditorGUILayout.BeginHorizontal();
+
+                int idx = order[p];
+                var n   = tc.Notifies[idx];
+                string head = n.Type switch
+                {
+                    NotifyType.Effect => "E", NotifyType.Camera => "C",
+                    NotifyType.Sound  => "S", _ => "N",
+                };
+                int f = Mathf.RoundToInt(n.NormalizedTime * clipFrames);
+                string label = (n.Locked ? "·" : "") + $"{head}{f}";
+
+                bool cur = idx == _selectedNotify && _notifyClipIdx == _selectedClip;
+                Color prev = GUI.backgroundColor;
+                if (cur) GUI.backgroundColor = new Color(0.95f, 0.85f, 0.25f);
+                if (GUILayout.Button(label, EditorStyles.miniButton, GUILayout.Width(48f)))
+                {
+                    _selectedNotify = idx; _notifyClipIdx = _selectedClip;
+                    GUI.FocusControl(null);
+                    Repaint();
+                }
+                GUI.backgroundColor = prev;
+
+                if (p % perRow == perRow - 1 || p == order.Count - 1) EditorGUILayout.EndHorizontal();
+            }
         }
 
         private static void DrawSeparator()

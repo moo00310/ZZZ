@@ -66,10 +66,7 @@ namespace ZZZ.Editor.Effects
         // entryProp = CompositeEffectEntry의 SerializedProperty. prefab은 검증용.
         public static void DrawEntryPoolFields(SerializedProperty entryProp, GameObject prefab)
         {
-            EditorGUILayout.LabelField("Pooling", EditorStyles.miniBoldLabel);
-            EditorGUILayout.PropertyField(entryProp.FindPropertyRelative("PrewarmCount"));
-            EditorGUILayout.PropertyField(entryProp.FindPropertyRelative("MaxSize"));
-
+            // 풀 프리웜/상한은 캐릭터의 EffectPrewarmer에서 프리팹 단위로 — 여기선 반납만.
             EditorGUILayout.LabelField("Despawn", EditorStyles.miniBoldLabel);
             var despawn = entryProp.FindPropertyRelative("Despawn");
             EditorGUILayout.PropertyField(despawn);

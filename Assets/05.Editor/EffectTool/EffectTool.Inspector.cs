@@ -75,9 +75,13 @@ namespace ZZZ.Editor.EffectTool
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("FollowSpawner"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("ParentToSpawnerRoot"),
+                        new GUIContent("Parent To Spawner Root", "손 위치에서 스폰하되 캐릭터 루트에 붙임 — 손 스윙 무시, 캐릭터 이동/방향만 따라감"));
+                    EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
+                        new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
 
                     bool poolFold = _poolFold.Contains(i);
-                    bool newPool = EditorGUILayout.Foldout(poolFold, "풀링/반납 설정", true);
+                    bool newPool = EditorGUILayout.Foldout(poolFold, "반납 설정", true);
                     if (newPool != poolFold) { if (newPool) _poolFold.Add(i); else _poolFold.Remove(i); }
                     if (newPool)
                     {
@@ -106,8 +110,8 @@ namespace ZZZ.Editor.EffectTool
                 e.FindPropertyRelative("EulerOffset").vector3Value = Vector3.zero;
                 e.FindPropertyRelative("Scale").vector3Value = Vector3.one;
                 e.FindPropertyRelative("FollowSpawner").boolValue = false;
-                e.FindPropertyRelative("PrewarmCount").intValue = 4;
-                e.FindPropertyRelative("MaxSize").intValue = 0;
+                e.FindPropertyRelative("ParentToSpawnerRoot").boolValue = false;
+                e.FindPropertyRelative("IgnoreSocketRotation").boolValue = false;
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
             }

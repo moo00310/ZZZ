@@ -47,9 +47,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710208
-      Attack: 4
-      Direction: 0
-      RequireHeld: 1
       Timing: 1
       WindowStart: 0.16216215
       WindowEnd: 1
@@ -59,9 +56,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710209
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -97,9 +91,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710210
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -135,9 +126,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710211
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -147,9 +135,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710212
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -159,9 +144,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710213
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -171,9 +153,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710214
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -209,9 +188,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710215
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -221,7 +197,7 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: cfe5c4f2e7de0ba4099a5e90c385bd4c, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
+    LockRotation: 1
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
@@ -247,9 +223,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710216
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -285,9 +258,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710217
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -297,9 +267,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710218
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -309,9 +276,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710219
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -321,9 +285,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710220
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1

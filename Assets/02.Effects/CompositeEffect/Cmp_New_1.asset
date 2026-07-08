@@ -15,13 +15,13 @@ MonoBehaviour:
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0
-    Duration: 1
-    PlaybackSpeed: 0.5
+    Duration: 0.5
+    PlaybackSpeed: 1
     Socket: 
-    PositionOffset: {x: 0, y: 0.5, z: 1}
+    PositionOffset: {x: 0, y: 0.8, z: 1.5}
     EulerOffset: {x: 0, y: 0, z: 0}
-    Scale: {x: 1.2, y: 1.2, z: 1.2}
-    FollowSpawner: 0
+    Scale: {x: 1, y: 1, z: 1}
+    FollowSpawner: 1
     PrewarmCount: 4
     MaxSize: 0
     Despawn: 0

@@ -15,11 +15,11 @@ namespace ZZZ.Editor.AnimationTool
         [SerializeField] private AnimationConfig _config;
         private SerializedObject _serializedConfig;
 
-        // ── 탭 ───────────────────────────────────────────────────
-        // Config = 기존 config 편집 뷰. Effect = 애니와 이펙트를 같이 보며 타이밍/스폰 위치 맞추는 뷰.
-        private enum ToolTab { Config, Effect }
-        [SerializeField] private ToolTab _activeTab = ToolTab.Config;
-        private const float TabH = 20f;
+        // ── 이펙트 프리뷰 활성 상태 ────────────────────────────────
+        // 별도 탭 없이 '선택 기반'으로 동작: Effect 타입 Notify를 선택하면(비-Combo) 씬에
+        // 조합 이펙트를 스폰·시뮬레이션하고, 다른 걸 선택하면 자동 정리한다. _fxPreviewOn은
+        // 켜짐/꺼짐 '엣지'를 감지해 재생성/정리를 트리거하는 이전 프레임 상태.
+        private bool _fxPreviewOn;
 
         // ── Preview ───────────────────────────────────────────────
         private bool   _isPlaying;
@@ -57,6 +57,7 @@ namespace ZZZ.Editor.AnimationTool
         private const float ClipGap   = 3f;
         private const float LabelW    = 144f;
         private const float HScrollH  = 14f;    // 하단 가로 스크롤바 높이
+        private const float NotifyHitRadius = 9f; // Notify 클릭 허용 반경(px) — 얇은 마커도 쉽게 집히게
 
         // ── 타임라인 ─────────────────────────────────────────────
         [SerializeField] private float _pxPerSec = 80f;
@@ -67,6 +68,8 @@ namespace ZZZ.Editor.AnimationTool
         [SerializeField] private int _selectedClip   = -1;
         private int _selectedNotify = -1;
         private int _notifyClipIdx  = -1;
+        private readonly System.Collections.Generic.List<int> _notifyHitBuf =
+            new System.Collections.Generic.List<int>();   // 겹친 Notify 순환 선택용 후보 버퍼
         private bool _showTrack;       // Track/Global Links 인스펙터 표시 여부 (상단 버튼으로만 켬)
         private bool _clipAdvFold;     // 클립 인스펙터의 고급(Boost/Tracking/Turn) 폴드아웃 펼침 여부
         private int  _selectedLink = -1;   // 선택 클립에서 '편집 중'인 링크 인덱스 (-1=없음) → 그 링크만 강조
@@ -166,6 +169,7 @@ namespace ZZZ.Editor.AnimationTool
             // 플레이 중에는 자체 프리뷰 대신 런타임 상태를 추적만 한다
             if (EditorApplication.isPlaying)
             {
+                PollLiveHotkeys();   // 게임 포커스여도 1~4 키로 추적 대상 전환
                 UpdateLiveState();
                 return;
             }
@@ -195,10 +199,10 @@ namespace ZZZ.Editor.AnimationTool
         private void OnGUI()
         {
             DrawToolbar();
-            DrawTabBar(new Rect(0, ToolbarH, position.width, TabH));
+            SyncEffectPreviewState();   // 선택 변화에 따라 이펙트 프리뷰 켜짐/꺼짐 반영
             if (_config != null && _serializedConfig != null) _serializedConfig.Update();
 
-            float barY = ToolbarH + TabH;
+            float barY = ToolbarH;
             var barRect = new Rect(0, barY, position.width, PlaybarH);
             if (EditorApplication.isPlaying) DrawLivebar(barRect);
             else                             DrawPlaybar(barRect);
@@ -214,41 +218,37 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUI.DrawRect(new Rect(timelineW, contentY, 1f, contentH), new Color(0.1f, 0.1f, 0.1f));
 
             var inspRect = new Rect(timelineW + 1f, contentY, inspW - 1f, contentH);
-            if (_activeTab == ToolTab.Effect) DrawEffectInspector(inspRect);
-            else                              DrawInspector(inspRect);
+            DrawInspector(inspRect);
 
             if (_config != null && _serializedConfig != null)
                 _serializedConfig.ApplyModifiedProperties();
         }
 
-        // 탭 스트립 — Animation / Effect. Effect로 나가면 이펙트 프리뷰 인스턴스를 정리한다.
-        private void DrawTabBar(Rect r)
+        // 선택된 Notify가 Effect 타입이면(비-Combo) 씬 이펙트 프리뷰가 켜진다.
+        private bool EffectPreviewActive
         {
-            EditorGUI.DrawRect(r, new Color(0.16f, 0.16f, 0.16f));
-            GUILayout.BeginArea(r);
-            GUILayout.BeginHorizontal();
-            DrawTabButton("Animation", ToolTab.Config);
-            DrawTabButton("Effect", ToolTab.Effect);
-            GUILayout.FlexibleSpace();
-            if (_activeTab == ToolTab.Effect)
-                GUILayout.Label("애니 재생하며 Effect Notify 시점에 조합 이펙트를 스폰·시뮬레이션",
-                    EditorStyles.miniLabel);
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            get
+            {
+                if (_config == null || _comboMode) return false;
+                if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return false;
+                var clip = _config.Clips[_notifyClipIdx];
+                if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return false;
+                return clip.Notifies[_selectedNotify].Type == NotifyType.Effect;
+            }
         }
 
-        private void DrawTabButton(string label, ToolTab tab)
+        // 프리뷰 활성 상태의 엣지를 감지 — 켜짐: 재생성 예약, 꺼짐: 인스턴스 정리.
+        private void SyncEffectPreviewState()
         {
-            bool on = _activeTab == tab;
-            var prev = GUI.backgroundColor;
-            if (on) GUI.backgroundColor = new Color(0.35f, 0.55f, 0.85f);
-            if (GUILayout.Toggle(on, label, "Button", GUILayout.Width(90f), GUILayout.Height(TabH - 2f)) && !on)
+            bool want = EffectPreviewActive;
+            if (want == _fxPreviewOn) return;
+            _fxPreviewOn = want;
+            if (want)
             {
-                _activeTab = tab;
-                if (tab != ToolTab.Effect) ClearFxPreview();
-                else _fxDirty = true;
+                _fxDirty = true;
+                if (!EditorApplication.isPlaying) SampleAtTime(_trackTime, false);   // 즉시 한 번 스폰/샘플
             }
-            GUI.backgroundColor = prev;
+            else ClearFxPreview();
         }
     }
 }

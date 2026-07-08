@@ -504,8 +504,25 @@ namespace ZZZ.Editor.AnimationTool
             bool  sel = _selectedNotify == ni && _notifyClipIdx == clipIdx;
             Color col = sel ? Color.yellow : NotifyColors[(int)notify.Type % NotifyColors.Length];
 
+            // 세로선
             EditorGUI.DrawRect(new Rect(mx - 1f, my, 2f, mh), col);
-            EditorGUI.DrawRect(new Rect(mx - 4f, my - 5f, 8f, 5f), col);
+
+            // 클릭 타겟이 되는 '깃발 머리' — 클릭 허용 반경(±NotifyHitRadius)과 맞춰 넉넉하게.
+            float hw = NotifyHitRadius;            // half-width
+            var head = new Rect(mx - hw, my - 9f, hw * 2f, 9f);
+            if (sel)   // 선택 시 흰 외곽선으로 강조
+                EditorGUI.DrawRect(new Rect(head.x - 1f, head.y - 1f, head.width + 2f, head.height + 2f),
+                    new Color(1f, 1f, 1f, 0.9f));
+            EditorGUI.DrawRect(head, col);
+            // 고정 시: 어두운 외곽 링으로 '잠김' 표시(이모지는 IMGUI 폰트에서 깨지므로 도형으로)
+            if (notify.Locked)
+            {
+                var d = new Color(0.08f, 0.08f, 0.08f);
+                EditorGUI.DrawRect(new Rect(head.x,               head.y,                head.width, 1f), d);
+                EditorGUI.DrawRect(new Rect(head.x,               head.yMax - 1f,        head.width, 1f), d);
+                EditorGUI.DrawRect(new Rect(head.x,               head.y,                1f, head.height), d);
+                EditorGUI.DrawRect(new Rect(head.xMax - 1f,       head.y,                1f, head.height), d);
+            }
 
             string icon = notify.Type switch
             {
@@ -514,7 +531,7 @@ namespace ZZZ.Editor.AnimationTool
                 NotifyType.Sound  => "S",
                 _                 => "N",
             };
-            GUI.Label(new Rect(mx - 5f, my - 5f, 10f, 10f), icon,
+            GUI.Label(head, icon,
                 new GUIStyle(EditorStyles.miniLabel)
                 { alignment = TextAnchor.MiddleCenter, fontSize = 8,
                   normal = { textColor = new Color(0.1f, 0.1f, 0.1f) } });

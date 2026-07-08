@@ -78,8 +78,8 @@ namespace ZZZ.Editor.AnimationTool
             if (EditorApplication.isPlaying) return;   // 런타임 애니메이터와 충돌 방지
             if (!AnimationMode.InAnimationMode()) AnimationMode.StartAnimationMode();
 
-            // Effect 탭: 애니 포즈와 같은 시간축으로 이펙트 시뮬레이션(순차 모드 전용)
-            if (_activeTab == ToolTab.Effect && !_comboMode) UpdateEffectPreview(time);
+            // Effect Notify 선택 시: 애니 포즈와 같은 시간축으로 이펙트 시뮬레이션(순차 모드 전용)
+            if (EffectPreviewActive) UpdateEffectPreview(time);
 
             float t = 0f;
             for (int i = 0; i < _config.Clips.Count; i++)
