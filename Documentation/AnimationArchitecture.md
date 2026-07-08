@@ -81,7 +81,7 @@ AnimationConfig
 │     ├── FaceTarget / FaceWindow / FaceTurnSpeed            타겟 조준 회전(스냅/락온 통합) — 워프와 독립
 │     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
-│     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 애니메이션 이벤트(이펙트/신호)
+│     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 애니메이션 이벤트(이펙트/신호). 시점 또는 [NormalizedTime, EndNormalizedTime] 구간
 │     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 다형성)
 └── GlobalLinks : List<ClipLink>   ← 모든 섹션에 적용 (Any State 전이)
 ```
@@ -169,8 +169,8 @@ Layer 1 (Additive)
 ## 타이밍 값은 normalizedTime으로 저장 — 에디터만 프레임으로 표시
 
 모든 타이밍/구간 값(`WindowStart`~`WindowEnd`, `LockWindow`, `FaceWindow`, `TrackWindow`, `TurnWindow`,
-`DoneThreshold`, `EntryOffset`, `Notify.NormalizedTime`, 모듈 `Start`~`End`)은 `.asset`에 **normalizedTime(0~1)** 으로
-저장된다. 반면 에디터 툴(`AnimationConfigTool`)은 이걸 **정수 프레임**으로 변환해 표시·편집한다.
+`DoneThreshold`, `EntryOffset`, `Notify.NormalizedTime`, `Notify.EndNormalizedTime`(구간 이펙트), 모듈 `Start`~`End`)은
+`.asset`에 **normalizedTime(0~1)** 으로 저장된다. 반면 에디터 툴(`AnimationConfigTool`)은 이걸 **정수 프레임**으로 변환해 표시·편집한다.
 
 ```
 저장(.asset)        normalizedTime (0~1)   ← 견고
