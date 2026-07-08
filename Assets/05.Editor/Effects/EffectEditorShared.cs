@@ -100,6 +100,110 @@ namespace ZZZ.Editor.Effects
                     MessageType.Warning);
         }
 
+        // ── 셰이더 노브 오버라이드 (프리팹이 EffectParameterSet으로 선언한 것만 동적으로 그림) ──
+        // entryProp = CompositeEffectEntry의 SerializedProperty. prefab에서 선언을 읽고,
+        // 값은 entry.ParamOverrides에 upsert한다(체크 = 오버라이드, 해제 = 프리팹 기본값).
+        public static void DrawParamOverrides(SerializedProperty entryProp, GameObject prefab)
+        {
+            if (prefab == null) return;
+            var set = prefab.GetComponent<EffectParameterSet>();
+            if (set == null || set.Parameters.Count == 0) return;
+
+            EditorGUILayout.LabelField("셰이더 노브", EditorStyles.miniBoldLabel);
+            var overrides = entryProp.FindPropertyRelative("ParamOverrides");
+
+            foreach (var p in set.Parameters)
+            {
+                if (p == null || string.IsNullOrEmpty(p.ShaderProperty)) continue;
+
+                int  idx = FindOverrideIndex(overrides, p.ShaderProperty);
+                bool has = idx >= 0;
+
+                EditorGUILayout.BeginHorizontal();
+                string label = string.IsNullOrEmpty(p.DisplayName) ? p.ShaderProperty : p.DisplayName;
+                bool nowHas = EditorGUILayout.ToggleLeft(new GUIContent(label, p.ShaderProperty), has,
+                    GUILayout.Width(150));
+                if (nowHas != has)
+                {
+                    if (nowHas) idx = AddOverride(overrides, p);
+                    else { overrides.DeleteArrayElementAtIndex(idx); idx = -1; }
+                    has = nowHas;
+                }
+
+                if (has)
+                {
+                    var el = overrides.GetArrayElementAtIndex(idx);
+                    var fv = el.FindPropertyRelative("FloatValue");
+                    var cv = el.FindPropertyRelative("ColorValue");
+                    switch (p.Type)
+                    {
+                        case EffectParamType.Bool:
+                            fv.floatValue = EditorGUILayout.Toggle(fv.floatValue > 0.5f) ? 1f : 0f;
+                            break;
+                        case EffectParamType.Color:
+                            cv.colorValue = EditorGUILayout.ColorField(cv.colorValue);
+                            break;
+                        default: // Float
+                            var rndProp = el.FindPropertyRelative("Randomize");
+                            if (rndProp.boolValue)
+                            {
+                                // 매 재생 랜덤 — 값은 런타임 Bind가 굴리므로 여기선 범위만 표시.
+                                string range = p.HasRange ? $"{p.Min:0.##}~{p.Max:0.##}" : "0~100";
+                                using (new EditorGUI.DisabledScope(true))
+                                    EditorGUILayout.LabelField($"런타임 랜덤 ({range})");
+                            }
+                            else
+                            {
+                                fv.floatValue = p.HasRange
+                                    ? EditorGUILayout.Slider(fv.floatValue, p.Min, p.Max)
+                                    : EditorGUILayout.FloatField(fv.floatValue);
+                            }
+                            rndProp.boolValue = GUILayout.Toggle(rndProp.boolValue,
+                                new GUIContent("랜덤", "켜면 런타임에서 재생마다 범위 내 랜덤값을 사용"),
+                                EditorStyles.miniButton, GUILayout.Width(46));
+                            break;
+                    }
+                }
+                else
+                {
+                    // 오버라이드 안 함 → 프리팹 기본값을 흐리게 보여줘 뭘 덮게 되는지 알려준다.
+                    using (new EditorGUI.DisabledScope(true))
+                    {
+                        switch (p.Type)
+                        {
+                            case EffectParamType.Bool:  EditorGUILayout.Toggle(p.DefaultFloat > 0.5f); break;
+                            case EffectParamType.Color: EditorGUILayout.ColorField(p.DefaultColor);    break;
+                            default:                    EditorGUILayout.FloatField(p.DefaultFloat);    break;
+                        }
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        private static int FindOverrideIndex(SerializedProperty overrides, string shaderProperty)
+        {
+            for (int i = 0; i < overrides.arraySize; i++)
+                if (overrides.GetArrayElementAtIndex(i).FindPropertyRelative("ShaderProperty").stringValue == shaderProperty)
+                    return i;
+            return -1;
+        }
+
+        // 리스트 끝에 오버라이드 항목 추가 + 프리팹 선언 기본값으로 초기화.
+        private static int AddOverride(SerializedProperty overrides, EffectParamDecl decl)
+        {
+            int n = overrides.arraySize;
+            overrides.InsertArrayElementAtIndex(n);
+            var el = overrides.GetArrayElementAtIndex(n);
+            el.FindPropertyRelative("ShaderProperty").stringValue = decl.ShaderProperty;
+            el.FindPropertyRelative("Type").enumValueIndex        = (int)decl.Type;
+            el.FindPropertyRelative("FloatValue").floatValue      = decl.DefaultFloat;
+            el.FindPropertyRelative("ColorValue").colorValue      = decl.DefaultColor;
+            el.FindPropertyRelative("Randomize").boolValue        = false;
+            return n;
+        }
+
         // ── 조합 내부 StartDelay 타임라인 ──
         public static void DrawStartDelayTimeline(Rect area, CompositeEffect c,
             ref int dragEntry, ref float grabDx, float playheadTime = -1f, System.Action<float> onRulerScrub = null)

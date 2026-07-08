@@ -52,5 +52,10 @@ namespace ZZZ.Effects
         [Header("Despawn")]
         public DespawnMode Despawn  = DespawnMode.ParticleStopped;
         public float       Lifetime = 0f;             // Despawn=Fixed일 때만 사용(초)
+
+        // 프리팹이 EffectParameterSet으로 선언한 셰이더 노브 중 이 조합에서 덮어쓴 것들(이름-값만).
+        // 재생 시 PooledEffectHandle.Bind가 MPB로 적용 — 같은 프리팹/풀을 조합마다 다른 룩으로 쓴다.
+        // sparse: 여기 없는 선언 파라미터는 프리팹 기본값(EffectParamDecl.Default*)을 쓴다.
+        public List<EffectParamOverride> ParamOverrides = new List<EffectParamOverride>();
     }
 }

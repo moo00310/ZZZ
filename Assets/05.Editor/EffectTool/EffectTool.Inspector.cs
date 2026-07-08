@@ -80,6 +80,8 @@ namespace ZZZ.Editor.EffectTool
                     EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
                         new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
 
+                    EffectEditorShared.DrawParamOverrides(e, prefab);
+
                     bool poolFold = _poolFold.Contains(i);
                     bool newPool = EditorGUILayout.Foldout(poolFold, "반납 설정", true);
                     if (newPool != poolFold) { if (newPool) _poolFold.Add(i); else _poolFold.Remove(i); }
@@ -114,6 +116,7 @@ namespace ZZZ.Editor.EffectTool
                 e.FindPropertyRelative("IgnoreSocketRotation").boolValue = false;
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
+                e.FindPropertyRelative("ParamOverrides").ClearArray();
             }
 
             _compositeSO.ApplyModifiedProperties();

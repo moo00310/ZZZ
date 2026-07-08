@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6403730617641942213}
   - component: {fileID: 4263145317643100803}
   - component: {fileID: 7455316632286766021}
+  - component: {fileID: 5814940400587060503}
   m_Layer: 0
   m_Name: Eff_FlameBurst
   m_TagString: Untagged
@@ -4910,3 +4911,32 @@ MonoBehaviour:
   _syncToDuration: 1
   _duration: 0.5
   _clamp: 1
+--- !u!114 &5814940400587060503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738888438281591883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 155ef775656cbb2449b1639bfc6ea772, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.EffectParameterSet
+  Parameters:
+  - DisplayName: Seed
+    ShaderProperty: _Seed
+    Type: 1
+    DefaultFloat: 0
+    DefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    HasRange: 1
+    Min: 0
+    Max: 5000
+  - DisplayName: Gray
+    ShaderProperty: _isGray
+    Type: 0
+    DefaultFloat: 0
+    DefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    HasRange: 0
+    Min: 0
+    Max: 0
