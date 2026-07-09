@@ -18,7 +18,7 @@ MonoBehaviour:
     Duration: 0.5
     PlaybackSpeed: 1
     Socket: 
-    PositionOffset: {x: 0, y: 0.8, z: 1.5}
+    PositionOffset: {x: 0, y: 0.8, z: 1.7}
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 1
