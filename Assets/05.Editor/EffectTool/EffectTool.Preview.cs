@@ -14,6 +14,10 @@ namespace ZZZ.Editor.EffectTool
             public GameObject Root;
             public List<ParticleSystem> TopSystems;   // 최상위 파티클(자식은 withChildren로 딸려감)
             public CompositeEffectEntry Entry;        // 시차/재생 길이/속도 등 프리뷰에 반영할 설정
+            public ParticleSystem OverrideTarget;     // 파티클 노브 적용 대상(단일 PS)
+            public ParticleBaseline Baseline;         // 오버라이드 끈 필드 복원용 프리팹 기본값(스폰 시 캡처)
+            public Renderer OverrideRenderer;         // 머티리얼 스왑 대상(단일 렌더러)
+            public Material BaseMaterial;             // 스왑 전 프리팹 기본 머티리얼
         }
 
         private GameObject _previewRoot;
@@ -93,9 +97,13 @@ namespace ZZZ.Editor.EffectTool
                 if (inst.Root.activeSelf != active) inst.Root.SetActive(active);
                 if (!active) continue;
 
+                // 머티리얼 스왑(룩 통째) → 셰이더 노브 MPB는 그 위에 얹힘
+                EffectMaterialApplier.Apply(inst.Entry.MaterialOverride, inst.OverrideRenderer, inst.BaseMaterial);
                 // 셰이더 노브 오버라이드 실시간 반영(런타임 Bind와 동일 로직)
                 if (_previewMpb == null) _previewMpb = new MaterialPropertyBlock();
                 EffectParamApplier.Apply(inst.Root, inst.Entry, _previewMpb);
+                // 파티클 모듈 노브(수명/Size커브/색) — Simulate 전에 적용해야 시뮬에 반영됨
+                ParticleParamApplier.Apply(inst.Entry, inst.OverrideTarget, inst.Baseline);
 
                 // PlaybackSpeed는 시뮬 시간 압축으로, Duration은 유효 길이 클램프로 근사
                 float speed = inst.Entry.PlaybackSpeed > 0f ? inst.Entry.PlaybackSpeed : 1f;
@@ -146,7 +154,15 @@ namespace ZZZ.Editor.EffectTool
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
 
-            _previewInstances.Add(new PreviewInstance { Root = go, TopSystems = top, Entry = entry });
+            // 파티클 노브 대상(단일 PS) + 머티리얼 스왑 대상(단일 렌더러) + 오버라이드 적용 전 기본값 캡처
+            var target   = go.GetComponentInChildren<ParticleSystem>(true);
+            var renderer = go.GetComponentInChildren<Renderer>(true);
+            _previewInstances.Add(new PreviewInstance
+            {
+                Root = go, TopSystems = top, Entry = entry,
+                OverrideTarget = target, Baseline = ParticleBaseline.Capture(target),
+                OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null,
+            });
         }
 
         private void StopPreview()

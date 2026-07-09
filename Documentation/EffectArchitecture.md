@@ -76,6 +76,8 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `StartDelay` | 이 조합 안에서의 상대 시차(초) |
 | `Duration` | 방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 **방출만 멈추고** 잔여 파티클은 자연 소멸 → `ParticleStopped`면 이어서 자동 반납. **Looping 이펙트를 조합마다 다른 길이로** 쓸 수 있다 |
 | `PlaybackSpeed` | 재생 속도 배율 — 프리팹에 구운 `simulationSpeed`에 곱해진다(원본은 캐시로 보존, 풀 재사용 시 매 재생 재적용). 전체 길이도 1/배율로 축소 |
+| `StartLifetime` | 파티클 Start Lifetime(초) 오버라이드. **0 = 프리팹 기본값**(안 덮음), >0이면 덮어써 나오고 사라지는 전체 속도 조절(작을수록 빠른 번쩍). `Duration`과 같은 '0=중립' 규칙이라 토글 없는 일반 필드 |
+| `MaterialOverride` | 렌더러 `sharedMaterial`을 조합마다 통째 스왑(텍스처+색+파라미터+블렌드). **null = 프리팹 기본**. 참조 스왑이라 인스턴스화/GC 없음 — [조합별 오버라이드](#조합별-오버라이드--노브-3층) 참조 |
 | `Socket` | 붙일 본/소켓 이름 (빈값 = 스포너 원점). 스포너 계층에서 이름으로 재귀 검색 |
 | `PositionOffset` / `EulerOffset` / `Scale` | 소켓 기준 로컬 배치 |
 | `FollowSpawner` | true = 소켓에 부모로 붙어 따라감 / false = 스폰 순간 위치에 분리(투사체 잔상 등) |
@@ -83,7 +85,8 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `IgnoreSocketRotation` | 소켓의 **위치만** 쓰고 회전은 무시 — 본에 구운 회전 대신 캐릭터 facing 기준으로 조준(`EulerOffset`이 그 프레임 기준으로 먹음). `FollowSpawner`(소켓 부모) 모드에선 무효 |
 | `Despawn` | `ParticleStopped`(파티클 전부 정지 시 자동 반납, 권장) / `Fixed`(Lifetime 초 뒤 강제 반납) |
 | `Lifetime` | `Fixed`일 때만 사용(초) — Looping 등 스스로 안 멈추는 이펙트용 |
-| `ParamOverrides` | 이 조합에서 덮어쓴 셰이더 노브(이름-값, sparse) — [셰이더 노브 오버라이드](#셰이더-노브-오버라이드--조합별-룩) 참조 |
+| `ParamOverrides` | 이 조합에서 덮어쓴 셰이더 노브(이름-값, sparse, MPB 적용) — [조합별 오버라이드](#조합별-오버라이드--노브-3층) 참조 |
+| `ParticleOverride` | 파티클 모듈 토글 오버라이드(Size over Lifetime 커브 / Start Color HDR). 커브·색은 중립값이 없어 토글 sparse |
 
 > 풀 프리웜/상한(과거 `PrewarmCount`/`MaxSize`)은 Entry가 아니라 캐릭터의
 > [EffectPrewarmer](#풀-프리웜-effectprewarmer) 컴포넌트에서 프리팹 단위로 설정한다.
@@ -215,7 +218,24 @@ FireNotifies (ConfigState, 매 프레임)
 - **MaterialPropertyBlock** 으로 렌더러 단위 격리 — 같은 `.mat`을 풀의 여러 인스턴스가 공유해도 값이 안 섞인다 (풀링 전제와 맞물리는 선택)
 - **`[ExecuteAlways]`** — 씬 프리뷰(파티클 패널 Play)에서도 연출이 보인다. 없으면 프리뷰 땐 `_Progress`가 기본값에 멈춰 "셰이더가 안 먹는 것처럼" 보임
 
-## 셰이더 노브 오버라이드 — 조합별 룩
+## 조합별 오버라이드 — 노브 3층
+
+같은 프리팹/풀을 여러 조합이 돌려쓰되, **조합마다 룩·타이밍을 다르게** 준다. 층이 셋이고 적용 방식이 다르다:
+
+| 층 | 무엇을 바꾸나 | 적용 방식 | 중립값(안 덮음) |
+|----|--------------|-----------|------------------|
+| **머티리얼** | 룩 통째(텍스처+색+파라미터+블렌드) | `renderer.sharedMaterial` 스왑 | `null` = 프리팹 기본 |
+| **파티클 모듈** | StartLifetime / Size over Lifetime 커브 / Start Color(HDR) | 모듈 struct에 직접 세팅 | StartLifetime `0`=기본 · Size/Color는 토글 off |
+| **셰이더(MPB)** | 셰이더 프로퍼티 미세값(색/시드/float) | `MaterialPropertyBlock` | 프리팹 선언 기본값 |
+
+- **머티리얼 = 룩 전체 스왑**(네이티브 머티리얼 인스펙터에서 오서링) vs **셰이더 노브 = 새 에셋 없이 미세 조정**. 공존한다 — MPB는 sharedMaterial 위에 얹힌다. 규율: 스왑 머티리얼은 **같은 셰이더/블렌드** 공유(다르면 템플릿 프리팹).
+- **풀 재사용 누수 방지** — 세 층 모두 "오버라이드 안 하면 프리팹 기본값(**baseline**)으로 되돌린다". baseline은 덮기 전 **최초 1회** 캡처(`ParticleBaseline` / 기본 머티리얼 / 셰이더 선언 기본값). 안 그러면 풀 인스턴스에 이전 조합 값이 남는다.
+- **단일 대상 전제** — 아톰 = 단일 PS/렌더러라 첫 `ParticleSystem`/`Renderer` 하나에 적용한다. 멀티 PS 프리팹이면 **첫 것에만** 먹는다([아톰 단위](#아톰-단위granularity--언제-쪼개나) 참조).
+- **왜 텍스처가 아니라 머티리얼인가** — 텍스처만 MPB로 스왑하면 셰이더별 프로퍼티 이름 선언이 필요하고 오서링이 툴로 들어온다. 머티리얼 참조 스왑은 상위집합(텍스처+색+파라미터)이고 오서링이 네이티브에 남아 더 낫다. 성능도 파티클엔 무승부, 메시엔 SRP Batcher 유지로 유리(`sharedMaterial`이라 인스턴스화/GC 없음).
+
+> 적용 코드는 [EffectParamApplier.cs](../Assets/04.Scripts/Effects/EffectParamApplier.cs)에 3층이 모여 있다 — `EffectParamApplier`(MPB) · `ParticleParamApplier`+`ParticleBaseline`(모듈) · `EffectMaterialApplier`(머티리얼). 셋 다 런타임 `Bind`와 두 툴 프리뷰가 공유해 룩을 일치시킨다.
+
+### 셰이더 노브(MPB) — 상세
 
 **문제**: 같은 이펙트 프리팹(`Eff_FlameBurst`)을 여러 조합이 돌려쓰는데, 조합마다 색/시드 같은 룩을
 다르게 주고 싶다. 그렇다고 raw 셰이더 프로퍼티를 툴에 통째로 여는 건 이펙트마다 의미가 달라 관심사가
@@ -245,6 +265,75 @@ FireNotifies (ConfigState, 매 프레임)
 
 ---
 
+## 오버라이드 판정 기준 — 노브 vs 템플릿 vs Variant
+
+무엇을 노브(데이터)로 빼고 무엇을 프리팹으로 남길지의 경계. 목적은 **툴이 ParticleSystem을
+재구현(inner-platform effect)하지 않게** 하는 것 — 노브를 계속 늘리면 결국 SO에 파티클을 통째
+재직렬화하는 꼴이 된다.
+
+**게이트 (3질문 전부 YES여야 노브, 하나라도 NO면 프리팹/템플릿)**
+
+1. **조합별 분산** — 같은 풀을 공유하며 조합마다 값이 달라야 하나? (NO → 프리팹 **Variant**: 별 풀 허용)
+2. **값 vs 구조** — scalar/curve/color/gradient/material 인가? 모듈 on-off·sub-emitter·셰이더/블렌드는 **구조** (NO → 새 **템플릿 프리팹**)
+3. **상위 빈도** — 자주 만지는 소수인가? 한 번 세팅하고 마는 롱테일이면 프리팹 (NO → Variant)
+
+**증가 규칙** — 모듈을 켜고 싶다 → 노브 추가가 아니라 *템플릿 프리팹 추가*(토폴로지는 5~10개서 포화).
+값이 조합마다 다르다 → *노브*(소수서 포화). 두 축의 증가 속도가 달라 폭주하지 않고 수렴한다.
+
+**툴 정체성(넘으면 안 되는 선)** — 툴 = "조합 + 조합별 델타" 레이어. 이펙트 authoring은 Unity
+ParticleSystem이 소유한다. 텍스처를 개별 노브로 빼는 대신 [머티리얼 스왑](#조합별-오버라이드--노브-3층)으로
+간 것도 이 원칙(오서링을 네이티브에 남김)의 실천이다.
+
+> 기술적으로는 모듈 대부분이 런타임 API로 설정 가능하다(불가능해서가 아니라, 전부 빼면 프리팹을
+> 더 나쁜 형태로 재구현하는 셈이라 안 하는 것). **진짜 불가는 sub-emitter뿐**(실 자식 GameObject 필요).
+> 현재 노브 화이트리스트: Material / StartLifetime / Size 커브 / Start Color / (셰이더 미세값 MPB).
+> 강제 캡은 없다 — 이 문서가 게이트를 지키는 유일한 방어선이다.
+
+---
+
+## 아톰 단위(granularity) — 언제 쪼개나
+
+**아톰 = "파티클 1개"가 아니라 "독립 관리가 필요한 최소 단위"**다. composition이 두 층에서 일어난다:
+
+| 층 | composition | 소유 |
+|----|-------------|------|
+| 레이어(Core+Sparks+Smoke…) | 한 프리팹에 파티클 여러 개로 묶음 | **아티스트/네이티브** (ParticleSystem 계층) |
+| 아톰 | 프리팹들을 시차·배치·노브로 조합 | **데이터** (`CompositeEffect`) |
+
+멀티 파티클 프리팹(에셋 스토어 등)은 **VFX의 표준**이고, **통째로 아톰 하나**로 써도 된다 —
+재생/풀링은 이미 멀티 PS를 지원한다([자동 반납](#자동-반납--pooledeffecthandle--particlestoprelay)의 릴레이 구조).
+전부 단일 PS로 쪼갤 필요 없다.
+
+**쪼개는 기준 (하나라도 해당 → 아톰 분리)**
+
+| 분리(고운 아톰) | 통째(거친 아톰) |
+|-----------------|-----------------|
+| 여러 이펙트가 공유하는 **완전 동일** 레이어(공유 풀로 메모리 절약) | 그 이펙트 **고유** 레이어(쪼개면 GameObject 오버헤드만↑) |
+| 레이어별 독립 시차/배치/풀링/노브 | 한 룩으로 고정·통짜 튜닝됨 |
+| 서로 **다른 소켓** / Entry-레벨 추종(`FollowSpawner` 등)이 다름 | 같은 소켓+추종(통째로 붙음) |
+| — | **Sub-emitter 포함**(쪼갤 수 없음) / "일부만 월드에 남김"은 PS **Simulation Space**로 |
+
+**풀링 단위 = 프리팹 인스턴스 하나**(내부 PS 개수 무관). 풀은 프리팹 단위 공유. Entry 1개 = 그 풀에서
+인스턴스 1개. 아톰 N개로 쪼개면 풀 N개 + 스폰당 인스턴스 N개.
+
+**성능 관점** — 렌더링(드로우콜/오버드로우)은 패키징 무관(6 PS = 6 PS, 파티클은 SRP Batch도 없음).
+차이는 스폰당 CPU 관리(SetActive/Bind ×N)뿐인데, **풀링이 Instantiate/Destroy/GC를 없애 격차가 작다**
+(Get/Release는 스택 pop 수준). 그러니 **granularity는 성능이 아니라 재사용/메모리/제어로 결정**한다.
+진짜 성능 레버는 **오버드로우/필레이트**(파티클 크기·개수·Additive 겹침)지 패키징이 아니다.
+
+**메모리 관점** — 쪼개기 자체가 아니라 **공유 가능한 동일 레이어를 공유 풀로 합칠 때** 절약된다
+(풀 크기가 "모든 이펙트의 합"이 아니라 "동시 재생 피크"로 잡히므로). **고유 레이어 쪼개기는 오히려 손해**
+(파티클 버퍼 동일 + 루트 GameObject/컴포넌트만 추가). 텍스처·메시 **에셋**은 참조 공유라 패키징 무관.
+콜드 이펙트는 풀링을 안 하거나 작게(온디맨드) 잡는 것도 별개 메모리 레버.
+
+> **풀링의 의미** = "객체 생성/파괴 스파이크 + GC 제거"를 **상주 메모리와 맞바꾸는** 것. 렌더링/처리량
+> 도구가 아니다. 프리웜으로 그 비용을 로드 타임에 앞당길 수 있다. 이득은 **스폰 빈도에 비례**한다.
+
+결론: **"자주 재사용되는 완전 동일 레이어만 아톰으로 뽑고, 고유/통짜 이펙트는 통째로 쓴다."** 고운 아톰과
+거친 아톰이 한 시스템에 공존하는 게 정상이다. (상세 결정 근거는 프로젝트 메모리 `effect-knob-vs-template-criteria`)
+
+---
+
 ## 에디터 툴
 
 ### EffectTool (`ZZZ/Effect Tool`) — 조합 전용 편집 창
@@ -255,7 +344,7 @@ FireNotifies (ConfigState, 매 프레임)
 |------|------|
 | 목록 (`List`) | 프로젝트의 모든 `CompositeEffect` 브라우징 + New Composite 생성 |
 | 타임라인 (`Timeline`) | Entry를 시간축 막대로 표시 — **막대 드래그 = `StartDelay`(시차), 우측 엣지 드래그 = `Duration`(방출 컷)** 을 데이터에 굽는다. 막대 길이는 `PlaybackSpeed`/`Duration` 반영 |
-| 인스펙터 (`Inspector`) | Entry별 프리팹/배치/반납/셰이더 노브 편집 (풀 프리웜은 EffectPrewarmer로 분리) |
+| 인스펙터 (`Inspector`) | Entry별 편집 — 접기 그룹으로 정리: Option(추종) / 파티클 노브(Duration·StartLifetime·배치·Size·Color) / 쉐이더 노브 + 상단 Material 스왑 (풀 프리웜은 EffectPrewarmer로 분리) |
 | 씬 프리뷰 (`Preview`) | `ParticleSystem.Simulate` 스크럽으로 플레이 진입 없이 조합 연출 확인 |
 | 풀 개요 (`Pool`) | 플레이 중 프리팹별 풀 상태(Free/Live/Created/Max) 모니터 |
 
@@ -276,9 +365,10 @@ FireNotifies (ConfigState, 매 프레임)
 
 ### EffectEditorShared — 두 툴의 공용 로직
 
-[EffectEditorShared.cs](../Assets/05.Editor/Effects/EffectEditorShared.cs) — 지속시간 계산, Entry 필드 그리기
-(+ Stop Action 검증), StartDelay 타임라인(드래그/룰러/플레이헤드), 풀 테이블, 에셋 생성을 static 헬퍼로
-모아 EffectTool과 Effect 탭이 **같은 그리기·계산 코드를 공유**한다 (중복 제거).
+[EffectEditorShared.cs](../Assets/05.Editor/Effects/EffectEditorShared.cs) — 지속시간 계산, **Entry 필드 그리기
+(`DrawEntryFields` — 확정 표시 순서 + 접기 그룹, 두 툴 공용)**, Stop Action 검증, StartDelay 타임라인
+(드래그/룰러/플레이헤드), 풀 테이블, 에셋 생성을 static 헬퍼로 모아 EffectTool과 Effect 탭이 **같은
+그리기·계산 코드를 공유**한다 (중복 제거). 필드 순서/그룹을 바꿀 땐 이 한 곳만 고치면 두 툴에 반영된다.
 
 ---
 
@@ -286,16 +376,16 @@ FireNotifies (ConfigState, 매 프레임)
 
 ```
 Assets/04.Scripts/Effects/               런타임
-├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 셰이더 노브 오버라이드)
+├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 노브 3층: 머티리얼/파티클/셰이더) + ParticleParamOverride
 ├── EffectService.cs          ★ 진입점 — Play(조합, trackForStop) / Prewarm / 프리팹별 풀 관리 / 소켓 검색·배치
 ├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize)
 ├── EffectPrewarmer.cs        캐릭터에 부착 — 프리팹 단위 풀 프리웜/상한 선언 (Start에서 EffectService.Prewarm)
 ├── EffectHandle.cs           구간 이펙트 정지 토큰 — 한 Play로 스폰된 인스턴스 묶음을 Stop
 ├── EffectServiceRunner.cs    StartDelay 지연 실행용 코루틴 호스트 (풀 루트에 부착)
-├── PooledEffectHandle.cs     인스턴스 재생 제어(속도/방출 컷/노브 MPB) + 풀 반납 (ParticleStopped / Fixed) + StopWindowed
+├── PooledEffectHandle.cs     인스턴스 재생 제어(속도/방출 컷/노브 3층: 머티리얼·파티클·MPB) + 풀 반납 (ParticleStopped / Fixed) + StopWindowed
 ├── ParticleStopRelay.cs      최상위 파티클의 Stop 콜백을 핸들로 릴레이
 ├── EffectParameterSet.cs     프리팹이 노출할 셰이더 노브 선언 (에디터 메타데이터)
-└── EffectParamApplier.cs     오버라이드→MPB 적용 (런타임/프리뷰 공용, 매 재생 랜덤 지원)
+└── EffectParamApplier.cs     노브 3층 적용기 모음 (런타임/프리뷰 공용) — EffectParamApplier(MPB) · ParticleParamApplier+ParticleBaseline(모듈) · EffectMaterialApplier(머티리얼 스왑)
 
 Assets/04.Scripts/Combat/                이펙트 연동
 ├── EffectHitVolume.cs        스폰 시 자기 범위 타격 (이펙트 범위 = 타격 범위)

@@ -15,12 +15,14 @@ MonoBehaviour:
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0.0275
+    MaterialOverride: {fileID: 0}
     Duration: 0.5
     PlaybackSpeed: 1
+    StartLifetime: 0
     Socket: 
-    PositionOffset: {x: 0, y: 0.5, z: 1.2}
+    PositionOffset: {x: 0, y: 0.5, z: 1.5}
     EulerOffset: {x: 20, y: 0, z: 0}
-    Scale: {x: 1, y: 1, z: 1}
+    Scale: {x: 0.8, y: 0.8, z: 1}
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
@@ -42,13 +44,53 @@ MonoBehaviour:
       FloatValue: 1
       ColorValue: {r: 0, g: 0, b: 0, a: 0}
       Randomize: 0
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 1
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.15
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      OverrideStartColor: 0
+      StartColor: {r: 1, g: 1, b: 1, a: 1}
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
     StartDelay: 0
+    MaterialOverride: {fileID: 0}
     Duration: 0.2
     PlaybackSpeed: 1
+    StartLifetime: 0
     Socket: Bip001 Prop2
     PositionOffset: {x: -0.2, y: 0, z: 0}
-    EulerOffset: {x: 0, y: 17, z: 0}
+    EulerOffset: {x: 10, y: 15, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
@@ -56,3 +98,95 @@ MonoBehaviour:
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 1
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.15
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      OverrideStartColor: 0
+      StartColor: {r: 1, g: 1, b: 1, a: 1}
+  - Prefab: {fileID: 5055750446988487301, guid: d999b6831c1cf3d46a3674a042e57af3, type: 3}
+    StartDelay: 0.03
+    MaterialOverride: {fileID: 0}
+    Duration: 0.2
+    PlaybackSpeed: 1
+    StartLifetime: 0.2
+    Socket: 
+    PositionOffset: {x: 0, y: 0.5, z: 1.4}
+    EulerOffset: {x: 20, y: 0, z: 0}
+    Scale: {x: 1.5, y: 1.5, z: 1.5}
+    FollowSpawner: 1
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
+    Despawn: 0
+    Lifetime: 0
+    ParamOverrides: []
+    ParticleOverride:
+      OverrideSizeCurve: 1
+      SizeMultiplier: 1
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.15
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      OverrideStartColor: 1
+      StartColor: {r: 1, g: 1, b: 1, a: 1}
