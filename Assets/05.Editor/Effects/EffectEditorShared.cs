@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ.Effects;
@@ -35,8 +36,19 @@ namespace ZZZ.Editor.Effects
         {
             if (e == null || e.Prefab == null) return 0f;
             float speed   = e.PlaybackSpeed > 0f ? e.PlaybackSpeed : 1f;
-            float natural = PrefabDuration(e.Prefab) / speed;
+            float natural = PrefabNaturalDuration(e) / speed;
             return e.Duration > 0f ? Mathf.Min(natural, e.Duration) : natural;
+        }
+
+        // StartLifetime 오버라이드(>0)를 반영한 프리팹 길이 근사. 단일 PS 기준으로
+        // duration + (오버라이드 수명 or 구운 수명). 오버라이드 없으면(0) PrefabDuration과 동일.
+        private static float PrefabNaturalDuration(CompositeEffectEntry e)
+        {
+            if (e.StartLifetime <= 0f) return PrefabDuration(e.Prefab);
+            float baseDur = 0f;
+            var ps = e.Prefab.GetComponentInChildren<ParticleSystem>(true);
+            if (ps != null) baseDur = ps.main.duration;
+            return baseDur + e.StartLifetime;
         }
 
         public static float CompositeDuration(CompositeEffect c)
@@ -109,7 +121,6 @@ namespace ZZZ.Editor.Effects
             var set = prefab.GetComponent<EffectParameterSet>();
             if (set == null || set.Parameters.Count == 0) return;
 
-            EditorGUILayout.LabelField("셰이더 노브", EditorStyles.miniBoldLabel);
             var overrides = entryProp.FindPropertyRelative("ParamOverrides");
 
             foreach (var p in set.Parameters)
@@ -202,6 +213,116 @@ namespace ZZZ.Editor.Effects
             el.FindPropertyRelative("ColorValue").colorValue      = decl.DefaultColor;
             el.FindPropertyRelative("Randomize").boolValue        = false;
             return n;
+        }
+
+        // ── Entry 필드 확정 표시 순서 (두 툴 공용) ──
+        // Prefab → Socket → StartDelay/PlaybackSpeed → [Option] → [파티클 노브] → [쉐이더 노브] (그룹은 접기 가능).
+        // 구조 필드(Prefab/Socket) 변경 여부를 리턴 — 호출 툴이 프리뷰 재생성 트리거로 쓴다.
+        public static bool DrawEntryFields(SerializedProperty e, SerializedProperty prefabProp, GameObject prefab)
+        {
+            // 구조 필드 — 변경 시 재생성
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
+            EditorGUILayout.PropertyField(e.FindPropertyRelative("Socket"), new GUIContent("Socket"));
+            bool structural = EditorGUI.EndChangeCheck();
+
+            // 룩 통째 교체 — null이면 프리팹 기본 머티리얼(렌더러 sharedMaterial 스왑)
+            EditorGUILayout.PropertyField(e.FindPropertyRelative("MaterialOverride"),
+                new GUIContent("Material", "비우면 프리팹 기본. 지정하면 렌더러 머티리얼을 통째 교체(텍스처+색+파라미터). 같은 셰이더 공유 권장"));
+
+            // 기본 타이밍(항상 표시)
+            EditorGUILayout.PropertyField(e.FindPropertyRelative("StartDelay"));
+            EditorGUILayout.PropertyField(e.FindPropertyRelative("PlaybackSpeed"));
+
+            // Option — 부착/추종 방식
+            if (FoldGroup(e, "Option"))
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("FollowSpawner"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("ParentToSpawnerRoot"),
+                    new GUIContent("Parent To Spawner Root", "손 위치에서 스폰하되 캐릭터 루트에 붙임 — 손 스윙 무시, 캐릭터 이동/방향만 따라감"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
+                    new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
+                EditorGUI.indentLevel--;
+            }
+
+            // 파티클 노브 — 타이밍/배치 + 모양/색(단일 PS의 조합별 델타)
+            if (FoldGroup(e, "파티클 노브"))
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("Duration"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("StartLifetime"),
+                    new GUIContent("Start Lifetime", "0 = 프리팹 기본값(안 덮음). >0이면 덮어써 나오고 사라지는 전체 속도 조절 — 작을수록 빠른 번쩍"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("PositionOffset"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
+                EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
+                DrawParticleShapeRows(e, prefab);
+                EditorGUI.indentLevel--;
+            }
+
+            // 쉐이더 노브 — 프리팹이 EffectParameterSet으로 선언한 게 있을 때만 그룹 노출
+            var shaderSet = prefab != null ? prefab.GetComponent<EffectParameterSet>() : null;
+            if (shaderSet != null && shaderSet.Parameters.Count > 0 && FoldGroup(e, "쉐이더 노브"))
+            {
+                EditorGUI.indentLevel++;
+                DrawParamOverrides(e, prefab);
+                EditorGUI.indentLevel--;
+            }
+
+            return structural;
+        }
+
+        // 그룹 접기 상태 — 순수 UI라 공유 메서드가 자체 보관(대상 인스턴스ID + 프로퍼티경로 + 그룹명 키).
+        // 없으면 펼침(기본). 도메인 리로드 시 초기화되는 건 무방.
+        private static readonly HashSet<string> _groupCollapsed = new HashSet<string>();
+
+        private static bool FoldGroup(SerializedProperty e, string label)
+        {
+            string key = e.serializedObject.targetObject.GetInstanceID() + e.propertyPath + label;
+            bool expanded = !_groupCollapsed.Contains(key);
+            bool now = EditorGUILayout.Foldout(expanded, label, true);
+            if (now != expanded) { if (now) _groupCollapsed.Remove(key); else _groupCollapsed.Add(key); }
+            return now;
+        }
+
+        // ── 파티클 모듈 토글 노브 (단일 PS의 조합별 델타: Size커브/시작색) ──
+        // 셰이더 노브와 달리 프리팹 선언이 필요 없다(파티클 모듈은 어느 PS에나 있는 보편 노브).
+        // 커브/색은 무해한 중립값이 없어 토글 = sparse: 끈 필드는 런타임에서 프리팹 기본값(baseline)으로 되돌린다.
+        // (StartLifetime은 '0=중립'이라 토글 없이 Entry 일반 필드로 그린다 — DrawEntryFields 참조)
+        public static void DrawParticleShapeRows(SerializedProperty entryProp, GameObject prefab)
+        {
+            var root = entryProp.FindPropertyRelative("ParticleOverride");
+            if (root == null) return;
+            if (prefab != null && prefab.GetComponentInChildren<ParticleSystem>(true) == null) return;
+
+            // Size over Lifetime — 커브 왼쪽=나오는 속도, 오른쪽=사라지는 속도
+            var onSize = root.FindPropertyRelative("OverrideSizeCurve");
+            EditorGUILayout.BeginHorizontal();
+            onSize.boolValue = EditorGUILayout.ToggleLeft(
+                new GUIContent("Size o/Life", "크기 커브. 왼쪽 기울기=나오는 속도, 오른쪽 기울기=사라지는 속도, 피크 위치=번쩍 타이밍"),
+                onSize.boolValue, GUILayout.Width(150));
+            using (new EditorGUI.DisabledScope(!onSize.boolValue))
+            {
+                var mult = root.FindPropertyRelative("SizeMultiplier");
+                mult.floatValue = EditorGUILayout.FloatField(mult.floatValue, GUILayout.Width(44));
+                var curve = root.FindPropertyRelative("SizeCurve");
+                curve.animationCurveValue = EditorGUILayout.CurveField(
+                    curve.animationCurveValue, Color.cyan, new Rect(0f, 0f, 1f, 1f));
+            }
+            EditorGUILayout.EndHorizontal();
+
+            // Start Color (HDR) — 밝기/색
+            var onCol = root.FindPropertyRelative("OverrideStartColor");
+            EditorGUILayout.BeginHorizontal();
+            onCol.boolValue = EditorGUILayout.ToggleLeft(
+                new GUIContent("Start Color", "시작 색(HDR). Intensity를 올리면 블룸이 터진다"),
+                onCol.boolValue, GUILayout.Width(150));
+            using (new EditorGUI.DisabledScope(!onCol.boolValue))
+            {
+                var c = root.FindPropertyRelative("StartColor");
+                c.colorValue = EditorGUILayout.ColorField(GUIContent.none, c.colorValue, true, true, true);
+            }
+            EditorGUILayout.EndHorizontal();
         }
 
         // ── 조합 내부 StartDelay 타임라인 ──

@@ -33,6 +33,17 @@ namespace ZZZ.Effects
         private MaterialPropertyBlock  _mpb;
         private bool                   _paramCacheInit;
 
+        // 파티클 모듈 노브(수명/Size커브/색)용 캐시 — 단일 PS와 그 프리팹 기본값 스냅샷.
+        // baseline은 최초 1회(모듈을 아직 안 덮은 상태)에 캡처해야 프리팹 기본값이 남는다.
+        private ParticleSystem   _overrideParticle;
+        private ParticleBaseline _particleBaseline;
+        private bool             _particleCacheInit;
+
+        // 머티리얼 스왑 노브용 캐시 — 단일 렌더러와 프리팹 기본 머티리얼(스왑 전 최초 1회 캡처).
+        private Renderer _overrideRenderer;
+        private Material _baseMaterial;
+        private bool     _materialCacheInit;
+
         public void Bind(EffectPool pool, CompositeEffectEntry entry)
         {
             _pool = pool;
@@ -41,7 +52,9 @@ namespace ZZZ.Effects
             CancelInvoke();   // 이전 재생의 ReleaseSelf/StopEmitting 예약 취소
 
             ApplyPlaybackSpeed(entry.PlaybackSpeed > 0f ? entry.PlaybackSpeed : 1f);
+            ApplyMaterialOverride(entry);
             ApplyParamOverrides(entry);
+            ApplyParticleOverrides(entry);
             if (entry.Duration > 0f)
                 Invoke(nameof(StopEmitting), entry.Duration);
 
@@ -93,6 +106,33 @@ namespace ZZZ.Effects
             }
             if (_paramSet == null) return;
             EffectParamApplier.Apply(entry, _paramSet, _renderers, _mpb);
+        }
+
+        // 파티클 모듈 노브를 단일 PS에 적용(셰이더 노브와 대칭). 프리팹 기본값(baseline)은 최초 1회 캡처 —
+        // 그 시점엔 아직 오버라이드를 안 덮었으므로 프리팹 원본이 남는다. 이후 매 Bind에서
+        // 오버라이드 있으면 그 값, 없으면 baseline으로 되돌려 풀 재사용 누수를 막는다.
+        private void ApplyParticleOverrides(CompositeEffectEntry entry)
+        {
+            if (!_particleCacheInit)
+            {
+                _overrideParticle  = GetComponentInChildren<ParticleSystem>(true);
+                _particleBaseline  = ParticleBaseline.Capture(_overrideParticle);
+                _particleCacheInit = true;
+            }
+            ParticleParamApplier.Apply(entry, _overrideParticle, _particleBaseline);
+        }
+
+        // 룩 통째 교체 — 단일 렌더러의 sharedMaterial을 조합의 MaterialOverride로(null이면 프리팹 기본).
+        // baseline(기본 머티리얼)은 스왑 전 최초 1회 캡처해 풀 재사용 시 복원한다.
+        private void ApplyMaterialOverride(CompositeEffectEntry entry)
+        {
+            if (!_materialCacheInit)
+            {
+                _overrideRenderer  = GetComponentInChildren<Renderer>(true);
+                _baseMaterial      = _overrideRenderer != null ? _overrideRenderer.sharedMaterial : null;
+                _materialCacheInit = true;
+            }
+            EffectMaterialApplier.Apply(entry.MaterialOverride, _overrideRenderer, _baseMaterial);
         }
 
         // 구간 이펙트가 끝났을 때(또는 섹션 이탈·캔슬) 외부(EffectHandle)에서 부르는 정지 진입점.

@@ -26,11 +26,19 @@ namespace ZZZ.Effects
         public GameObject Prefab;                    // 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 포함)
         public float      StartDelay = 0f;            // 이 조합 안에서의 상대 시차(초)
 
+        // 룩 통째 교체 노브 — 프리팹 렌더러(단일)의 sharedMaterial을 조합마다 스왑한다. null = 프리팹 기본값.
+        // 텍스처+색+파라미터+블렌드를 한 번에 바꾸고 오서링은 네이티브 머티리얼 인스펙터에서(툴로 안 빨려듦).
+        // sharedMaterial 참조 스왑이라 인스턴스화/릭 없음. 같은 셰이더 공유 규율(다른 셰이더/블렌드는 템플릿 프리팹).
+        // 셰이더 노브(MPB)와 공존 — 미세 조정은 MPB, 룩 전체 스왑은 이 필드. 메모리 effect-knob-vs-template-criteria.
+        public Material   MaterialOverride;
+
         [Header("Playback")]
         [Tooltip("방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 방출을 멈추고 잔여 파티클은 자연 소멸 — Looping 이펙트를 조합마다 다른 길이로 쓸 수 있다")]
         public float Duration      = 0f;
         [Tooltip("재생 속도 배율. 프리팹에 구운 simulationSpeed에 곱해지며, 전체 길이도 1/배율로 줄어든다")]
         public float PlaybackSpeed = 1f;
+        [Tooltip("파티클 Start Lifetime(초) 오버라이드. 0 = 프리팹 기본값(안 덮음). >0이면 덮어써 나오고 사라지는 전체 속도를 조절 — 작을수록 빠른 번쩍. Duration과 같은 '0=중립' 규칙이라 토글 없이 일반 필드")]
+        public float StartLifetime = 0f;
 
         [Header("Placement")]
         public string  Socket         = "";           // 붙일 본/소켓 이름 (빈값=스폰 원점)
@@ -57,5 +65,30 @@ namespace ZZZ.Effects
         // 재생 시 PooledEffectHandle.Bind가 MPB로 적용 — 같은 프리팹/풀을 조합마다 다른 룩으로 쓴다.
         // sparse: 여기 없는 선언 파라미터는 프리팹 기본값(EffectParamDecl.Default*)을 쓴다.
         public List<EffectParamOverride> ParamOverrides = new List<EffectParamOverride>();
+
+        // 프리팹 파티클(단일 PS)의 "조합별 델타" 노브. 셰이더 노브(ParamOverrides)와 같은 철학 —
+        // 같은 프리팹/풀을 조합마다 다른 타이밍/색으로 쓴다. 필드별 On 토글 = sparse: 끈 필드는
+        // Bind가 프리팹 기본값(베이스라인)으로 되돌린다(풀 재사용 누수 방지). 노브 판정 기준은
+        // 메모리 effect-knob-vs-template-criteria 참조. (텍스처는 값이라 셰이더 MPB 노브로 처리)
+        public ParticleParamOverride ParticleOverride = new ParticleParamOverride();
+    }
+
+    // 단일 ParticleSystem에 대한 조합별 "토글 오버라이드". 커브/색은 무해한 중립값이 없어
+    // Override* 토글로 sparse하게 적용한다(스칼라인 StartLifetime은 '0=중립'이라 Entry 일반 필드로 뺐다).
+    // 적용은 ParticleParamApplier(런타임 Bind + 에디터 프리뷰 공용). 모듈 struct에 직접 세팅한다.
+    [Serializable]
+    public class ParticleParamOverride
+    {
+        // 크기 커브(왼쪽=나오는 속도, 오른쪽=사라지는 속도) + 피크 배율. → sizeOverLifetime
+        public bool           OverrideSizeCurve = false;
+        public float          SizeMultiplier    = 1f;
+        public AnimationCurve SizeCurve = new AnimationCurve(
+            new Keyframe(0f, 0f), new Keyframe(0.15f, 1f), new Keyframe(1f, 0f));
+
+        // 시작 색(HDR). Intensity를 올리면 블룸이 터진다. → main.startColor
+        public bool                       OverrideStartColor = false;
+        [ColorUsage(true, true)] public Color StartColor     = Color.white;
+
+        public bool HasAny => OverrideSizeCurve || OverrideStartColor;
     }
 }

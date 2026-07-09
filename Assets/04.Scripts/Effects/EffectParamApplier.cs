@@ -82,4 +82,73 @@ namespace ZZZ.Effects
             return null;
         }
     }
+
+    // 룩 통째 교체 노브 — 단일 렌더러의 sharedMaterial을 조합별로 스왑(런타임 Bind + 에디터 프리뷰 공용).
+    // null 오버라이드는 baseline(프리팹 기본 머티리얼)으로 되돌려 풀 재사용 누수를 막는다.
+    // sharedMaterial 참조 대입이라 인스턴스화/릭/alloc 없음. 셰이더 노브(MPB)는 이 위에 얹혀 공존한다.
+    public static class EffectMaterialApplier
+    {
+        public static void Apply(Material ov, Renderer r, Material baseline)
+        {
+            if (r == null) return;
+            r.sharedMaterial = ov != null ? ov : baseline;
+        }
+    }
+
+    // 프리팹 파티클(단일 PS)의 기본 모듈값 스냅샷. 풀 재사용 시 오버라이드 안 한 필드를
+    // 이 값으로 되돌리려면 원본이 필요하다(= 셰이더 노브의 EffectParamDecl.Default* 역할).
+    // 파티클은 기본값이 데이터가 아니라 컴포넌트에 구워져 있어, 최초 1회 라이브로 캡처해 캐시한다.
+    public struct ParticleBaseline
+    {
+        public bool                          Valid;
+        public ParticleSystem.MinMaxCurve    StartLifetime;
+        public ParticleSystem.MinMaxGradient StartColor;
+        public bool                          SizeEnabled;
+        public ParticleSystem.MinMaxCurve    Size;
+
+        public static ParticleBaseline Capture(ParticleSystem ps)
+        {
+            var b = new ParticleBaseline();
+            if (ps == null) return b;
+            var main = ps.main;
+            var sol  = ps.sizeOverLifetime;
+            b.Valid         = true;
+            b.StartLifetime = main.startLifetime;
+            b.StartColor    = main.startColor;
+            b.SizeEnabled   = sol.enabled;
+            b.Size          = sol.size;
+            return b;
+        }
+    }
+
+    // 파티클 모듈 노브를 단일 PS에 적용. 셰이더 MPB(EffectParamApplier)와 대칭 — 런타임 Bind와
+    // 에디터 프리뷰가 공유해 룩을 일치시킨다. StartLifetime은 Entry 일반 필드('0=프리팹 기본값'),
+    // Size커브/시작색은 토글 오버라이드. 미적용(0/토글 off)은 baseline으로 되돌려 풀 재사용 누수를 막는다.
+    public static class ParticleParamApplier
+    {
+        public static void Apply(CompositeEffectEntry entry, ParticleSystem ps, in ParticleBaseline baseline)
+        {
+            if (ps == null || entry == null || !baseline.Valid) return;
+
+            var main = ps.main;
+            main.startLifetime = entry.StartLifetime > 0f
+                ? (ParticleSystem.MinMaxCurve)entry.StartLifetime : baseline.StartLifetime;
+
+            var ov = entry.ParticleOverride;
+            main.startColor = ov != null && ov.OverrideStartColor
+                ? (ParticleSystem.MinMaxGradient)ov.StartColor : baseline.StartColor;
+
+            var sol = ps.sizeOverLifetime;
+            if (ov != null && ov.OverrideSizeCurve)
+            {
+                sol.enabled = true;
+                sol.size    = new ParticleSystem.MinMaxCurve(ov.SizeMultiplier, ov.SizeCurve);
+            }
+            else
+            {
+                sol.enabled = baseline.SizeEnabled;
+                sol.size    = baseline.Size;
+            }
+        }
+    }
 }

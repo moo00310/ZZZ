@@ -27,6 +27,13 @@ namespace ZZZ.Editor.AnimationTool
             public bool       Captured;
             public Vector3    CapPos;
             public Quaternion CapRot;
+
+            // 파티클 노브 적용 대상(단일 PS)과 오버라이드 적용 전 프리팹 기본값(스폰 시 캡처)
+            public ParticleSystem   OverrideTarget;
+            public ParticleBaseline Baseline;
+            // 머티리얼 스왑 대상(단일 렌더러)과 스왑 전 기본 머티리얼
+            public Renderer OverrideRenderer;
+            public Material BaseMaterial;
         }
 
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
@@ -70,8 +77,10 @@ namespace ZZZ.Editor.AnimationTool
                 if (!active) { a.Captured = false; continue; }   // 비활성 → 다음 활성 진입 때 다시 캡처
 
                 PlaceFxAtom(a);   // 오프셋/스케일 편집 실시간 반영 (ParentToSpawnerRoot는 캡처 포즈로 고정)
+                EffectMaterialApplier.Apply(a.Entry.MaterialOverride, a.OverrideRenderer, a.BaseMaterial);   // 룩 통째 스왑
                 if (_fxMpb == null) _fxMpb = new MaterialPropertyBlock();
                 EffectParamApplier.Apply(a.Root, a.Entry, _fxMpb);   // 셰이더 노브 오버라이드 실시간 반영
+                ParticleParamApplier.Apply(a.Entry, a.OverrideTarget, a.Baseline);   // 파티클 모듈 노브(Simulate 전)
                 float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
                 foreach (var ps in a.Top)
                     if (ps != null) ps.Simulate(Mathf.Min(local, atomDur) * speed, true, true);
@@ -119,7 +128,11 @@ namespace ZZZ.Editor.AnimationTool
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
 
-            var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry, Socket = socket };
+            var target   = go.GetComponentInChildren<ParticleSystem>(true);
+            var renderer = go.GetComponentInChildren<Renderer>(true);
+            var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry, Socket = socket,
+                                        OverrideTarget = target, Baseline = ParticleBaseline.Capture(target),
+                                        OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null };
             if (!toRoot) ApplyFxTransform(a);   // 루트 부모형은 활성 진입 시 캡처해 배치
             go.SetActive(false);
             _fxAtoms.Add(a);
@@ -335,26 +348,8 @@ namespace ZZZ.Editor.AnimationTool
 
                 if (newExp)
                 {
-                    // 구조 필드(프리팹/소켓) — 변경 시 재생성
-                    EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("Socket"), new GUIContent("Socket"));
-                    bool structural = EditorGUI.EndChangeCheck();
-
-                    // 실시간 필드
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("StartDelay"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("Duration"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("PlaybackSpeed"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("PositionOffset"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("FollowSpawner"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("ParentToSpawnerRoot"),
-                        new GUIContent("Parent To Spawner Root", "손 위치에서 스폰하되 캐릭터 루트에 붙임 — 손 스윙 무시, 캐릭터 이동/방향만 따라감"));
-                    EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
-                        new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
-
-                    EffectEditorShared.DrawParamOverrides(e, prefab);
+                    // 필드 표시 순서는 두 툴 공용(EffectEditorShared). 구조 필드(Prefab/Socket) 변경 시 재생성.
+                    bool structural = EffectEditorShared.DrawEntryFields(e, prefabProp, prefab);
 
                     // 풀링/반납 — 접기
                     bool poolFold = _fxPoolFold.Contains(i);
