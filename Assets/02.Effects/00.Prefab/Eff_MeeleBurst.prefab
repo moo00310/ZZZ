@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 998472646268445300}
   - component: {fileID: 7008707175050353598}
   - component: {fileID: -6346802575915203098}
+  - component: {fileID: -550280946409954893}
   m_Layer: 0
   m_Name: Eff_MeeleBurst
   m_TagString: Untagged
@@ -170,7 +171,7 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 15
+      scalar: 13
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -4937,3 +4938,17 @@ MonoBehaviour:
   _syncToDuration: 1
   _duration: 0.5
   _clamp: 1
+--- !u!114 &-550280946409954893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7127868586447008791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f9c1e7a4b2d48c6a5e0f1b2c3d4e5f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.EffectPoolConfig
+  PrewarmCount: 4
+  MaxSize: 4
