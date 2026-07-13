@@ -89,7 +89,7 @@ namespace ZZZ.Effects
             return pool;
         }
 
-        // 캐릭터의 EffectPrewarmer가 로드 시 호출 — 프리팹 단위 전역 풀을 미리 채운다(첫 스폰 히칭/GC 방지).
+        // RegisterOwner가 프리팹의 EffectPoolConfig 값으로 호출 — 프리팹 단위 전역 풀을 미리 채운다(첫 스폰 히칭/GC 방지).
         // 이미 있는 풀이면 free 인스턴스를 count까지 보충한다(여러 캐릭터가 같은 프리팹을 프리웜해도 안전).
         // 상한(maxSize)은 풀 최초 생성 시에만 적용(프리팹 단위 공유라 최초값 유지).
         public static void Prewarm(GameObject prefab, int count, int maxSize)
@@ -102,6 +102,31 @@ namespace ZZZ.Effects
                 s_pools[prefab] = pool;
             }
             else pool.Prewarm(count);
+        }
+
+        // 소유권 등록 — 이 프리팹을 쓰는 캐릭터가 로드될 때(EffectOwnership이 config에서 유도해 호출).
+        // 용량(프리웜 개수·상한)은 프리팹의 EffectPoolConfig에서 읽는다 — 프리팹 단위 속성이라 소유자와 무관.
+        // Config가 없으면 온디맨드(프리웜 0·무제한). 풀은 Prewarm이 MaxSize와 함께 (없으면) 생성하고 owner만 추가.
+        public static void RegisterOwner(GameObject prefab, Object owner)
+        {
+            if (prefab == null || owner == null) return;
+
+            int count = 0, maxSize = 0;
+            var cfg = prefab.GetComponent<EffectPoolConfig>();
+            if (cfg != null) { count = cfg.PrewarmCount; maxSize = cfg.MaxSize; }
+
+            Prewarm(prefab, count, maxSize);
+            GetOrCreatePool(prefab).AddOwner(owner);
+        }
+
+        // 소유권 해제 — 캐릭터 언로드 시(OnDestroy). 마지막 owner가 빠지면 풀이 teardown되어
+        // 대기 인스턴스를 파괴하고, 재생 중이던 것도 끝나는 대로 회수된다(EffectPool.RemoveOwner).
+        // 텍스처 등 에셋 메모리까지 실제로 내리려면 씬 전환 등 적절한 시점에 Resources.UnloadUnusedAssets() 호출.
+        public static void UnregisterOwner(GameObject prefab, Object owner)
+        {
+            if (prefab == null || owner == null || s_pools == null) return;
+            if (s_pools.TryGetValue(prefab, out EffectPool pool))
+                pool.RemoveOwner(owner);
         }
 
         private static Transform GetPoolRoot()

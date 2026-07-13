@@ -54,8 +54,9 @@ namespace ZZZ.Effects
         // (FollowSpawner=소켓 부모 모드에선 무효 — 그땐 소켓 회전을 계속 따라감)
         public bool    IgnoreSocketRotation = false;
 
-        // 풀 프리웜/상한은 엔트리가 아니라 캐릭터의 EffectPrewarmer 컴포넌트에서 프리팹 단위로 설정한다
-        // (풀은 프리팹 단위 전역 공유 — 엔트리별로 두면 산발적이라 중앙화). 미프리웜 프리팹은 온디맨드 생성(무제한).
+        // 풀 프리웜/상한은 엔트리가 아니라 프리팹의 EffectPoolConfig 컴포넌트에서 프리팹 단위로 설정한다
+        // (풀은 프리팹 단위 전역 공유 — 용량은 프리팹의 속성). 소유권은 캐릭터가 config에서 유도해 등록(EffectOwnership).
+        // 미설정(EffectPoolConfig 없는) 프리팹은 온디맨드 생성(프리웜 0·무제한).
 
         [Header("Despawn")]
         public DespawnMode Despawn  = DespawnMode.ParticleStopped;

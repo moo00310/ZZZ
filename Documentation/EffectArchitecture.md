@@ -18,7 +18,9 @@
     ▼
 [ EffectPool ]                ← 프리팹 단위 풀 (Get / Release, MaxSize 초과분 파괴)
     │   같은 프리팹을 여러 조합이 써도 풀은 공유된다 (키 = 프리팹 GameObject)
-    │   프리웜은 캐릭터의 EffectPrewarmer가 로드 시 EffectService.Prewarm으로 채움
+    │   용량(프리웜 수·상한)은 프리팹의 EffectPoolConfig가 정의
+    │   소유권 refcount — 캐릭터가 config에서 유도해 등록(EffectOwnership),
+    │   마지막 소유자가 떠나면 teardown(회수)
     ▼
 [ 이펙트 인스턴스 ]
     ├── PooledEffectHandle        재생 제어(속도/방출 컷/노브) + 자기 풀 반납 (ParticleStopped / Fixed)
@@ -50,8 +52,8 @@
 
 > 트레이드오프 — Entry는 "그 조합 안에서의" 값(배치/시차/반납/노브)만 들고, 프리팹의 고유 속성인
 > **풀 설정(프리웜 수·상한)은 Entry에서 뺐다**. 풀은 프리팹당 하나뿐인데 Entry마다 풀 설정을 두면
-> "어느 Entry 값이 이기냐"가 모호했기 때문 — 지금은 캐릭터의 [EffectPrewarmer](#풀-프리웜-effectprewarmer)가
-> 프리팹 단위로 한곳에 모아 선언한다(단일 출처). 덕분에 에셋 수가 줄고 편집 동선이 조합 하나로 끝난다.
+> "어느 Entry 값이 이기냐"가 모호했기 때문 — 지금은 프리팹의 [EffectPoolConfig](#풀-용량과-소유권-effectpoolconfig--effectownership)가
+> 프리팹 단위로 선언한다(단일 출처). 덕분에 에셋 수가 줄고 편집 동선이 조합 하나로 끝난다.
 
 ### 시차(딜레이)의 두 층위
 
@@ -88,8 +90,8 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `ParamOverrides` | 이 조합에서 덮어쓴 셰이더 노브(이름-값, sparse, MPB 적용) — [조합별 오버라이드](#조합별-오버라이드--노브-3층) 참조 |
 | `ParticleOverride` | 파티클 모듈 토글 오버라이드(Size over Lifetime 커브 / Start Color HDR). 커브·색은 중립값이 없어 토글 sparse |
 
-> 풀 프리웜/상한(과거 `PrewarmCount`/`MaxSize`)은 Entry가 아니라 캐릭터의
-> [EffectPrewarmer](#풀-프리웜-effectprewarmer) 컴포넌트에서 프리팹 단위로 설정한다.
+> 풀 프리웜/상한(과거 `PrewarmCount`/`MaxSize`)은 Entry가 아니라 프리팹의
+> [EffectPoolConfig](#풀-용량과-소유권-effectpoolconfig--effectownership) 컴포넌트에서 프리팹 단위로 설정한다.
 
 ---
 
@@ -106,7 +108,7 @@ Play(composite, spawner, trackForStop)
     └── StartDelay > 0  → EffectServiceRunner.Delay(코루틴) → PlayEntry → handle?.Add
                            (지연 중 spawner가 파괴되면 스킵)
 PlayEntry(entry, spawner)
-    ├── GetOrCreatePool(prefab)      풀이 없으면 온디맨드 생성(상한 0=무제한) — 프리웜은 별도(EffectPrewarmer)
+    ├── GetOrCreatePool(prefab)      풀이 없으면 온디맨드 생성(상한 0=무제한) — 프리웜/상한은 별도(RegisterOwner가 EffectPoolConfig로)
     ├── pool.Get()                   재사용 or 신규 인스턴스
     ├── FindSocket → PlaceInstance   소켓 본 검색 + FollowSpawner/ParentToSpawnerRoot/IgnoreSocketRotation 배치
     ├── PooledEffectHandle.Bind      재생 제어(PlaybackSpeed·Duration 방출 컷·노브 MPB) + 반납 방식 바인딩 (매 재생마다)
@@ -121,22 +123,43 @@ PlayEntry(entry, spawner)
 
 ---
 
-## 풀 프리웜 (EffectPrewarmer)
+## 풀 용량과 소유권 (EffectPoolConfig / EffectOwnership)
 
-풀은 프리팹 단위 **전역 공유**(EffectService)라, "무엇을 몇 개 미리 만들지"도 프리팹 단위로 한곳에 모으는 게 자연스럽다.
-[EffectPrewarmer.cs](../Assets/04.Scripts/Effects/EffectPrewarmer.cs)를 캐릭터(스포너)에 붙여, 그 캐릭터가 쓰는
-이펙트 프리팹 + 프리웜 개수·상한을 리스트로 선언하면 `Start`에서 `EffectService.Prewarm(prefab, count, maxSize)`을 호출한다.
+풀은 프리팹 단위 **전역 공유**(EffectService)다. 여기엔 성격이 다른 두 데이터가 얽혀 있어 **분리**했다:
+**용량**(프리웜 수·상한)은 *프리팹의 속성*이고, **소유권**(누가 이 프리팹을 쓰나)은 *캐릭터의 속성*이다.
+
+### ① 용량 — 프리팹의 [EffectPoolConfig](../Assets/04.Scripts/Effects/EffectPoolConfig.cs)
+
+이펙트 프리팹 루트에 붙이는 컴포넌트. 풀 용량은 프리팹당 하나로 정의돼야 하므로(공유 자원) 프리팹 자신이 들고 있는다.
 
 | 필드 | 의미 |
 |------|------|
-| `Prefab` | 프리웜할 이펙트 프리팹 |
-| `Count` | 미리 만들어둘 인스턴스 수(첫 스폰 히칭/GC 방지) |
-| `MaxSize` | 풀 상한(0=무제한). **풀 최초 생성 시에만** 적용 |
+| `PrewarmCount` | 미리 만들어둘 인스턴스 수(첫 스폰 히칭/GC 방지). 0 = 프리웜 안 함(온디맨드) |
+| `MaxSize` | 풀 상한(0=무제한). 초과분은 반납 시 파괴 |
 
-- **왜 Entry가 아니라 컴포넌트인가** — 풀이 프리팹당 하나뿐이라, 같은 프리팹을 여러 Entry가 써도 프리웜 값은 하나여야 한다.
-  Entry에 두면 "어느 Entry 값이 이기냐"가 모호했다 → 프리팹 단위 선언으로 단일 출처를 만들었다(위 [설계 원칙](#설계-원칙--실행은-조합-단위-풀링은-프리팹-단위) 참조).
-- **중복 안전** — 여러 캐릭터가 같은 프리팹을 프리웜해도 풀은 하나만 만들고 free 인스턴스를 `Count`까지 보충할 뿐이다.
-- **미프리웜 프리팹** — 선언 안 한 프리팹은 첫 재생 때 온디맨드로 풀이 생기고 상한은 무제한(0)이다.
+- **왜 프리팹인가** — 풀이 프리팹당 하나뿐이라 용량도 하나여야 한다. 과거엔 캐릭터마다 선언해
+  같은 프리팹의 `MaxSize`가 **로드 순서로 갈리던** 잠재 버그가 있었다 → 프리팹 속성으로 옮겨 단일 출처화.
+- **Config 없는 프리팹** — 온디맨드(프리웜 0·무제한)로 동작한다.
+
+### ② 소유권 + 회수 — [EffectOwnership](../Assets/04.Scripts/Core/EffectOwnership.cs) (config 유도)
+
+"이 캐릭터가 어떤 이펙트를 쓰나"는 이미 캐릭터의 `AnimationConfig`(→ Effect Notify → CompositeEffect → Entry.Prefab)에
+있다. 그래서 **손으로 리스트를 만들지 않고 config에서 유도**한다(단일 진실원, 중복/drift 없음). state machine이:
+
+- **로드**(`Awake`) — `EffectOwnership.Register(this, 내 config들)` → distinct 프리팹마다
+  `EffectService.RegisterOwner`(프리팹 `EffectPoolConfig`대로 프리웜 + owner 집합에 추가).
+- **파괴**(`OnDestroy`) — `EffectOwnership.Unregister` → `EffectService.UnregisterOwner`.
+
+**refcount 회수(teardown)** — 풀은 owner 집합을 들고, 여러 캐릭터가 같은 프리팹을 공유하면 owner가 여럿이다.
+마지막 owner가 빠질 때만 회수한다(공유 이펙트가 안 깨짐):
+
+- owner 0 → `EffectPool`이 teardown 진입: 대기(free) 인스턴스는 즉시 파괴, 재생 중이던 것도 반납되는 순간 파괴.
+- 풀 객체 자체는 s_pools에 남겨둔다(빈 껍데기, 오버헤드 미미) — owner가 다시 오면 Prewarm으로 재충전.
+- **에셋 메모리**(텍스처 등)까지 실제로 내리려면 씬 전환 등 적절한 시점에 `Resources.UnloadUnusedAssets()`를 별도 호출.
+  teardown은 "붙든 참조를 끊는" 단계까지만 한다.
+
+> **모바일 상주 대응** — 이 refcount 덕분에 안 쓰는 캐릭터의 전용 이펙트는 그 캐릭터가 언로드되면 풀에서 빠진다.
+> 공유 이펙트는 마지막 사용자가 떠날 때까지 유지 → 상주와 공유를 둘 다 만족.
 
 ---
 
@@ -344,7 +367,7 @@ ParticleSystem이 소유한다. 텍스처를 개별 노브로 빼는 대신 [머
 |------|------|
 | 목록 (`List`) | 프로젝트의 모든 `CompositeEffect` 브라우징 + New Composite 생성 |
 | 타임라인 (`Timeline`) | Entry를 시간축 막대로 표시 — **막대 드래그 = `StartDelay`(시차), 우측 엣지 드래그 = `Duration`(방출 컷)** 을 데이터에 굽는다. 막대 길이는 `PlaybackSpeed`/`Duration` 반영 |
-| 인스펙터 (`Inspector`) | Entry별 편집 — 접기 그룹으로 정리: Option(추종) / 파티클 노브(Duration·StartLifetime·배치·Size·Color) / 쉐이더 노브 + 상단 Material 스왑 (풀 프리웜은 EffectPrewarmer로 분리) |
+| 인스펙터 (`Inspector`) | Entry별 편집 — 접기 그룹으로 정리: Option(추종) / 파티클 노브(Duration·StartLifetime·배치·Size·Color) / 쉐이더 노브 + 상단 Material 스왑 (풀 용량은 프리팹 EffectPoolConfig로 분리) |
 | 씬 프리뷰 (`Preview`) | `ParticleSystem.Simulate` 스크럽으로 플레이 진입 없이 조합 연출 확인 |
 | 풀 개요 (`Pool`) | 플레이 중 프리팹별 풀 상태(Free/Live/Created/Max) 모니터 |
 
@@ -377,15 +400,18 @@ ParticleSystem이 소유한다. 텍스처를 개별 노브로 빼는 대신 [머
 ```
 Assets/04.Scripts/Effects/               런타임
 ├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 노브 3층: 머티리얼/파티클/셰이더) + ParticleParamOverride
-├── EffectService.cs          ★ 진입점 — Play(조합, trackForStop) / Prewarm / 프리팹별 풀 관리 / 소켓 검색·배치
-├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize)
-├── EffectPrewarmer.cs        캐릭터에 부착 — 프리팹 단위 풀 프리웜/상한 선언 (Start에서 EffectService.Prewarm)
+├── EffectService.cs          ★ 진입점 — Play(조합, trackForStop) / Prewarm / RegisterOwner·UnregisterOwner / 프리팹별 풀 관리 / 소켓 검색·배치
+├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize + owner refcount/teardown)
+├── EffectPoolConfig.cs       이펙트 프리팹 루트에 부착 — 풀 용량(PrewarmCount/MaxSize) 선언 (프리팹 속성)
 ├── EffectHandle.cs           구간 이펙트 정지 토큰 — 한 Play로 스폰된 인스턴스 묶음을 Stop
 ├── EffectServiceRunner.cs    StartDelay 지연 실행용 코루틴 호스트 (풀 루트에 부착)
 ├── PooledEffectHandle.cs     인스턴스 재생 제어(속도/방출 컷/노브 3층: 머티리얼·파티클·MPB) + 풀 반납 (ParticleStopped / Fixed) + StopWindowed
 ├── ParticleStopRelay.cs      최상위 파티클의 Stop 콜백을 핸들로 릴레이
 ├── EffectParameterSet.cs     프리팹이 노출할 셰이더 노브 선언 (에디터 메타데이터)
 └── EffectParamApplier.cs     노브 3층 적용기 모음 (런타임/프리뷰 공용) — EffectParamApplier(MPB) · ParticleParamApplier+ParticleBaseline(모듈) · EffectMaterialApplier(머티리얼 스왑)
+
+Assets/04.Scripts/Core/
+└── EffectOwnership.cs        캐릭터 config에서 이펙트 프리팹을 유도해 풀에 소유권 등록/해제 (state machine이 호출)
 
 Assets/04.Scripts/Combat/                이펙트 연동
 ├── EffectHitVolume.cs        스폰 시 자기 범위 타격 (이펙트 범위 = 타격 범위)

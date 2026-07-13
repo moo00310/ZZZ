@@ -91,6 +91,10 @@ namespace ZZZ.Player.StateMachine
 
             // 협력 객체 조립 — 트리거는 인스펙터에서 만들어진 인스턴스에 런타임 의존만 주입(Init).
             var registry = new ConfigRegistry(_startConfig, _configs);
+
+            // 이 캐릭터가 config에서 참조하는 이펙트 프리팹의 소유권 등록 → 전역 풀 프리웜(파괴 시 해제).
+            EffectOwnership.Register(this, OwnedConfigs());
+
             _input = new InputBuffer(_inputBufferWindow);
             _dodge.Init(this, _state, registry, _input, resources);
             _parry.Init(this, _state, registry, _input);
@@ -104,6 +108,17 @@ namespace ZZZ.Player.StateMachine
         // CallbackContext.interaction으로 Tap/Hold를 구분(InputValue엔 이 정보가 없음). 나머지 입력은 SendMessages 유지.
         private void OnEnable()  { if (_playerInput != null) _playerInput.actions["Attack"].performed += OnAttackPerformed; }
         private void OnDisable() { if (_playerInput != null) _playerInput.actions["Attack"].performed -= OnAttackPerformed; }
+
+        // 이펙트 소유권 해제 — 이 프리팹들의 마지막 소유자였다면 전역 풀이 회수된다(모바일 상주 방지).
+        private void OnDestroy() => EffectOwnership.Unregister(this, OwnedConfigs());
+
+        // 이 캐릭터가 쓰는 config 전체(시작 + 이벤트 진입용) — 이펙트 소유권 유도에 사용.
+        private IEnumerable<AnimationConfig> OwnedConfigs()
+        {
+            yield return _startConfig;
+            if (_configs != null)
+                foreach (var c in _configs) yield return c;
+        }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → AnimatorBridge._animator 초기화 보장
         private void Start() => _state.Enter();

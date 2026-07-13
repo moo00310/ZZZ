@@ -107,16 +107,17 @@ Animator Controller에 Trigger / Bool / Transition 화살표를 쌓는 전통 �
 ### 대표 결과물 (왜 → 어떻게 → 장단점)
 
 **① 이펙트 조합 에셋 (`CompositeEffect`) — 프리팹 직접 참조 (SO)**
-개별 이펙트마다 SO를 만드는 초기안(`EffectDefinition`)은 에셋 관리 비용이 실익보다 커서 폐기하고,
-각 Entry가 **프리팹을 직접 참조**하며 재생(시차·방출 지속·속도 배율)·배치(소켓/오프셋/추종)·풀링(프리워밍/상한)·반납 설정을 자체 보유한다 — 같은 프리팹을 조합마다 다르게 재생.
-단일 이펙트도 Entry 1개짜리 조합이라 Notify 쪽 타입 분기가 없다.
-→ 에셋 수·편집 동선 최소화. 단, 프리팹 공유 시 풀 설정은 최초 생성 Entry 값을 따른다.
+각 Entry가 **프리팹을 직접 참조**하며 재생(시차·방출 지속·속도 배율)·배치(소켓/오프셋/추종)·반납 설정을 자체 보유한다 — 같은 프리팹을 조합마다 다르게 재생.
+단일 이펙트도 Entry 1개짜리 조합이라 Notify 쪽 타입 분기가 없다. 풀 용량(프리워밍/상한)은 조합이 아니라 프리팹의 `EffectPoolConfig`가 소유(프리팹 속성).
+→ 에셋 수·편집 동선 최소화.
 
 **② 풀링 런타임 (`EffectService` + `EffectPool`) — GC 절감, 모바일 대비**
 `ConfigState.DispatchNotify`의 `Instantiate`를 [EffectService.Play](Documentation/EffectArchitecture.md#런타임-진입점-effectservice)로
 교체 — 프리팹별 풀에서 꺼내 소켓 본에 배치하고, 재생이 끝나면 **자동 반납**한다
 ([PooledEffectHandle](Documentation/EffectArchitecture.md#자동-반납--pooledeffecthandle--particlestoprelay):
 최상위 파티클 전부 정지 감지 / Lifetime 강제 반납). 프리워밍으로 첫 스폰 히칭을 막고 `MaxSize`로 피크만 흡수한다.
+풀 소유권은 캐릭터가 config에서 유도해 등록하고([EffectOwnership](Documentation/EffectArchitecture.md#풀-용량과-소유권-effectpoolconfig--effectownership)),
+**마지막 소유자가 떠나면 회수(refcount teardown)** — 모바일에서 안 쓰는 이펙트가 상주하지 않게 한다.
 
 **③ 이펙트 전용 에디터 툴 (`EffectTool` + AnimationConfigTool "Effect" 탭)**
 

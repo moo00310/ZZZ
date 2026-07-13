@@ -62,11 +62,15 @@ namespace ZZZ.Monster
 
             _hitTarget = GetComponent<HitTarget>();
             _hitTarget.OnDamaged += OnDamaged;
+
+            // 이 몬스터가 config에서 참조하는 이펙트 프리팹의 소유권 등록 → 전역 풀 프리웜(파괴 시 해제).
+            EffectOwnership.Register(this, _idleConfig, _hitConfig);
         }
 
         private void OnDestroy()
         {
             if (_hitTarget != null) _hitTarget.OnDamaged -= OnDamaged;
+            EffectOwnership.Unregister(this, _idleConfig, _hitConfig);
         }
 
         // Start는 모든 Awake 이후 → AnimatorBridge 초기화 보장
