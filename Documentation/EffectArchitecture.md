@@ -1,8 +1,12 @@
 # 이펙트 아키텍처
 
-> **용어 안내** — **Notify** = 애니메이션 재생 중 특정 시점에 발동하는 애니메이션 이벤트
-> ([애니메이션 문서](AnimationArchitecture.md) 내부 용어) · **조합**(`CompositeEffect`) = 여러 이펙트
-> 프리팹을 시차·배치와 함께 묶은 에셋 · **Entry** = 조합 안의 프리팹 1개 항목.
+애니메이션 Notify에서 이펙트를 재생하고 풀로 반납하는 과정을 설명한다.
+
+| 용어 | 의미 |
+|---|---|
+| Notify | 애니메이션 재생 중 특정 시점이나 구간에 실행되는 이벤트 |
+| CompositeEffect | 여러 이펙트 프리팹과 재생 설정을 묶은 에셋 |
+| Entry | CompositeEffect 안의 프리팹 한 항목 |
 
 ## 전체 구조도
 
@@ -400,7 +404,7 @@ ParticleSystem이 소유한다. 텍스처를 개별 노브로 빼는 대신 [머
 ```
 Assets/04.Scripts/Effects/               런타임
 ├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 노브 3층: 머티리얼/파티클/셰이더) + ParticleParamOverride
-├── EffectService.cs          ★ 진입점 — Play(조합, trackForStop) / Prewarm / RegisterOwner·UnregisterOwner / 프리팹별 풀 관리 / 소켓 검색·배치
+├── EffectService.cs          진입점 — Play / Prewarm / 소유권 등록 / 프리팹별 풀 관리 / 배치
 ├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize + owner refcount/teardown)
 ├── EffectPoolConfig.cs       이펙트 프리팹 루트에 부착 — 풀 용량(PrewarmCount/MaxSize) 선언 (프리팹 속성)
 ├── EffectHandle.cs           구간 이펙트 정지 토큰 — 한 Play로 스폰된 인스턴스 묶음을 Stop
@@ -418,7 +422,7 @@ Assets/04.Scripts/Combat/                이펙트 연동
 └── EffectProgressDriver.cs   파티클 시간 → 셰이더 _Progress 구동 (MPB 격리)
 
 Assets/05.Editor/
-├── EffectTool/               ★ 전용 툴 (ZZZ/Effect Tool) — partial 분할
+├── EffectTool/               전용 편집 도구 (ZZZ/Effect Tool) — partial 분할
 │   ├── EffectTool.cs             창 골격 + 툴바 + 목록/타임라인/인스펙터 배치
 │   ├── EffectTool.List.cs        조합 브라우징
 │   ├── EffectTool.Timeline.cs    StartDelay 타임라인

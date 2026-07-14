@@ -1,8 +1,13 @@
-# 플레이어 애니메이션 아키텍처
+# 전투 애니메이션 아키텍처
 
-> **용어 안내** — 이 문서(및 코드)의 내부 용어 셋. **섹션** = config 안의 클립 구간(`TrackClip`) ·
-> **Link** = 구간 간 전이 정의(`ClipLink`) · **Notify** = 재생 중 특정 시점에 발동하는 애니메이션 이벤트 ·
-> **Module** = 구간에 붙는 로직 플러그인(`SectionModule`). 상세는 [전투 흐름 데이터 에셋](#전투-흐름-데이터-에셋-animationconfig) 절.
+`AnimationConfig`가 전투 흐름을 저장하고 `ConfigState`가 이를 실행하는 과정을 설명한다. 플레이어와 몬스터는 같은 실행 코드를 사용한다.
+
+| 용어 | 코드 타입 | 의미 |
+|---|---|---|
+| Section | `TrackClip` | Config 안의 애니메이션 구간 |
+| Link | `ClipLink` | Section 사이의 전이 |
+| Notify | `TrackNotify` | 재생 중 특정 시점이나 구간에 실행되는 이벤트 |
+| Module | `SectionModule` | Section의 일정 구간에 적용되는 기능 |
 
 ## 전체 구조도
 
@@ -558,7 +563,7 @@ Assets/04.Scripts/
 ├── Movement/
 │   └── RootMotionTracker.cs         본 위치 프레임 델타 추출 헬퍼
 │
-├── Monster/                         ★ 몬스터 — 같은 ConfigState 엔진 재사용 (Idle+Hit 스캐폴드)
+├── Monster/                         몬스터 — 같은 ConfigState 사용 (Idle+Hit)
 │   ├── MonsterStateMachine.cs       입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
 │   ├── MonsterController.cs         IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
 │   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
@@ -579,7 +584,7 @@ Assets/04.Scripts/
         ├── InputBuffer.cs            선입력 버퍼
         │
         ├── States/
-        │   └── ConfigState.cs        ★ 공유 러너 — config로 모든 흐름 구동 (플레이어·몬스터)
+        │   └── ConfigState.cs        config 실행기 (플레이어·몬스터 공용)
         │
         ├── Triggers/                 외부/전역 진입 (push)
         │   ├── HitTrigger.cs             피격 + 패링 쳐냄 분기
