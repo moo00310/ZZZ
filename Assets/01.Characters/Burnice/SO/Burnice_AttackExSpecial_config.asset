@@ -218,7 +218,7 @@ MonoBehaviour:
     TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
-      TargetSection: 
+      TargetSection: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_End
       BlendDuration: 0.01
       EntryOffset: 0
       Condition:
