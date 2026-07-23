@@ -217,7 +217,7 @@ namespace ZZZ.Editor.Effects
 
         // ── Entry 필드 확정 표시 순서 (두 툴 공용) ──
         // Prefab → Socket → StartDelay/PlaybackSpeed → [Option] → [파티클 노브] → [쉐이더 노브] (그룹은 접기 가능).
-        // 구조 필드(Prefab/Socket) 변경 여부를 리턴 — 호출 툴이 프리뷰 재생성 트리거로 쓴다.
+        // 프리뷰 구조(Prefab/Socket/부착 방식) 변경 여부를 리턴 — 호출 툴이 재생성 트리거로 쓴다.
         public static bool DrawEntryFields(SerializedProperty e, SerializedProperty prefabProp, GameObject prefab)
         {
             // 구조 필드 — 변경 시 재생성
@@ -238,11 +238,13 @@ namespace ZZZ.Editor.Effects
             if (FoldGroup(e, "Option"))
             {
                 EditorGUI.indentLevel++;
+                EditorGUI.BeginChangeCheck();
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("FollowSpawner"));
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("ParentToSpawnerRoot"),
                     new GUIContent("Parent To Spawner Root", "손 위치에서 스폰하되 캐릭터 루트에 붙임 — 손 스윙 무시, 캐릭터 이동/방향만 따라감"));
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("IgnoreSocketRotation"),
                     new GUIContent("Ignore Socket Rotation", "소켓 위치만 쓰고 회전은 무시(월드 기준). 본에 회전이 구워져 EulerOffset 조준이 어려울 때"));
+                structural |= EditorGUI.EndChangeCheck();
                 EditorGUI.indentLevel--;
             }
 

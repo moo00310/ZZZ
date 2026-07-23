@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using ZZZ.Combat;
 using ZZZ.Effects;
 using ZZZ.Editor.Effects;
 
@@ -18,6 +19,7 @@ namespace ZZZ.Editor.EffectTool
             public ParticleBaseline Baseline;         // 오버라이드 끈 필드 복원용 프리팹 기본값(스폰 시 캡처)
             public Renderer OverrideRenderer;         // 머티리얼 스왑 대상(단일 렌더러)
             public Material BaseMaterial;             // 스왑 전 프리팹 기본 머티리얼
+            public EffectProgressDriver[] ProgressDrivers;
         }
 
         private GameObject _previewRoot;
@@ -108,11 +110,14 @@ namespace ZZZ.Editor.EffectTool
                 // PlaybackSpeed는 시뮬 시간 압축으로, Duration은 유효 길이 클램프로 근사
                 float speed = inst.Entry.PlaybackSpeed > 0f ? inst.Entry.PlaybackSpeed : 1f;
                 float dur   = Mathf.Max(EffectEditorShared.EntryDuration(inst.Entry), 0.05f);
+                float playbackTime = Mathf.Min(local, dur) * speed;
                 foreach (var ps in inst.TopSystems)
                 {
                     if (ps == null) continue;
-                    ps.Simulate(Mathf.Min(local, dur) * speed, true, true);
+                    ps.Simulate(playbackTime, true, true);
                 }
+                foreach (var driver in inst.ProgressDrivers)
+                    if (driver != null) driver.Evaluate(playbackTime);
             }
             SceneView.RepaintAll();
         }
@@ -162,6 +167,7 @@ namespace ZZZ.Editor.EffectTool
                 Root = go, TopSystems = top, Entry = entry,
                 OverrideTarget = target, Baseline = ParticleBaseline.Capture(target),
                 OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null,
+                ProgressDrivers = go.GetComponentsInChildren<EffectProgressDriver>(true),
             });
         }
 

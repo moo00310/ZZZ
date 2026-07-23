@@ -25,6 +25,7 @@ namespace ZZZ.Effects
         private ParticleSystem[] _allSystems;
         private float[]          _baseSimSpeeds;
         private float            _appliedSpeed = 1f;
+        private WeaponTrailController[] _trailControllers;
 
         // 셰이더 노브 오버라이드(MPB)용 캐시 — 프리팹의 선언(EffectParameterSet)과 대상 렌더러.
         // 인스턴스 구조는 재사용 내내 안 바뀌므로 최초 1회만 수집한다.
@@ -156,6 +157,12 @@ namespace ZZZ.Effects
             if (_topLevelSystems == null) _topLevelSystems = CollectTopLevelSystems();
             foreach (var ps in _topLevelSystems)
                 if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+            if (_trailControllers == null)
+                _trailControllers = GetComponentsInChildren<WeaponTrailController>(true);
+
+            foreach (WeaponTrailController trailController in _trailControllers)
+                if (trailController != null) trailController.StopEmission();
         }
 
         // 다른 ParticleSystem의 자식인 건 제외(중첩 서브이미터는 부모 정지에 딸려간다고 본다) — 남는 게 최상위.

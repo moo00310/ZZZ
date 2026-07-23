@@ -47,11 +47,17 @@ namespace ZZZ.Combat
         private void Update()
         {
             EnsureInit();
+            Evaluate(_ps.time);
+        }
 
-            // Playback Time(_ps.time)을 전체 길이로 나눈 정규화 진행도.
-            // 플레이 모드/씬 프리뷰 모두 파티클과 자동 동기화.
+        // Effect Tool처럼 ParticleSystem.Simulate로 시간을 직접 스크럽하는 에디터 경로에서도
+        // MonoBehaviour.Update에 의존하지 않고 같은 진행도를 적용할 수 있게 한다.
+        public void Evaluate(float playbackTime)
+        {
+            EnsureInit();
+
             float span = ResolveSpan();
-            float p    = span > 0f ? _ps.time / span : 1f;
+            float p    = span > 0f ? playbackTime / span : 1f;
             if (_clamp) p = Mathf.Clamp01(p);
 
             _renderer.GetPropertyBlock(_mpb);

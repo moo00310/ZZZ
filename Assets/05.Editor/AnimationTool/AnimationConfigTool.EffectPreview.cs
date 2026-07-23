@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Combat;
 using ZZZ.Effects;
 using ZZZ.Editor.Effects;
 
@@ -12,7 +13,7 @@ namespace ZZZ.Editor.AnimationTool
     // 순차(비-Combo) 모드 전용 — Combo 타이밍은 분기·동적이라 절대 시간 계산이 불가.
     public partial class AnimationConfigTool
     {
-        // 스폰된 프리뷰 이펙트 하나(= 조합 Entry 하나). 소켓 본에 붙어 샘플된 포즈를 따라간다.
+        // 스폰된 프리뷰 이펙트 하나(= 조합 Entry 하나).
         private class FxPreviewAtom
         {
             public GameObject Root;
@@ -21,8 +22,7 @@ namespace ZZZ.Editor.AnimationTool
             public TrackNotify Notify;
             public CompositeEffectEntry Entry;
 
-            // ParentToSpawnerRoot 프리뷰용 — 발동(활성 진입) 순간 소켓 포즈를 루트 로컬로 캡처해 고정.
-            // 손 스윙(이후 프레임의 소켓 이동)을 따라가지 않고 캐릭터 루트만 따라가게 한다(런타임과 동일).
+            // 분리/ParentToSpawnerRoot 프리뷰용 — 발동 순간의 소켓 포즈를 캡처한다.
             public Transform  Socket;
             public bool       Captured;
             public Vector3    CapPos;
@@ -34,6 +34,7 @@ namespace ZZZ.Editor.AnimationTool
             // 머티리얼 스왑 대상(단일 렌더러)과 스왑 전 기본 머티리얼
             public Renderer OverrideRenderer;
             public Material BaseMaterial;
+            public EffectProgressDriver[] ProgressDrivers;
         }
 
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
@@ -82,8 +83,11 @@ namespace ZZZ.Editor.AnimationTool
                 EffectParamApplier.Apply(a.Root, a.Entry, _fxMpb);   // 셰이더 노브 오버라이드 실시간 반영
                 ParticleParamApplier.Apply(a.Entry, a.OverrideTarget, a.Baseline);   // 파티클 모듈 노브(Simulate 전)
                 float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
+                float playbackTime = Mathf.Min(local, atomDur) * speed;
                 foreach (var ps in a.Top)
-                    if (ps != null) ps.Simulate(Mathf.Min(local, atomDur) * speed, true, true);
+                    if (ps != null) ps.Simulate(playbackTime, true, true);
+                foreach (var driver in a.ProgressDrivers)
+                    if (driver != null) driver.Evaluate(playbackTime);
             }
             SceneView.RepaintAll();
         }
@@ -114,9 +118,12 @@ namespace ZZZ.Editor.AnimationTool
         private void SpawnFxAtom(int clipIdx, TrackNotify notify, CompositeEffectEntry entry)
         {
             Transform socket = FindSocket(entry.Socket);
-            // ParentToSpawnerRoot: 소켓 위치에서 스폰하되 부모는 캐릭터 루트(_target). 배치는 매 프레임 PlaceFxAtom가.
+            // 런타임과 같은 부모 규칙: FollowSpawner만 소켓, ParentToSpawnerRoot는 캐릭터 루트,
+            // 둘 다 아니면 월드에 분리한다.
             bool toRoot = entry.ParentToSpawnerRoot && _target != null;
-            Transform parent = toRoot ? _target.transform : socket;
+            Transform parent = toRoot
+                ? _target.transform
+                : entry.FollowSpawner ? socket : null;
 
             var go = Instantiate(entry.Prefab, parent);
             go.hideFlags = HideFlags.DontSave;
@@ -132,8 +139,9 @@ namespace ZZZ.Editor.AnimationTool
             var renderer = go.GetComponentInChildren<Renderer>(true);
             var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry, Socket = socket,
                                         OverrideTarget = target, Baseline = ParticleBaseline.Capture(target),
-                                        OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null };
-            if (!toRoot) ApplyFxTransform(a);   // 루트 부모형은 활성 진입 시 캡처해 배치
+                                        OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null,
+                                        ProgressDrivers = go.GetComponentsInChildren<EffectProgressDriver>(true) };
+            if (entry.FollowSpawner && !toRoot) ApplyFxTransform(a);
             go.SetActive(false);
             _fxAtoms.Add(a);
         }
@@ -158,11 +166,11 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     Transform socket = a.Socket != null ? a.Socket : root;
                     // 회전 기준 프레임 — 런타임 PlaceInstance와 동일. IgnoreSocketRotation이면 캐릭터 루트(_target) 기준.
-                    Quaternion frame = a.Entry.IgnoreSocketRotation ? root.rotation : socket.rotation;
+                    Quaternion rootFrame = a.Entry.IgnoreSocketRotation ? root.rotation : socket.rotation;
                     Vector3    wpos = a.Entry.IgnoreSocketRotation
-                        ? socket.position + frame * a.Entry.PositionOffset
+                        ? socket.position + rootFrame * a.Entry.PositionOffset
                         : socket.TransformPoint(a.Entry.PositionOffset);
-                    Quaternion wrot = frame * Quaternion.Euler(a.Entry.EulerOffset);
+                    Quaternion wrot = rootFrame * Quaternion.Euler(a.Entry.EulerOffset);
                     a.CapPos   = root.InverseTransformPoint(wpos);
                     a.CapRot   = Quaternion.Inverse(root.rotation) * wrot;
                     a.Captured = true;
@@ -173,7 +181,25 @@ namespace ZZZ.Editor.AnimationTool
                 t.localScale    = a.Entry.Scale;
                 return;
             }
-            ApplyFxTransform(a);
+
+            if (a.Entry.FollowSpawner)
+            {
+                ApplyFxTransform(a);
+                return;
+            }
+
+            // FollowSpawner가 꺼진 런타임 이펙트는 발동 순간의 월드 포즈에 분리되어
+            // 이후 소켓 본의 이동/회전을 따라가지 않는다.
+            if (a.Captured) return;
+            Transform anchor = a.Socket != null ? a.Socket : _target.transform;
+            Quaternion detachedFrame = a.Entry.IgnoreSocketRotation ? _target.transform.rotation : anchor.rotation;
+            Transform detachedTransform = a.Root.transform;
+            detachedTransform.position = a.Entry.IgnoreSocketRotation
+                ? anchor.position + detachedFrame * a.Entry.PositionOffset
+                : anchor.TransformPoint(a.Entry.PositionOffset);
+            detachedTransform.rotation = detachedFrame * Quaternion.Euler(a.Entry.EulerOffset);
+            detachedTransform.localScale = a.Entry.Scale;
+            a.Captured = true;
         }
 
         // Entry 접힘 상태는 조합별로 SessionState에 저장 — 스크립트 재컴파일(도메인 리로드)에도 유지된다.
