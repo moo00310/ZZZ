@@ -326,7 +326,7 @@ RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`
 프레임 모두 `mesh = transform facing`이라 연속이 된다.
 
 **감수한 비용** — 전이 1프레임에 **사지 stride 로컬 포즈만** 컷된다. facing·이동은 멀쩡하고, 턴이
-달리는 포즈로 끝나면 이 컷은 거의 안 보인다. (구간 회전잠금 `LockWindow`, 잠금 해제 후
+달리는 포즈로 끝나면 이 컷은 거의 안 보인다. (`RotationLockModule`의 구간 잠금, 잠금 해제 후
 `_rotationEaseTime` 이즈인도 함께 동작.)
 
 **더 매끄럽게 하려면 (선택 — 애니/리그)** — 근본 원인이 "턴이 골반에 구워진 것"이라, 아래 중 하나면
@@ -593,6 +593,14 @@ Assets/04.Scripts/
             ├── SectionModule.cs          추상 베이스 (OnEnter/Tick)
             ├── WindowModule.cs           구간(Start~End) 판정 베이스
             ├── SectionContext.cs         모듈이 받는 런타임 핸들 묶음
+            ├── AdditionalMovementModule.cs 추가 이동 거리/방향
+            ├── RotationLockModule.cs     회전 잠금
+            ├── FaceInputModule.cs        진입 시 입력 방향 조준
+            ├── FaceTargetModule.cs       타깃 조준
+            ├── TargetWarpModule.cs       타깃 방향 이동 워프
+            ├── StartBoostModule.cs       섹션 시작 이동 보강
+            ├── SectionTurnModule.cs      Root yaw 추출
+            ├── RootMotionTuningModules.cs 루프 평속화/후진 배율
             ├── IFrameModule.cs           무적 구간(i-frame)
             └── ParryModule.cs            패링 활성 구간
 ```

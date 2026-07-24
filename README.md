@@ -34,12 +34,14 @@ AnimationConfig ── 전이, 재생 구간, 이벤트, 구간 기능
 
 | 요소 | 역할 |
 |---|---|
-| Section | 재생할 애니메이션 클립과 이동 설정 |
+| Section | 재생할 애니메이션 클립과 루트모션 사용 여부 |
 | Link | 다른 Section 또는 Config로 넘어가는 조건과 시점 |
 | Notify | 특정 시점에 이펙트나 게임 이벤트 실행 |
-| Module | 무적, 패링처럼 일정 구간에만 활성화되는 기능 |
+| Module | 추가 이동, 회전, 타깃 보정, 무적·패링 등 섹션 기능 |
 
-새로운 전투 행동은 주로 Config 에셋으로 만든다. 새로운 판정 방식이 필요할 때는 `LinkCondition` 또는 `SectionModule` 구현을 추가한다.
+추가 이동과 회전 잠금 같은 섹션 동작은 `TrackClip`의 고정 필드가 아니라
+`SectionModule` 조합으로 구성한다. 새로운 전투 행동은 주로 Config 에셋으로 만들고,
+새로운 전이 조건이나 섹션 기능이 필요할 때 `LinkCondition` 또는 `SectionModule` 구현을 추가한다.
 
 ## 에디터 도구
 
@@ -49,6 +51,7 @@ AnimationConfig ── 전이, 재생 구간, 이벤트, 구간 기능
 
 - Section 배치와 재생 구간 편집
 - Link, Notify, Module 편집
+- 모듈 라인 접기·펼치기와 Window 구간 핸들 드래그 편집
 - 콤보와 루트 모션 프리뷰
 - 플레이 중 현재 Config, Section, 입력 상태 확인
 - 애니메이션 위에서 이펙트 시점과 위치 조정
