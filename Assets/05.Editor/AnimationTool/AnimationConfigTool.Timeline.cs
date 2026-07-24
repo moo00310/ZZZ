@@ -22,7 +22,7 @@ namespace ZZZ.Editor.AnimationTool
             }
 
             // 수직 스크롤 (휠) — 수평은 하단 스크롤바로 조정
-            float contentRowsH = _config.Clips.Count * (ClipH + ClipGap) + 34f;   // +Add 버튼 여백 포함
+            float contentRowsH = TimelineContentHeight() + 34f;
             float viewRowsH    = area.height - RulerH - HScrollH;
             float maxScrollY   = Mathf.Max(0f, contentRowsH - viewRowsH);
             if (Event.current.type == EventType.ScrollWheel && area.Contains(Event.current.mousePosition))
@@ -68,7 +68,7 @@ namespace ZZZ.Editor.AnimationTool
             if (editPreview && _comboMode && _comboActiveClip >= 0 && _comboActiveClip < _config.Clips.Count)
             {
                 var   atc  = _config.Clips[_comboActiveClip];
-                float aRowY = _comboActiveClip * (ClipH + ClipGap) - _scrollY;
+                float aRowY = ClipRowTop(_comboActiveClip) - _scrollY;
                 EditorGUI.DrawRect(new Rect(LabelW, aRowY, area.width - LabelW, ClipH),
                     new Color(1f, 0.6f, 0f, 0.08f));
 
@@ -88,7 +88,7 @@ namespace ZZZ.Editor.AnimationTool
                 _liveClipIdx >= 0 && _liveClipIdx < _config.Clips.Count)
             {
                 var   ltc   = _config.Clips[_liveClipIdx];
-                float lRowY = _liveClipIdx * (ClipH + ClipGap) - _scrollY;
+                float lRowY = ClipRowTop(_liveClipIdx) - _scrollY;
                 EditorGUI.DrawRect(new Rect(LabelW, lRowY, area.width - LabelW, ClipH),
                     new Color(0.3f, 1f, 0.35f, 0.10f));
 
@@ -114,7 +114,7 @@ namespace ZZZ.Editor.AnimationTool
             // 클립 행 그리기
             for (int i = 0; i < _config.Clips.Count; i++)
             {
-                float rowY    = i * (ClipH + ClipGap) - _scrollY;
+                float rowY    = ClipRowTop(i) - _scrollY;
                 float startT  = GetClipStartTime(i);
                 var   tc      = _config.Clips[i];
                 float dur     = tc.Clip != null ? tc.Clip.length / Mathf.Max(0.01f, tc.Speed) : 0f;
@@ -128,17 +128,19 @@ namespace ZZZ.Editor.AnimationTool
                         new Color(0f, 0f, 0f, 0.45f));
 
                 DrawClipRow(tc, i, barX, barW, rowY, area.width);
+                if (ModulesExpanded(tc))
+                    DrawModuleLanes(tc, barX, barW, rowY + ClipH, area.width);
             }
 
             // 순서 변경 삽입 위치 표시선
             if (_reorderingClip >= 0 && _reorderTargetIdx >= 0)
             {
-                float lineY = _reorderTargetIdx * (ClipH + ClipGap) - _scrollY - 1f;
+                float lineY = ClipInsertionY(_reorderTargetIdx) - _scrollY - 1f;
                 EditorGUI.DrawRect(new Rect(0, lineY, area.width, 3f), new Color(0.3f, 0.65f, 1f));
             }
 
             // 클립 추가 버튼
-            float addY = _config.Clips.Count * (ClipH + ClipGap) - _scrollY + 6f;
+            float addY = TimelineContentHeight() - _scrollY + 6f;
             if (addY < rowsH && GUI.Button(new Rect(4, addY, 100, 22), "+ Add Clip"))
             {
                 Undo.RecordObject(_config, "Add Clip");
@@ -158,6 +160,39 @@ namespace ZZZ.Editor.AnimationTool
             EditorGUI.DrawRect(new Rect(0, hbarRect.y, area.width, HScrollH), new Color(0.18f, 0.18f, 0.18f));
             _scrollX = Mathf.Max(0f, GUI.HorizontalScrollbar(
                 hbarRect, _scrollX, Mathf.Min(viewW, contentW), 0f, contentW));
+        }
+
+        private bool ModulesExpanded(TrackClip tc)
+            => tc != null && tc.Modules != null && tc.Modules.Count > 0
+                && _expandedModuleClips.Contains(tc);
+
+        private float ExpandedModuleHeight(TrackClip tc)
+            => ModulesExpanded(tc) ? tc.Modules.Count * ModuleLaneH : 0f;
+
+        private float ClipRowTop(int index)
+        {
+            float y = 0f;
+            int count = Mathf.Min(index, _config.Clips.Count);
+            for (int i = 0; i < count; i++)
+                y += ClipH + ExpandedModuleHeight(_config.Clips[i]) + ClipGap;
+            return y;
+        }
+
+        private float ClipInsertionY(int index)
+            => index >= _config.Clips.Count ? TimelineContentHeight() : ClipRowTop(index);
+
+        private float TimelineContentHeight()
+            => ClipRowTop(_config.Clips.Count);
+
+        private int ClipInsertionIndexAt(float contentY)
+        {
+            for (int i = 0; i < _config.Clips.Count; i++)
+            {
+                float midpoint = ClipRowTop(i)
+                    + (ClipH + ExpandedModuleHeight(_config.Clips[i]) + ClipGap) * 0.5f;
+                if (contentY < midpoint) return i;
+            }
+            return _config.Clips.Count;
         }
         // 라이브 프리뷰 중 런타임 플레이헤드/활성 행이 항상 뷰 중앙에 오도록 스크롤을 따라가게 한다.
         // Follow 토글과 연동 — 런타임 config를 따라가는 동안 가로(플레이헤드)·세로(활성 클립 행)를
@@ -183,7 +218,7 @@ namespace ZZZ.Editor.AnimationTool
             }
 
             // ── 세로: 활성 클립 행을 뷰 중앙에 ──
-            float rowMid = _liveClipIdx * (ClipH + ClipGap) + ClipH * 0.5f;
+            float rowMid = ClipRowTop(_liveClipIdx) + ClipH * 0.5f;
             _scrollY = Mathf.Clamp(rowMid - viewRowsH * 0.5f, 0f, maxScrollY);
         }
 
@@ -240,7 +275,7 @@ namespace ZZZ.Editor.AnimationTool
                 float dur    = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                 float barX   = LabelW + startT * _pxPerSec - _scrollX;
                 float barW   = dur * _pxPerSec;
-                float srcYc  = i * (ClipH + ClipGap) - _scrollY + ClipH * 0.5f;
+                float srcYc  = ClipRowTop(i) - _scrollY + ClipH * 0.5f;
 
                 for (int li = 0; li < tc.Links.Count; li++)
                 {
@@ -288,7 +323,7 @@ namespace ZZZ.Editor.AnimationTool
 
                     float dstStartT = GetClipStartTime(ti);
                     float dstX = LabelW + dstStartT * _pxPerSec - _scrollX;
-                    float dstY = ti * (ClipH + ClipGap) - _scrollY + ClipH * 0.5f;
+                    float dstY = ClipRowTop(ti) - _scrollY + ClipH * 0.5f;
 
                     float cdx = Mathf.Abs(dstY - srcY) * 0.4f + 24f;
                     Handles.DrawBezier(
@@ -348,6 +383,18 @@ namespace ZZZ.Editor.AnimationTool
 
             DrawBadge("Loop", tc.IsLooping, new Rect(7, rowY + 22, 34, 12));
             DrawBadge("RM",   tc.UseRootMotion, new Rect(43, rowY + 22, 26, 12));
+            if (tc.Modules != null && tc.Modules.Count > 0)
+            {
+                bool expanded = ModulesExpanded(tc);
+                if (GUI.Button(new Rect(72, rowY + 21, 64, 14),
+                    $"{(expanded ? "▼" : "▶")} M {tc.Modules.Count}",
+                    new GUIStyle(EditorStyles.miniButton) { fontSize = 8 }))
+                {
+                    if (expanded) _expandedModuleClips.Remove(tc);
+                    else _expandedModuleClips.Add(tc);
+                    Repaint();
+                }
+            }
 
             if (tc.Clip != null)
                 GUI.Label(new Rect(7, rowY + 38, LabelW - 26, 11),
@@ -359,6 +406,7 @@ namespace ZZZ.Editor.AnimationTool
                 new GUIStyle(EditorStyles.miniButton) { fontSize = 9 }))
             {
                 Undo.RecordObject(_config, "Remove Clip");
+                _expandedModuleClips.Remove(tc);
                 _config.Clips.RemoveAt(idx);
                 EditorUtility.SetDirty(_config);
                 _serializedConfig = new SerializedObject(_config);
@@ -381,9 +429,8 @@ namespace ZZZ.Editor.AnimationTool
                         { normal = { textColor = new Color(0.68f, 0.68f, 0.68f) },
                           clipping = TextClipping.Clip });
 
-                // Section Turn(루트 회전) / Lock Rotation 윈도우 (바 위 밴드)
-                DrawSectionTurnWindow(tc, barX, barW, rowY);
-                DrawLockWindow(tc, barX, barW, rowY);
+                if (!ModulesExpanded(tc))
+                    DrawCollapsedModuleSummary(tc, barX, barW, rowY);
 
                 // Link 윈도우 밴드 (바 하단)
                 DrawLinkWindows(tc, barX, barW, rowY);
@@ -393,6 +440,147 @@ namespace ZZZ.Editor.AnimationTool
             if (tc.Clip != null)
                 for (int ni = 0; ni < tc.Notifies.Count; ni++)
                     DrawNotifyMarker(tc.Notifies[ni], ni, idx, barX, barW, rowY);
+        }
+
+        private void DrawModuleLanes(TrackClip tc, float barX, float barW,
+            float lanesY, float totalW)
+        {
+            for (int i = 0; i < tc.Modules.Count; i++)
+            {
+                SectionModule module = tc.Modules[i];
+                float y = lanesY + i * ModuleLaneH;
+                Color color = ModuleColor(module);
+
+                EditorGUI.DrawRect(new Rect(0f, y, totalW, ModuleLaneH - 1f),
+                    i % 2 == 0 ? new Color(0.145f, 0.145f, 0.145f) : new Color(0.16f, 0.16f, 0.16f));
+                EditorGUI.DrawRect(new Rect(0f, y, 3f, ModuleLaneH - 1f), color);
+
+                string label = module != null ? module.MenuName : "(Missing Module)";
+                GUI.Label(new Rect(7f, y + 1f, LabelW - 10f, ModuleLaneH - 2f), label,
+                    new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        fontSize = 9,
+                        clipping = TextClipping.Clip,
+                        normal = { textColor = color }
+                    });
+
+                if (module == null || barW <= 0f || barX + barW <= LabelW || barX >= totalW)
+                    continue;
+
+                float laneTop = y + 3f;
+                float laneHeight = ModuleLaneH - 7f;
+                if (module is WindowModule window)
+                {
+                    float start = Mathf.Clamp01(window.Start);
+                    float end = Mathf.Clamp01(window.End);
+                    if (Mathf.Approximately(start, end))
+                    {
+                        float x = Mathf.Clamp(barX + start * barW, LabelW, totalW);
+                        EditorGUI.DrawRect(new Rect(x - 1f, laneTop, 3f, laneHeight), color);
+                        GUI.Label(new Rect(x + 4f, y + 1f, Mathf.Max(0f, barW - 6f),
+                            ModuleLaneH - 2f), module.DisplayName, ModuleLaneLabelStyle(color));
+                        DrawModuleHandle(x, laneTop, laneHeight, color,
+                            _dragWindowModule == window);
+                    }
+                    else
+                    {
+                        float actualStartX = barX + start * barW;
+                        float actualEndX = barX + end * barW;
+                        float startX = Mathf.Max(LabelW, actualStartX);
+                        float endX = Mathf.Min(totalW, actualEndX);
+                        DrawModuleRange(startX, endX,
+                            laneTop, laneHeight, color, module.DisplayName);
+                        if (actualStartX >= LabelW && actualStartX <= totalW)
+                            DrawModuleHandle(actualStartX, laneTop, laneHeight, color,
+                                _dragWindowModule == window && _dragWindowStart);
+                        if (actualEndX >= LabelW && actualEndX <= totalW)
+                            DrawModuleHandle(actualEndX, laneTop, laneHeight, color,
+                                _dragWindowModule == window && !_dragWindowStart);
+                    }
+                }
+                else if (module is FaceInputModule || module is StartBoostModule)
+                {
+                    float x = Mathf.Max(LabelW, barX);
+                    EditorGUI.DrawRect(new Rect(x - 1f, laneTop, 3f, laneHeight), color);
+                    GUI.Label(new Rect(x + 4f, y + 1f, Mathf.Max(0f, barW - 6f), ModuleLaneH - 2f),
+                        module.DisplayName, ModuleLaneLabelStyle(color));
+                }
+                else
+                {
+                    DrawModuleRange(Mathf.Max(LabelW, barX), Mathf.Min(totalW, barX + barW),
+                        laneTop, laneHeight, color,
+                        module.DisplayName);
+                }
+            }
+        }
+
+        private void DrawCollapsedModuleSummary(TrackClip tc, float barX, float barW, float rowY)
+        {
+            if (tc.Modules == null || tc.Modules.Count == 0 || barW <= 0f) return;
+
+            int visible = Mathf.Min(tc.Modules.Count, 5);
+            for (int i = 0; i < visible; i++)
+            {
+                SectionModule module = tc.Modules[i];
+                Color color = ModuleColor(module);
+                float y = rowY + 23f + i * 3f;
+
+                if (module is WindowModule window)
+                {
+                    float start = Mathf.Clamp01(window.Start);
+                    float end = Mathf.Clamp01(window.End);
+                    EditorGUI.DrawRect(new Rect(
+                        barX + start * barW, y, Mathf.Max(2f, (end - start) * barW), 2f), color);
+                }
+                else
+                    EditorGUI.DrawRect(new Rect(barX, y, Mathf.Max(2f, barW), 2f), color);
+            }
+        }
+
+        private static void DrawModuleRange(float startX, float endX, float y, float height,
+            Color color, string label)
+        {
+            if (endX <= startX) return;
+            float width = Mathf.Max(2f, endX - startX);
+            EditorGUI.DrawRect(new Rect(startX, y, width, height),
+                new Color(color.r, color.g, color.b, 0.25f));
+            EditorGUI.DrawRect(new Rect(startX, y, 2f, height), color);
+            EditorGUI.DrawRect(new Rect(endX - 2f, y, 2f, height), color);
+            if (width > 54f)
+                GUI.Label(new Rect(startX + 4f, y - 2f, width - 8f, height + 4f),
+                    label, ModuleLaneLabelStyle(color));
+        }
+
+        private static void DrawModuleHandle(float x, float y, float height, Color color, bool active)
+        {
+            var hitRect = new Rect(x - 6f, y - 2f, 12f, height + 4f);
+            EditorGUIUtility.AddCursorRect(hitRect, MouseCursor.ResizeHorizontal);
+            Color handleColor = active ? Color.white : color;
+            EditorGUI.DrawRect(new Rect(x - 2f, y - 1f, 4f, height + 2f), handleColor);
+            EditorGUI.DrawRect(new Rect(x - 4f, y - 2f, 8f, 2f), handleColor);
+        }
+
+        private static GUIStyle ModuleLaneLabelStyle(Color color)
+            => new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 8,
+                clipping = TextClipping.Clip,
+                normal = { textColor = color }
+            };
+
+        private static Color ModuleColor(SectionModule module)
+        {
+            if (module is AdditionalMovementModule || module is StartBoostModule
+                || module is SmoothLoopSpeedModule || module is BackMotionScaleModule)
+                return new Color(0.3f, 0.65f, 1f);
+            if (module is TargetWarpModule)
+                return new Color(0.2f, 0.85f, 0.8f);
+            if (module is RotationLockModule || module is FaceInputModule
+                || module is FaceTargetModule || module is SectionTurnModule)
+                return new Color(0.85f, 0.5f, 1f);
+            if (module is IFrameModule || module is ParryModule)
+                return new Color(0.35f, 0.9f, 0.45f);
+            return new Color(0.7f, 0.7f, 0.7f);
         }
 
         // 입력 타입별 색상
@@ -415,22 +603,6 @@ namespace ZZZ.Editor.AnimationTool
                 case LinkTiming.OnEnd:        return new Color(0.75f, 0.75f, 0.75f);
                 default:                      return InputColor(ReadInput(link)?.Attack ?? ComboInput.None);
             }
-        }
-
-        // Section Turn(루트 회전 추출) 윈도우 — [TurnWindowStart, End] 구간을 바 위에 보라 밴드로.
-        private void DrawSectionTurnWindow(TrackClip tc, float barX, float barW, float rowY)
-        {
-            if (!tc.SectionTurn || barW <= 0f) return;
-            DrawWindowBand(tc.TurnWindowStart, tc.TurnWindowEnd, barX, barW, rowY,
-                new Color(0.72f, 0.45f, 1f), "Root Turn");   // 보라 = 회전
-        }
-
-        // Lock Rotation 윈도우 — [LockWindowStart, End] 구간을 바 위에 주황 밴드로.
-        private void DrawLockWindow(TrackClip tc, float barX, float barW, float rowY)
-        {
-            if (!tc.LockRotation || barW <= 0f) return;
-            DrawWindowBand(tc.LockWindowStart, tc.LockWindowEnd, barX, barW, rowY,
-                new Color(1f, 0.6f, 0.2f), "Lock");          // 주황 = 잠금
         }
 
         // 바 위 [aN,bN] 구간을 반투명 밴드 + 양끝 경계 + 라벨로 그린다. End<=Start면 바 전체.

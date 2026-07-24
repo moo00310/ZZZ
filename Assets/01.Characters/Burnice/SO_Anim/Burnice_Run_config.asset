@@ -24,7 +24,7 @@ MonoBehaviour:
     LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
-    SmoothLoopSpeed: 1
+    SmoothLoopSpeed: 0
     BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
@@ -47,9 +47,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710282
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -59,19 +56,17 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710283
-      Attack: 0
-      Direction: 7
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 6745857324881018935
   - SectionName: Run_End
     Clip: {fileID: 7400000, guid: 0405b8783ad94a14f9b0ca197cddae96, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
@@ -97,9 +92,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710284
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -109,21 +101,19 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710285
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.2806533
       WindowEnd: 1
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 6745857324881018936
   - SectionName: Avatar_Female_Size02_Burnice_Ani_TurnBack
     Clip: {fileID: 7400000, guid: b7efe55dec7a5a545bc3ce0c9ccd30f4, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
-    LockWindowEnd: 0.42211825
+    LockWindowEnd: 1
     SmoothLoopSpeed: 0
     BackMotionScale: 1
     FaceInputOnEnter: 0
@@ -137,9 +127,9 @@ MonoBehaviour:
     FaceWindowStart: 0
     FaceWindowEnd: 0
     FaceTurnSpeed: 720
-    SectionTurn: 1
+    SectionTurn: 0
     TurnWindowStart: 0
-    TurnWindowEnd: 0.42211825
+    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
       TargetSection: Avatar_Female_Size02_Burnice_Ani_TurnBack
@@ -147,9 +137,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710286
-      Attack: 0
-      Direction: 7
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4489336
       WindowEnd: 1
@@ -159,9 +146,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710287
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -171,14 +155,13 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710288
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 6745857324881018937
+    - rid: 6745857324881018938
   GlobalLinks:
   - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
     TargetSection: Attack_ExSpecial_02
@@ -186,9 +169,6 @@ MonoBehaviour:
     EntryOffset: 0
     Condition:
       rid: 7723411238959710289
-    Attack: 3
-    Direction: 0
-    RequireHeld: 0
     Timing: 0
     WindowStart: 0
     WindowEnd: 1
@@ -198,15 +178,30 @@ MonoBehaviour:
     EntryOffset: 0
     Condition:
       rid: 7723411238959710290
-    Attack: 2
-    Direction: 0
-    RequireHeld: 0
     Timing: 0
     WindowStart: 0
     WindowEnd: 1
   references:
     version: 2
     RefIds:
+    - rid: 6745857324881018935
+      type: {class: SmoothLoopSpeedModule, ns: ZZZ, asm: Assembly-CSharp}
+      data: 
+    - rid: 6745857324881018936
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018937
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.42211825
+    - rid: 6745857324881018938
+      type: {class: SectionTurnModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.42211825
     - rid: 7723411238959710282
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:

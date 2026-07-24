@@ -21,7 +21,7 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 6c14d662b6b803042a3178858cc108fb, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
     FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
-    TurnWindowEnd: 0.4
+    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
@@ -47,9 +47,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710291
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -59,9 +56,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710292
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
@@ -69,20 +63,23 @@ MonoBehaviour:
     - Type: 3
       NormalizedTime: 0
       EventName: OnHitShake
-      EffectPrefab: {fileID: 0}
-    Modules: []
+      Effect: {fileID: 0}
+      EndNormalizedTime: 0
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018931
   - SectionName: Hit_H_Back
     Clip: {fileID: 7400000, guid: ba999ce2a680cf8409ee1d1f3368892d, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
     BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
-    StartBoostTime: 0.01
+    StartBoostTime: 0.15
     EnableTracking: 0
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
@@ -93,7 +90,7 @@ MonoBehaviour:
     FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
-    TurnWindowEnd: 0.4
+    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -101,9 +98,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710293
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
@@ -113,9 +107,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710294
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -123,20 +114,23 @@ MonoBehaviour:
     - Type: 3
       NormalizedTime: 0
       EventName: OnHitShake
-      EffectPrefab: {fileID: 0}
-    Modules: []
+      Effect: {fileID: 0}
+      EndNormalizedTime: 0
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018932
   - SectionName: Hit_L_Front
     Clip: {fileID: 7400000, guid: f2e8bdfb092a2fd4391f3f38bc466341, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
     BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
-    StartBoostTime: 0.01
+    StartBoostTime: 0.15
     EnableTracking: 0
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
@@ -147,7 +141,7 @@ MonoBehaviour:
     FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
-    TurnWindowEnd: 0.4
+    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: 
@@ -155,9 +149,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710295
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.30625
       WindowEnd: 1
@@ -167,9 +158,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710296
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
@@ -177,20 +165,23 @@ MonoBehaviour:
     - Type: 3
       NormalizedTime: 0
       EventName: OnHitShake
-      EffectPrefab: {fileID: 0}
-    Modules: []
+      Effect: {fileID: 0}
+      EndNormalizedTime: 0
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018933
   - SectionName: Hit_L_Back
     Clip: {fileID: 7400000, guid: 8dac3ab9aaa0f7a4398cf960d665a514, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 1
+    LockRotation: 0
     LockWindowStart: 0
     LockWindowEnd: 1
     SmoothLoopSpeed: 0
     BackMotionScale: 1
     FaceInputOnEnter: 0
     StartBoostSpeed: 0
-    StartBoostTime: 0.01
+    StartBoostTime: 0.15
     EnableTracking: 0
     TrackWindowStart: 0
     TrackWindowEnd: 0.4
@@ -201,7 +192,7 @@ MonoBehaviour:
     FaceTurnSpeed: 720
     SectionTurn: 0
     TurnWindowStart: 0
-    TurnWindowEnd: 0.4
+    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -209,9 +200,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710297
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.4625
       WindowEnd: 1
@@ -221,9 +209,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710298
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -231,12 +216,35 @@ MonoBehaviour:
     - Type: 3
       NormalizedTime: 0.016628027
       EventName: OnHitShake
-      EffectPrefab: {fileID: 0}
-    Modules: []
+      Effect: {fileID: 0}
+      EndNormalizedTime: 0
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018934
   GlobalLinks: []
   references:
     version: 2
     RefIds:
+    - rid: 6745857324881018931
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018932
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018933
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018934
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
     - rid: 7723411238959710291
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:

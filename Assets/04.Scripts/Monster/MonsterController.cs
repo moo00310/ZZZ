@@ -13,6 +13,7 @@ namespace ZZZ.Monster
         public bool  AllowRotation       { get; set; } = true;
         public bool  SmoothLoopSpeed     { get; set; }
         public bool  ExtractRootRotation { get; set; }
+        public bool  RootRotationWindowActive { get; set; } = true;
         public float BackMotionScale     { get; set; } = 1f;
         public bool  WarpWindowActive    { get; set; }
         public bool  FaceWindowActive    { get; set; }
@@ -24,9 +25,10 @@ namespace ZZZ.Monster
         public void FlushRootPos()      { }
         public void FlushRootRotation() { }
         public void ClearWarpTarget()   { }
-        public void SetWarpTarget(Transform target, float stopDistance, bool translate,
-            bool face = false, float faceTurnSpeed = 720f) { }
+        public void SetWarpTranslationTarget(Transform target, float stopDistance) { }
+        public void SetFacingTarget(Transform target, float faceTurnSpeed) { }
         public void AddStartBoost(float speed, float duration) { }
+        public void MoveBy(Vector3 worldDelta) { }
 
         // 즉시 yaw 회전 — worldDir(수평) 쪽을 바라본다. v1엔 호출 안 되지만 미리 구현.
         public void FaceToward(Vector3 worldDir)

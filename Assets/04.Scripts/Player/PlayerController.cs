@@ -74,6 +74,7 @@ namespace ZZZ.Player
         public bool AllowRotation   { get; set; } = true;   // false면 이동 입력이 있어도 캐릭터 회전 안 함 (피격/경직 등)
         public bool SmoothLoopSpeed { get; set; } = false;  // 루프 전진 평속화 (틱 제거). 기본 끔 — 섹션(TrackClip)별로 ConfigState가 설정
         public bool ExtractRootRotation { get; set; } = false;  // 이 섹션에서 Root 본 yaw를 transform에 적용 (턴 섹션). ConfigState가 설정
+        public bool RootRotationWindowActive { get; set; } = true;
         public float BackMotionScale { get; set; } = 1f;        // 후진(-Z) 루트모션 증폭 배율. 섹션(TrackClip)별로 ConfigState가 설정
 
         // 실제 수평 이동 속도 (루트모션 포함) — 애니메이터 블렌드/HUD 표시용
@@ -121,17 +122,20 @@ namespace ZZZ.Player
         public bool WarpWindowActive { get; set; }   // 이동 워프 윈도우 안인지 — ConfigState가 매 프레임 갱신
         public bool FaceWindowActive { get; set; }   // 타겟 조준 윈도우 안인지 — ConfigState가 매 프레임 갱신
 
-        // translate = 이동 워프(EnableTracking), face = 타겟 조준(FaceTarget) — 둘은 독립. 같은 적 타겟 공유.
-        public void SetWarpTarget(Transform target, float stopDistance, bool translate,
-            bool face = false, float faceTurnSpeed = 720f)
+        public void SetWarpTranslationTarget(Transform target, float stopDistance)
         {
-            _warpTarget       = target;
+            _warpTarget = target;
             _warpStopDistance = stopDistance;
-            _warpTranslate    = translate;
-            _faceEnabled      = face;
-            _faceTurnSpeed    = faceTurnSpeed;
-            WarpWindowActive  = false;
-            FaceWindowActive  = false;
+            _warpTranslate = target != null;
+            WarpWindowActive = false;
+        }
+
+        public void SetFacingTarget(Transform target, float faceTurnSpeed)
+        {
+            _warpTarget = target;
+            _faceEnabled = target != null;
+            _faceTurnSpeed = faceTurnSpeed;
+            FaceWindowActive = false;
         }
 
         public void ClearWarpTarget()
@@ -149,6 +153,13 @@ namespace ZZZ.Player
             worldDir.y = 0f;
             if (worldDir.sqrMagnitude < 0.0001f) return;
             transform.rotation = Quaternion.LookRotation(worldDir);
+        }
+
+        public void MoveBy(Vector3 worldDelta)
+        {
+            worldDelta.y = 0f;
+            if (worldDelta.sqrMagnitude > 0f)
+                _cc.Move(worldDelta);
         }
 
         private const float k_moveThreshold = 0.01f;
@@ -292,7 +303,7 @@ namespace ZZZ.Player
             {
                 float rootCur = TwistYawOf(_rootBone.localRotation);
                 bool enter = !_wasExtracting || _flushRootRotPending;   // 섹션 진입(타 섹션 OR 같은 턴 재진입)
-                if (enter || transitioning)
+                if (!RootRotationWindowActive || enter || transitioning)
                 {
                     _prevRootYaw = rootCur;
                     if (enter) _rootYawComp = 0f;

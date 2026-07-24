@@ -39,11 +39,18 @@ namespace ZZZ.Editor.AnimationTool
             // ── MouseDown ────────────────────────────────────────
             if (ev.type == EventType.MouseDown && ev.button == 0 && area.Contains(ev.mousePosition))
             {
+                if (TryBeginModuleWindowDrag(ev.mousePosition))
+                {
+                    ev.Use();
+                    Repaint();
+                    return;
+                }
+
                 bool hitSomething = false;
 
                 for (int i = 0; i < _config.Clips.Count && !hitSomething; i++)
                 {
-                    float rowY = i * (ClipH + ClipGap) - _scrollY;
+                    float rowY = ClipRowTop(i) - _scrollY;
                     if (ev.mousePosition.y < rowY || ev.mousePosition.y >= rowY + ClipH) continue;
 
                     // 레이블 영역 클릭 → 순서 변경 드래그 시작
@@ -129,8 +136,14 @@ namespace ZZZ.Editor.AnimationTool
             // ── MouseDrag ────────────────────────────────────────
             if (ev.type == EventType.MouseDrag && ev.button == 0)
             {
+                if (_dragWindowModule != null && _dragModuleClip != null)
+                {
+                    DragModuleWindow(ev.mousePosition.x);
+                    ev.Use();
+                    Repaint();
+                }
                 // Notify 드래그
-                if (_draggingNotify && _dragNotifyClip < _config.Clips.Count)
+                else if (_draggingNotify && _dragNotifyClip < _config.Clips.Count)
                 {
                     var   tc     = _config.Clips[_dragNotifyClip];
                     float startT = GetClipStartTime(_dragNotifyClip);
@@ -149,9 +162,7 @@ namespace ZZZ.Editor.AnimationTool
                 else if (_reorderingClip >= 0)
                 {
                     // 마우스 Y 위치로 삽입 인덱스 계산
-                    int target = Mathf.Clamp(
-                        Mathf.RoundToInt((ev.mousePosition.y + _scrollY) / (ClipH + ClipGap)),
-                        0, _config.Clips.Count);
+                    int target = ClipInsertionIndexAt(ev.mousePosition.y + _scrollY);
                     _reorderTargetIdx = target;
                     ev.Use(); Repaint();
                 }
@@ -161,6 +172,8 @@ namespace ZZZ.Editor.AnimationTool
             if (ev.type == EventType.MouseUp && ev.button == 0)
             {
                 _draggingNotify = false;
+                _dragModuleClip = null;
+                _dragWindowModule = null;
 
                 if (_reorderingClip >= 0)
                 {
@@ -195,7 +208,7 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     var tc = _config.Clips[i];
                     if (tc.Clip == null) continue;
-                    float rowY   = i * (ClipH + ClipGap) - _scrollY;
+                    float rowY   = ClipRowTop(i) - _scrollY;
                     float startT = GetClipStartTime(i);
                     float dur    = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
                     float barX   = LabelW + startT * _pxPerSec - _scrollX;
@@ -266,6 +279,79 @@ namespace ZZZ.Editor.AnimationTool
                     break;
                 }
             }
+        }
+
+        private bool TryBeginModuleWindowDrag(Vector2 mousePosition)
+        {
+            const float handleRadius = 6f;
+
+            for (int clipIndex = 0; clipIndex < _config.Clips.Count; clipIndex++)
+            {
+                TrackClip tc = _config.Clips[clipIndex];
+                if (!ModulesExpanded(tc) || tc.Clip == null) continue;
+
+                float lanesY = ClipRowTop(clipIndex) - _scrollY + ClipH;
+                float duration = tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
+                float barX = LabelW + GetClipStartTime(clipIndex) * _pxPerSec - _scrollX;
+                float barW = duration * _pxPerSec;
+
+                for (int moduleIndex = 0; moduleIndex < tc.Modules.Count; moduleIndex++)
+                {
+                    if (!(tc.Modules[moduleIndex] is WindowModule window)) continue;
+
+                    float laneY = lanesY + moduleIndex * ModuleLaneH;
+                    if (mousePosition.y < laneY || mousePosition.y >= laneY + ModuleLaneH) continue;
+
+                    float start = Mathf.Clamp01(window.Start);
+                    float end = Mathf.Clamp01(window.End);
+                    float startX = barX + start * barW;
+                    float endX = barX + end * barW;
+                    float startDistance = Mathf.Abs(mousePosition.x - startX);
+                    float endDistance = Mathf.Abs(mousePosition.x - endX);
+
+                    if (startDistance > handleRadius && endDistance > handleRadius) return false;
+
+                    _dragModuleClip = tc;
+                    _dragWindowModule = window;
+                    // 겹친 핸들은 End를 우선해 [0,0] 진입 모듈을 오른쪽으로 펼칠 수 있게 한다.
+                    _dragWindowStart = startDistance < endDistance;
+                    _selectedClip = clipIndex;
+                    _selectedNotify = -1;
+                    Undo.RecordObject(_config, "Edit Module Window");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void DragModuleWindow(float mouseX)
+        {
+            int clipIndex = _config.Clips.IndexOf(_dragModuleClip);
+            if (clipIndex < 0 || _dragModuleClip.Clip == null) return;
+
+            float duration = _dragModuleClip.Clip.length
+                / Mathf.Max(0.01f, _dragModuleClip.Speed);
+            float barX = LabelW + GetClipStartTime(clipIndex) * _pxPerSec - _scrollX;
+            float barW = duration * _pxPerSec;
+            if (barW <= 0f) return;
+
+            float normalized = Mathf.Clamp01((mouseX - barX) / barW);
+            normalized = SnapModuleTimeToFrame(_dragModuleClip, normalized);
+
+            if (_dragWindowStart)
+                _dragWindowModule.Start = Mathf.Min(normalized, _dragWindowModule.End);
+            else
+                _dragWindowModule.End = Mathf.Max(normalized, _dragWindowModule.Start);
+
+            EditorUtility.SetDirty(_config);
+        }
+
+        private static float SnapModuleTimeToFrame(TrackClip tc, float normalized)
+        {
+            if (tc.Clip == null || tc.Clip.frameRate <= 0f) return normalized;
+            float frameCount = tc.Clip.length * tc.Clip.frameRate;
+            if (frameCount <= 0f) return normalized;
+            return Mathf.Clamp01(Mathf.Round(normalized * frameCount) / frameCount);
         }
     }
 }

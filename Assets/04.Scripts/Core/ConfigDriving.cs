@@ -14,6 +14,7 @@ namespace ZZZ
         bool  AllowRotation      { get; set; }   // false면 회전 잠금(피격/경직)
         bool  SmoothLoopSpeed    { get; set; }   // 루프 전진 평속화(틱 제거)
         bool  ExtractRootRotation{ get; set; }   // Root yaw를 transform에 추출(턴 섹션)
+        bool  RootRotationWindowActive { get; set; } // Root yaw를 실제 추출하는 구간
         float BackMotionScale    { get; set; }   // 후진(-Z) 루트모션 증폭 배율
         bool  WarpWindowActive   { get; set; }   // 이동 워프 윈도우 안인지(매 프레임 갱신)
         bool  FaceWindowActive   { get; set; }   // 타겟 조준 윈도우 안인지(매 프레임 갱신)
@@ -25,9 +26,10 @@ namespace ZZZ
         void FlushRootPos();        // 루트모션 위치 추출 baseline 리셋(섹션 진입)
         void FlushRootRotation();   // 루트 회전 추출 baseline/누적 리셋(섹션 진입)
         void FaceToward(Vector3 worldDir);   // 즉시/즉회전으로 worldDir을 향함
+        void MoveBy(Vector3 worldDelta);     // 모듈이 요청한 추가 수평 이동
         void ClearWarpTarget();
-        void SetWarpTarget(Transform target, float stopDistance, bool translate,
-            bool face = false, float faceTurnSpeed = 720f);
+        void SetWarpTranslationTarget(Transform target, float stopDistance);
+        void SetFacingTarget(Transform target, float faceTurnSpeed);
         void AddStartBoost(float speed, float duration);   // 시작 부스트(0이면 해제)
     }
 

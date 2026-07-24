@@ -79,15 +79,9 @@ AnimationConfig
 │     ├── SectionName            섹션 식별자
 │     ├── Clip / Speed
 │     ├── MoveMode               None / RootMotion
-│     ├── LockRotation / LockWindow / FaceInputOnEnter   입력 회전 잠금(구간 지정 가능) / 진입 시 입력 방향 스냅
-│     ├── SmoothLoopSpeed          루프 전진 평속화(틱 제거) — RootMotion 루프 전용, 기본 꺼짐
-│     ├── StartBoostSpeed / StartBoostTime     루트모션 워밍업 보완
-│     ├── EnableTracking / TrackWindow / StopDistance       적 방향으로 이동 워프
-│     ├── FaceTarget / FaceWindow / FaceTurnSpeed            타겟 조준 회전(스냅/락온 통합) — 워프와 독립
-│     ├── SectionTurn / TurnWindow              루트 회전 추출(턴) — Root 본 yaw를 transform에
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
 │     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 애니메이션 이벤트(이펙트/신호). 시점 또는 [NormalizedTime, EndNormalizedTime] 구간
-│     └── Modules  : List<SectionModule>  ← 섹션 기능 (i-frame 등, 다형성)
+│     └── Modules  : List<SectionModule>  ← 이동·회전·판정 등 섹션 기능(다형성)
 └── GlobalLinks : List<ClipLink>   ← 모든 섹션에 적용 (Any State 전이)
 ```
 
@@ -164,7 +158,7 @@ Layer 1 (Additive)
 |------|------|
 | **루트모션(본 델타 추출)과 상극** | 루트모션을 `Bip001` 본의 프레임 델타로 뽑는데, Blend Tree는 두 클립 포즈를 **상시 블렌딩**해 본 위치를 "가짜 평균값"으로 만든다 → 이동 추출이 오염된다. 이미 *블렌드 구간(전환)의 수평 이동은 통째로 버리는데*([루트모션](#루트모션-직접-구현) 참조), Blend Tree는 그 오염을 항상 켜는 셈 |
 | **핵심 철학과 충돌** | 블렌딩 로직 + 파라미터(speed/direction)를 다시 AnimatorController로 밀어넣는다 → "분기/타이밍은 코드·데이터, Animator는 클립 재생만"이라는 전제를 깬다 |
-| **섹션 단위 제어 불가** | MoveMode·LockWindow·SmoothLoopSpeed·워프·SectionTurn·Link·Notify·Module은 전부 "특정 클립=섹션"에 붙는다. Blend Tree는 "어느 클립인지"를 추상화해 이 per-section 데이터를 붙일 곳이 없어진다 |
+| **섹션 단위 제어 불가** | MoveMode·SectionModule·Link·Notify는 전부 "특정 클립=섹션"에 붙는다. Blend Tree는 "어느 클립인지"를 추상화해 이 per-section 데이터를 붙일 곳이 없어진다 |
 
 > 정리: 이 프로젝트의 이동은 **블렌딩이 아니라 개별 클립의 루트모션**으로 성립하므로, Blend Tree의
 > "포즈 보간"은 득보다 실(루트모션 오염·제어 상실)이 크다. 부드러운 전이는 클립 간 짧은 `CrossFade`로 충분히 얻는다.
@@ -173,8 +167,8 @@ Layer 1 (Additive)
 
 ## 타이밍 값은 normalizedTime으로 저장 — 에디터만 프레임으로 표시
 
-모든 타이밍/구간 값(`WindowStart`~`WindowEnd`, `LockWindow`, `FaceWindow`, `TrackWindow`, `TurnWindow`,
-`DoneThreshold`, `EntryOffset`, `Notify.NormalizedTime`, `Notify.EndNormalizedTime`(구간 이펙트), 모듈 `Start`~`End`)은
+모든 타이밍/구간 값(`WindowStart`~`WindowEnd`, `DoneThreshold`, `EntryOffset`,
+`Notify.NormalizedTime`, `Notify.EndNormalizedTime`(구간 이펙트), 모듈 `Start`~`End`)은
 `.asset`에 **normalizedTime(0~1)** 으로 저장된다. 반면 에디터 툴(`AnimationConfigTool`)은 이걸 **정수 프레임**으로 변환해 표시·편집한다.
 
 ```
@@ -226,9 +220,9 @@ Layer 1 (Additive)
 | `RootMotion` | `Bip001` 본의 수평 이동량을 추출해 적용 — 걷기/달리기/공격/대시/회피 |
 
 > 걷기·달리기도 코드 이동이 아니라 **RootMotion**으로 처리한다.
-> `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`을 토글하고,
-> `AllowRotation`은 매 프레임 `LockRotation`+`LockWindow`(normalizedTime 구간)로 제어한다
-> (`UpdateRotationWindows`). 잠금 해제 후 회전은 `_rotationEaseTime` 동안 이즈인된다.
+> `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`을 토글한다.
+> 추가 이동, 회전 잠금, 타깃 워프·조준, 시작 부스트, 루트 회전 추출과 루트모션 보정은
+> 모두 `SectionModule`이 소유한다.
 
 ### 루트모션 (직접 구현)
 
@@ -257,10 +251,10 @@ Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않
 |------|-----------|------|
 | 가만히 있어도 캐릭터가 스르륵 밀림 / 몸(메시)만 따로 떠서 실제 위치와 어긋남 | 애니에 담긴 이동값이 매 프레임 쌓임 | 매 프레임 `Bip001`의 수평(X·Z)을 0으로 되돌려 누적을 끊음. 높이(Y)는 남겨 상하 바운스 유지 |
 | 루프가 처음으로 돌아가는 순간 순간이동 | 되감기 프레임엔 위치가 확 뒤로 점프함 | 그 한 프레임의 이동은 버림(0 처리) |
-| 루프마다 본체가 잠깐 멈칫("틱틱") | 전진 커브가 끝에서 1프레임 멈췄다 되감김 → 다리는 도는데 본체만 안 나감 (포즈·회전은 시작=끝이라 매끄러움) | 루프 클립은 한 바퀴 **평균 전진속도**(`_loopVelLocal`)를 재서 다음 바퀴부터 일정하게 전진. 멈칫 없고, 평균이라 안 빨라지고, 회전·다리는 원본이라 보폭 유지. 공격 등 비루프는 원본 그대로. **섹션(TrackClip)별 `SmoothLoopSpeed` 토글** — 애니 섹션 툴에서 RootMotion 섹션에 체크박스로 on/off (끄면 원본 보폭감 유지, 틱 보임). `ConfigState`가 섹션 진입 시 `Controller.SmoothLoopSpeed`로 전달 |
+| 루프마다 본체가 잠깐 멈칫("틱틱") | 전진 커브가 끝에서 1프레임 멈췄다 되감김 → 다리는 도는데 본체만 안 나감 (포즈·회전은 시작=끝이라 매끄러움) | 루프 클립은 한 바퀴 **평균 전진속도**(`_loopVelLocal`)를 재서 다음 바퀴부터 일정하게 전진. `SmoothLoopSpeedModule`이 있는 섹션에만 적용 |
 | 동작이 바뀔 때 캐릭터가 점프 | 새 동작에 들어가도 직전 기준점이 남아있음 | 진입 순간 기준점을 새로 잡음 (`FlushRootPos`) |
 | 동작 전환(블렌드) 중 앞/뒤로 튐 | 블렌드 구간엔 두 클립 포즈가 섞여 "가짜 이동"이 나옴 | 블렌드 구간(+직후 1프레임)의 수평 이동은 통째로 버림 (≤0.05s라 짧고, 끝나면 기준점 다시 잡아 재개) |
-| 동작 초반이 굼떠 보임 | 루트모션이 시작 순간엔 이동량이 약함 | 시작 부스트로 초반 가속 보강 (`StartBoostSpeed`/`StartBoostTime`) |
+| 동작 초반이 굼떠 보임 | 루트모션이 시작 순간엔 이동량이 약함 | `StartBoostModule`로 초반 가속 보강 |
 
 > 평균 전진속도 방식의 트레이드오프: 보폭 안의 미세한 가감속(디딜 때 느리고 찰 때 빠른 것)이 평탄해져 발이 살짝 미끄러질 수 있으나, 달리기 속도에선 대개 안 보인다.
 
@@ -270,24 +264,24 @@ Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않
 
 애니 원본만으로는 적을 정확히 못 때리므로, 루트모션 위에 두 가지 보정을 얹는다.
 
-### 타겟 워프 & 조준 — 이동(EnableTracking)과 회전(FaceTarget)은 독립
-RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, **둘 중 켜진 기능만** 적용한다(두 토글은 별개).
+### 타겟 워프 & 조준 — `TargetWarpModule`과 `FaceTargetModule`은 독립
+RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`)을 찾아 적용한다.
 적이 없으면 둘 다 무동작 → 원본 모션 그대로 (적 유무 분기 불필요).
 
-**이동 워프 (`EnableTracking`)** — 루트모션 수평 이동을 적 방향으로 재조준 (회전과 무관, 이동만).
+**이동 워프 (`TargetWarpModule`)** — 루트모션 수평 이동을 적 방향으로 재조준 (회전과 무관, 이동만).
 - `StopDistance`로 타겟 앞에서 멈춤(관통 방지)
-- `TrackWindow`(Start~End) 구간에서만 워프 작동 → 타격 이후엔 끊어 적을 따라 휙 도는 것 방지
+- 모듈 `Start~End` 구간에서만 워프 작동 → 타격 이후엔 끊어 적을 따라 휙 도는 것 방지
 - 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다
 
-**타겟 조준 (`FaceTarget`)** — `FaceWindow` 동안 타겟을 향해 회전. 스냅(1회)·락온(지속)을 하나로 통합.
-- `FaceWindow [0,0]` = 진입 1회 스냅 / 넓히면 그 구간 내내 락온(적이 움직여도 따라붙음)
-- `FaceTurnSpeed` 0 = 즉시(스냅처럼), >0 = 각속도 제한 회전
-- **이동 워프와 독립** — 트래킹 없이 회전만 켤 수 있다. `FaceInputOnEnter`(내 입력 방향 조준)가 있으면 진입 스냅보다 우선.
+**타겟 조준 (`FaceTargetModule`)** — 모듈 윈도우 동안 타겟을 향해 회전한다.
+- `Start=End=0`이면 진입 1회 스냅 / 넓히면 그 구간 내내 락온
+- `TurnSpeed` 0 = 즉시, >0 = 각속도 제한 회전
+- `FaceInputModule`이 함께 있으면 입력 방향 조준이 진입 스냅보다 우선
 
-### 턴 회전 추출 (SectionTurn) — 턴 애니로 캐릭터를 실제 회전
+### 턴 회전 추출 (`SectionTurnModule`) — 턴 애니로 캐릭터를 실제 회전
 
 턴 애니(예: 180° 뒤돌기, TurnBack)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야
-턴 이후 이동/다음 섹션(run_loop)이 새 방향으로 이어진다. `SectionTurn`을 켠 섹션에서만 작동.
+턴 이후 이동/다음 섹션(run_loop)이 새 방향으로 이어진다. 모듈이 있는 섹션에서만 작동한다.
 
 **리그 전제 (이 기능의 모든 난이도의 근원)**
 - **회전이 `Bip001`(골반)에 구워져** 있다. 별도 `Root` 본은 깨끗한 yaw 커브를 갖지만
@@ -353,12 +347,15 @@ RootMotion 섹션 진입 시 전방 적(`EnemySensor.FindTarget()`)을 찾아, *
 
 ```
 SectionModule (추상)           OnEnter(1회) / Tick(매 프레임)
+├── FaceInputModule / StartBoostModule / SmoothLoopSpeedModule / BackMotionScaleModule
 └── WindowModule (추상)        [Start, End] normalizedTime 구간 판정(InWindow) 공유 — 루프 wrap 처리 포함
+    ├── AdditionalMovementModule / RotationLockModule
+    ├── TargetWarpModule / FaceTargetModule / SectionTurnModule
     ├── IFrameModule           구간 동안 Machine.Invulnerable = true   → 피격 '무시'
     └── ParryModule            구간 동안 Machine.ParryActive  = true   → 피격을 '쳐냄'으로 분기
 ```
 
-`ConfigState`는 섹션 진입 시 `Invulnerable`/`ParryActive`를 **false로 리셋**하고, 모듈이 윈도우 동안만 다시 켠다.
+`ConfigState`는 섹션 진입 시 이동기와 전투 플래그를 기본값으로 리셋하고, 모듈이 필요한 기능만 다시 켠다.
 `HitTrigger`는 `Invulnerable`이면 피격을 무시(회피 i-frame), `ParryActive`면 쳐냄으로 분기(패링).
 
 - **장점** — 무적·패링처럼 "구간 동안 플래그를 켜는" 판정을 **클래스 1개 + 구간 두 값**으로 추가한다. 툴의 추가 메뉴/구간 편집 UI가 베이스 덕에 자동으로 잡힌다. i-frame('무시')과 parry('응수')가 대칭이라 읽기 쉽다.
@@ -377,7 +374,7 @@ Dodge 입력 버퍼됨
     ▼
 DodgeTrigger.Suffix()  — 입력 상태로 섹션 방향 결정
     ├── 무입력/아래            → Evade_Back   (회전 없이 백스텝)
-    ├── 방향(W/A/D) 일반        → Evade_Front  (FaceInputOnEnter로 입력 방향 회전)
+    ├── 방향(W/A/D) 일반        → Evade_Front  (FaceInputModule로 입력 방향 회전)
     └── 방향 + 퍼펙트 윈도우    → Evade_Left / Evade_Right  (좌우 회피)
     │
     ▼
@@ -608,7 +605,10 @@ Assets/04.Scripts/
 `Assets/05.Editor/AnimationTool/AnimationConfigTool.cs`가 `AnimationConfig`를 시각 편집한다.
 
 - 타임라인에서 클립 배치·Link(베지어 연결선)·Notify·Module 편집
-  - **Module 추가** : 등록된 `SectionModule` 타입을 드롭다운으로 자동 나열 — 새 모듈 = 클래스 1개 추가 → 메뉴 자동 등장
+- **Module 추가** : 등록된 `SectionModule` 타입을 드롭다운으로 자동 나열 — 새 모듈 = 클래스 1개 추가 → 메뉴 자동 등장
+- **Module Lane** : 클립 행의 `M n` 버튼으로 접기/펼치기. 접으면 컬러 구간 요약,
+  펼치면 모듈별 행에서 `WindowModule` 구간과 진입·전체 섹션 모듈을 분리해 표시.
+  `WindowModule`의 양 끝 핸들은 타임라인에서 직접 드래그할 수 있으며 클립 프레임에 스냅된다.
 - **Combo 프리뷰** : 공격 입력은 단일 드롭다운으로 '눌러둠(held)' 선택 → Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
 - **라이브 모니터** : 플레이 중 `PlayerStateMachine`을 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
   (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)

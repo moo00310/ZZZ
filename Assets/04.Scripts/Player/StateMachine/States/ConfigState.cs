@@ -83,13 +83,16 @@ namespace ZZZ.Player.StateMachine.States
             // 섹션 진입 후 경과 시간으로 nt를 직접 계산한다 — 섹션 타임라인의 0점을 코드가 소유하기 위해서다.
             // Animator 상태 시간은 같은 섹션 재진입(A→B→A) 시 0이 아닌 이전 지점에서 이어지고, EntryOffset
             // (중간 진입)도 통제하기 어렵다. _clipTime은 진입 시 0(또는 offset)으로 리셋되므로 항상 섹션 기준이다.
+            float previousNtRaw = SectionNormalizedTime(tc);
             _clipTime += Time.deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 
             FireNotifies(tc, ntRaw);
-            UpdateWarpWindow(tc, ntRaw);
-            UpdateFaceWindow(tc, ntRaw);
-            UpdateRotationWindows(tc, ntRaw);
+            Ctx.Mover.AllowRotation = true;
+            Ctx.Mover.WarpWindowActive = false;
+            Ctx.Mover.FaceWindowActive = false;
+            Ctx.Mover.RootRotationWindowActive = false;
+            _sc.PreviousNormalizedTime = previousNtRaw;
             TickModules(tc, ntRaw);
 
             // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 평가
@@ -248,52 +251,18 @@ namespace ZZZ.Player.StateMachine.States
 
             // 이동 방식 적용
             Ctx.Mover.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
-            Ctx.Mover.SmoothLoopSpeed = tc.SmoothLoopSpeed;   // 루프 전진 평속화 (틱 제거) — 섹션별 토글
-            Ctx.Mover.BackMotionScale = tc.BackMotionScale;   // 후진(-Z) 루트모션 증폭 — 섹션별 배율
-            Ctx.Mover.ExtractRootRotation = tc.SectionTurn;   // 턴 섹션이면 Root yaw를 transform에 적용
-            if (tc.SectionTurn) Ctx.Mover.FlushRootRotation();   // 진입(재진입 포함) 시 회전 추출 baseline/누적 리셋
-            // 회전 윈도우 초기값 (Update 전 1프레임 일관성) — 이후 매 프레임 UpdateRotationWindows가 갱신
-            UpdateRotationWindows(tc, 0f);
+            Ctx.Mover.AllowRotation = true;
+            Ctx.Mover.SmoothLoopSpeed = false;
+            Ctx.Mover.BackMotionScale = 1f;
+            Ctx.Mover.ExtractRootRotation = false;
+            Ctx.Mover.RootRotationWindowActive = false;
+            Ctx.Mover.ClearWarpTarget();
+            Ctx.Mover.AddStartBoost(0f, 0f);
             if (tc.MoveMode == MoveMode.RootMotion) Ctx.Mover.FlushRootPos();
 
-            // 진입 스냅 — 이동 입력이 있으면 그쪽으로 즉시 회전 후(LockRotation이면) 고정.
-            // 콤보가 새 섹션으로 진입하는 순간이 곧 "콤보 사이" 재조준 지점이 된다.
-            // 입력이 있으면 아래 적 방향 조준(FaceTarget 진입 스냅)보다 우선한다.
-            bool facedInput = false;
-            if (tc.FaceInputOnEnter)
-            {
-                Vector3 inputDir = Ctx.Mover.MoveDirection;   // 카메라 기준 WASD 방향
-                if (inputDir.sqrMagnitude > 0.0001f)
-                {
-                    Ctx.Mover.FaceToward(inputDir);
-                    facedInput = true;
-                }
-            }
-
-            // 타겟 기반 기능 — 이동 워프(EnableTracking)와 타겟 조준(FaceTarget)은 독립 토글.
-            // 하나라도 켜져 있으면 적을 찾는다. 콤보 단마다 재탐색 → 적이 옆으로 빠져도 다음 타가 따라간다.
-            Ctx.Mover.ClearWarpTarget();
-            if (tc.MoveMode == MoveMode.RootMotion && (tc.EnableTracking || tc.FaceTarget))
-            {
-                var sensor = Ctx.Mover.EnemySensor;
-                var target = sensor != null ? sensor.FindTarget() : null;
-                if (target != null)
-                {
-                    // translate = 이동 워프(EnableTracking), face = 타겟 조준(FaceTarget) — 회전은 트래킹과 무관
-                    Ctx.Mover.SetWarpTarget(target, tc.StopDistance,
-                        tc.EnableTracking, tc.FaceTarget, tc.FaceTurnSpeed);
-                    // 진입 1회 스냅 — FaceWindow가 0부터면 첫 프레임에 즉시 정렬(입력 조준이 있으면 양보).
-                    // 이후 FaceWindow 동안의 지속 회전(락온)은 컨트롤러 UpdateWarpFacing이 담당.
-                    if (tc.FaceTarget && tc.FaceWindowStart <= 0f && !facedInput)
-                        Ctx.Mover.FaceToward(target.position - Ctx.Transform.position);
-                }
-            }
-
-            // 시작 부스트 (0이면 내부에서 해제) — 매 섹션 진입마다 갱신
-            Ctx.Mover.AddStartBoost(tc.StartBoostSpeed, tc.StartBoostTime);
-
-            // 섹션 모듈 진입 (i-frame 등) — Warp가 참조할 수 있게 입력 조준 여부 전달
-            _sc.FacedInputThisEnter = facedInput;
+            // 섹션 기능은 모듈만 소유한다. 위 기본값 초기화 후 OnEnter 순서대로 필요한 기능을 켠다.
+            _sc.FacedInputThisEnter = false;
+            _sc.PreviousNormalizedTime = SectionNormalizedTime(tc);
             for (int i = 0; i < tc.Modules.Count; i++)
                 tc.Modules[i]?.OnEnter(tc, _sc);
 
@@ -310,36 +279,6 @@ namespace ZZZ.Player.StateMachine.States
         {
             if (tc.Clip == null || tc.Clip.length <= 0f) return 1f;
             return _clipTime * Mathf.Max(0.01f, tc.Speed) / tc.Clip.length;
-        }
-
-        // 이동 워프 윈도우 — TrackWindow 안에서만 이동 재조준 작동 (타격 이후 적을 따라 휙 도는 것 방지)
-        private void UpdateWarpWindow(TrackClip tc, float ntRaw)
-        {
-            if (!tc.EnableTracking) { Ctx.Mover.WarpWindowActive = false; return; }
-            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
-            Ctx.Mover.WarpWindowActive = p >= tc.TrackWindowStart && p <= tc.TrackWindowEnd;
-        }
-
-        // 타겟 조준 윈도우 — FaceWindow 안에서 컨트롤러가 타겟을 향해 회전. [0,0]이면 진입 1회(스냅), 넓히면 락온.
-        private void UpdateFaceWindow(TrackClip tc, float ntRaw)
-        {
-            if (!tc.FaceTarget) { Ctx.Mover.FaceWindowActive = false; return; }
-            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
-            Ctx.Mover.FaceWindowActive = p >= tc.FaceWindowStart && p <= tc.FaceWindowEnd;
-        }
-
-        // 입력 회전 잠금(LockRotation)을 normalizedTime 구간에서만 작동시킨다. End<=Start면 섹션 전체.
-        private void UpdateRotationWindows(TrackClip tc, float ntRaw)
-        {
-            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : Mathf.Clamp01(ntRaw);
-
-            if (tc.LockRotation)
-            {
-                bool windowed = tc.LockWindowEnd > tc.LockWindowStart;
-                bool locked   = !windowed || (p >= tc.LockWindowStart && p <= tc.LockWindowEnd);
-                Ctx.Mover.AllowRotation = !locked;
-            }
-            else Ctx.Mover.AllowRotation = true;
         }
 
         // 섹션 모듈 매 프레임 구동 (i-frame 등). 있는 모듈만 실행.

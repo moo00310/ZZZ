@@ -160,19 +160,70 @@ namespace ZZZ.Editor.AnimationTool
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUI.BeginChangeCheck();
+                float windowStart = 0f, windowEnd = 0f;
                 if (m is WindowModule wm)   // 윈도우 모듈(무적/패링/…) 공용 — Start/End 슬라이더
                 {
-                    float s = wm.Start, e = wm.End;
-                    FrameWindowField("   Window (f)", "이 모듈이 작동하는 프레임 구간", tc, ref s, ref e);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        Undo.RecordObject(_config, "Edit Module");
-                        wm.Start = Mathf.Clamp01(Mathf.Min(s, e));
-                        wm.End   = Mathf.Clamp01(Mathf.Max(s, e));
-                        EditorUtility.SetDirty(_config);
-                    }
+                    windowStart = wm.Start;
+                    windowEnd = wm.End;
+                    FrameWindowField("   Window (f)", "이 모듈이 작동하는 프레임 구간",
+                        tc, ref windowStart, ref windowEnd);
                 }
-                else EditorGUI.EndChangeCheck();
+
+                float distance = m is AdditionalMovementModule move ? move.Distance : 0f;
+                AdditionalMoveDirection moveDirection = m is AdditionalMovementModule moveDir
+                    ? moveDir.Direction : AdditionalMoveDirection.Forward;
+                float stopDistance = m is TargetWarpModule warp ? warp.StopDistance : 0f;
+                float turnSpeed = m is FaceTargetModule face ? face.TurnSpeed : 0f;
+                float boostSpeed = m is StartBoostModule boost ? boost.Speed : 0f;
+                float boostDuration = m is StartBoostModule boostTime ? boostTime.Duration : 0f;
+                float backScale = m is BackMotionScaleModule back ? back.Scale : 0f;
+
+                if (m is AdditionalMovementModule)
+                {
+                    distance = EditorGUILayout.FloatField(
+                        new GUIContent("   Distance", "Window 전체에 걸쳐 추가할 총 이동 거리(m)"), distance);
+                    moveDirection = (AdditionalMoveDirection)EditorGUILayout.EnumPopup(
+                        new GUIContent("   Direction", "Forward/Backward는 캐릭터 기준, MoveInput은 현재 입력 방향"),
+                        moveDirection);
+                }
+                else if (m is TargetWarpModule)
+                    stopDistance = EditorGUILayout.FloatField("   Stop Distance", stopDistance);
+                else if (m is FaceTargetModule)
+                    turnSpeed = EditorGUILayout.FloatField("   Turn Speed (°/s)", turnSpeed);
+                else if (m is StartBoostModule)
+                {
+                    boostSpeed = EditorGUILayout.FloatField("   Speed", boostSpeed);
+                    boostDuration = EditorGUILayout.FloatField("   Duration (s)", boostDuration);
+                }
+                else if (m is BackMotionScaleModule)
+                    backScale = EditorGUILayout.FloatField("   Scale", backScale);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(_config, "Edit Module");
+                    if (m is WindowModule window)
+                    {
+                        window.Start = Mathf.Clamp01(Mathf.Min(windowStart, windowEnd));
+                        window.End = Mathf.Clamp01(Mathf.Max(windowStart, windowEnd));
+                    }
+                    if (m is AdditionalMovementModule movement)
+                    {
+                        movement.Distance = distance;
+                        movement.Direction = moveDirection;
+                    }
+                    else if (m is TargetWarpModule targetWarp)
+                        targetWarp.StopDistance = Mathf.Max(0f, stopDistance);
+                    else if (m is FaceTargetModule faceTarget)
+                        faceTarget.TurnSpeed = Mathf.Max(0f, turnSpeed);
+                    else if (m is StartBoostModule startBoost)
+                    {
+                        startBoost.Speed = Mathf.Max(0f, boostSpeed);
+                        startBoost.Duration = Mathf.Max(0f, boostDuration);
+                    }
+                    else if (m is BackMotionScaleModule backMotion)
+                        backMotion.Scale = Mathf.Max(0f, backScale);
+                    EditorUtility.SetDirty(_config);
+                }
             }
 
             if (removeAt >= 0)
@@ -226,103 +277,6 @@ namespace ZZZ.Editor.AnimationTool
             var   clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", tc.Clip, typeof(AnimationClip), false);
             float spd  = EditorGUILayout.FloatField("Speed",       tc.Speed);
             var   mode = (MoveMode)EditorGUILayout.EnumPopup("Move Mode", tc.MoveMode);
-            bool lockRot = EditorGUILayout.Toggle(
-                new GUIContent("Lock Rotation", "이 클립 동안 이동 입력이 있어도 캐릭터 회전 금지 (피격/경직)"),
-                tc.LockRotation);
-            float lockWS = tc.LockWindowStart, lockWE = tc.LockWindowEnd;
-            if (lockRot)
-                FrameWindowField("  Lock Window (f)", "회전을 잠그는 프레임 구간. End<=Start면 섹션 전체",
-                    tc, ref lockWS, ref lockWE);
-            bool faceInput = tc.FaceInputOnEnter;   // 토글은 아래 고급 'Facing' 그룹에서 그림 (조준 옵션끼리 묶음)
-
-            // 루프 전진 평속화 — RootMotion 루프 섹션 전용 (걷기/달리기). 비루프/비RootMotion엔 영향 없음.
-            bool smoothLoop = tc.SmoothLoopSpeed;
-            float backScale = tc.BackMotionScale;
-            if (mode == MoveMode.RootMotion)
-            {
-                // Smooth Loop Speed는 루프 클립에서만 의미 있는 기능 → 루프일 때만 토글 노출(켜고/끄기).
-                // 비루프 클립은 런타임에서 무시되므로 토글을 숨기고, 켜져 있던 stale 값은 꺼서 정리한다.
-                if (tc.IsLooping)
-                    smoothLoop = EditorGUILayout.Toggle(
-                        new GUIContent("Smooth Loop Speed", "루프 클립 끝 정지프레임이 만드는 전진 '틱'을 한 루프 평균속도로 제거. 끄면 원본 보폭감(프레임별 가감속) 유지하되 틱이 보일 수 있음"),
-                        tc.SmoothLoopSpeed);
-                else
-                    smoothLoop = false;   // 비루프 → 항상 끔 (토글 숨김)
-                backScale = EditorGUILayout.FloatField(
-                    new GUIContent("Back Motion Scale", "후진(캐릭터 기준 -Z) 루트모션만 이 배율로 증폭. 전진/측면 불변. 1=원본, 1.2=뒤로 빠지는 모션 20% 강조(스텝백·recoil 강조)"),
-                    tc.BackMotionScale);
-            }
-
-            // ── 고급 (접기) — Boost / Target Tracking / Section Turn ──
-            // 값은 항상 현재값으로 초기화 → 접혀서 UI를 안 그려도 저장 로직이 그대로 유지됨
-            float boostSpd = tc.StartBoostSpeed,  boostT = tc.StartBoostTime;
-            bool  track    = tc.EnableTracking,   face   = tc.FaceTarget;
-            float faceTurn = tc.FaceTurnSpeed;
-            float fwS = tc.FaceWindowStart, fwE = tc.FaceWindowEnd;
-            float twS = tc.TrackWindowStart, twE = tc.TrackWindowEnd, stopD = tc.StopDistance;
-            bool  secTurn  = tc.SectionTurn;
-            float turnWS   = tc.TurnWindowStart, turnWE = tc.TurnWindowEnd;
-
-            // 접혀 있어도 어떤 고급 옵션이 켜져 있는지 라벨로 표시
-            string advLabel = "고급";
-            if (boostSpd > 0f)          advLabel += " · Boost";
-            if (track)                  advLabel += " · Warp";
-            if (faceInput)              advLabel += " · FaceInput";
-            if (face)                   advLabel += " · FaceTarget";
-            if (secTurn)                advLabel += " · Turn";
-            _clipAdvFold = EditorGUILayout.Foldout(_clipAdvFold, advLabel, true);
-            if (_clipAdvFold)
-            {
-                boostSpd = EditorGUILayout.FloatField(
-                    new GUIContent("Start Boost", "클립 시작 순간 진행 방향 속도 (0=끔). 시간이 지나며 감쇠"),
-                    tc.StartBoostSpeed);
-                if (boostSpd > 0f)
-                    boostT = EditorGUILayout.FloatField("  Boost Time(s)", tc.StartBoostTime);
-
-                if (mode == MoveMode.RootMotion)
-                {
-                    EditorGUILayout.LabelField("── Facing & Warp ──", EditorStyles.miniBoldLabel);
-
-                    // [이동 워프] 루트모션 이동을 적 방향으로 끌어와 StopDistance 앞에서 멈춤 (회전과 별개)
-                    track = EditorGUILayout.Toggle(
-                        new GUIContent("Target Warp (Move)", "전방 적 방향으로 루트모션 이동을 끌어와 StopDistance 앞에서 멈춤. 회전과 독립"),
-                        tc.EnableTracking);
-                    if (track)
-                    {
-                        FrameWindowField("  Warp Window (f)", "이동 워프가 작동하는 프레임 구간. 타격 이후엔 끊을 것",
-                            tc, ref twS, ref twE);
-                        stopD = EditorGUILayout.FloatField(
-                            new GUIContent("  Stop Distance", "타겟 앞 정지 거리 (관통 방지) — 이동 워프 전용"), tc.StopDistance);
-                    }
-
-                    // [입력 조준] 진입 순간 내 이동 입력(WASD) 방향으로 1회 스냅. 적 방향(Face Target)보다 우선.
-                    faceInput = EditorGUILayout.Toggle(
-                        new GUIContent("Face Input (Enter)", "진입 순간 이동 입력 방향으로 즉시 스냅 (적이 아니라 내 입력 방향). 입력 있으면 Face Target보다 우선"),
-                        tc.FaceInputOnEnter);
-
-                    // [타겟 조준] Snap+Lock-on 통합 — FaceWindow 동안 타겟 향해 회전. [0,0]=진입 스냅, 넓히면 락온
-                    face = EditorGUILayout.Toggle(
-                        new GUIContent("Face Target", "FaceWindow 동안 타겟을 향해 회전. Window [0,0]=진입 1회 스냅 / 넓히면 락온(적이 움직여도 따라붙음). Target Warp와 독립"),
-                        tc.FaceTarget);
-                    if (face)
-                    {
-                        FrameWindowField("  Face Window (f)", "조준 작동 구간. Start==End면 진입 1회 스냅, 넓히면 그 구간 내내 락온",
-                            tc, ref fwS, ref fwE);
-                        faceTurn = EditorGUILayout.FloatField(
-                            new GUIContent("  Turn Speed(°/s)", "조준 회전 각속도. 0=즉시(스냅)"), tc.FaceTurnSpeed);
-                    }
-                }
-
-                if (mode == MoveMode.RootMotion)
-                {
-                    secTurn = EditorGUILayout.Toggle(
-                        new GUIContent("Section Turn (Root)", "클립에 구워진 턴 회전을 Bip001 yaw 델타로 추출해 transform에 적용. 각도는 애니가 결정. 켤 때 Lock Rotation도 함께 둘 것"),
-                        tc.SectionTurn);
-                    if (secTurn)
-                        FrameWindowField("  Turn Window (f)", "yaw 델타를 추출하는 프레임 구간. End<=Start면 섹션 전체. 구간 밖에선 추출만 멈추고 회전은 유지",
-                            tc, ref turnWS, ref turnWE);
-                }
-            }
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -333,25 +287,6 @@ namespace ZZZ.Editor.AnimationTool
                 tc.Clip = clip;
                 tc.Speed = Mathf.Max(0.01f, spd);
                 tc.MoveMode = mode;
-                tc.LockRotation = lockRot;
-                tc.LockWindowStart = Mathf.Clamp01(Mathf.Min(lockWS, lockWE));
-                tc.LockWindowEnd   = Mathf.Clamp01(Mathf.Max(lockWS, lockWE));
-                tc.FaceInputOnEnter = faceInput;
-                tc.SmoothLoopSpeed = smoothLoop;
-                tc.BackMotionScale = Mathf.Max(0f, backScale);
-                tc.StartBoostSpeed = Mathf.Max(0f, boostSpd);
-                tc.StartBoostTime  = Mathf.Max(0.01f, boostT);
-                tc.EnableTracking   = track;
-                tc.TrackWindowStart = Mathf.Clamp01(Mathf.Min(twS, twE));
-                tc.TrackWindowEnd   = Mathf.Clamp01(Mathf.Max(twS, twE));
-                tc.StopDistance     = Mathf.Max(0f, stopD);
-                tc.FaceTarget       = face;
-                tc.FaceWindowStart  = Mathf.Clamp01(Mathf.Min(fwS, fwE));
-                tc.FaceWindowEnd    = Mathf.Clamp01(Mathf.Max(fwS, fwE));
-                tc.FaceTurnSpeed    = Mathf.Max(0f, faceTurn);
-                tc.SectionTurn     = secTurn;
-                tc.TurnWindowStart = Mathf.Clamp01(Mathf.Min(turnWS, turnWE));
-                tc.TurnWindowEnd   = Mathf.Clamp01(Mathf.Max(turnWS, turnWE));
                 EditorUtility.SetDirty(_config);
             }
 
