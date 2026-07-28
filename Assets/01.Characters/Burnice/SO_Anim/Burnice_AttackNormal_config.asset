@@ -423,7 +423,13 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.058592666
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 64547889d77e6344fa198847250c1ec9, type: 2}
+      EndNormalizedTime: 0
+      Locked: 1
     Modules:
     - rid: 6745857304624365634
     - rid: 6745857324881018900
@@ -496,12 +502,28 @@ MonoBehaviour:
       Timing: 0
       WindowStart: 0.53521127
       WindowEnd: 1
-    Notifies: []
+    - TargetConfig: {fileID: 0}
+      TargetSection: Attack_Normal_02
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 6745857415900561470
+      Timing: 0
+      WindowStart: 0.33802816
+      WindowEnd: 1
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.02737669
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: d46e3362105eeec45a32a847258bad67, type: 2}
+      EndNormalizedTime: 0
+      Locked: 1
     Modules:
     - rid: 6745857324881018904
     - rid: 6745857324881018905
     - rid: 6745857324881018906
     - rid: 6745857324881018907
+    - rid: 6745857393258135614
   - SectionName: Attack_Rush_End
     Clip: {fileID: 7400000, guid: b1f9b2b8f9953fe48a6713e34603a047, type: 2}
     Speed: 1
@@ -675,15 +697,28 @@ MonoBehaviour:
     - rid: 6745857324881018906
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        Start: 0
-        End: 0.33802816
+        Start: 0.014084507
+        End: 0.07042254
         StopDistance: 1.2
     - rid: 6745857324881018907
       type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Start: 0.014084507
-        End: 0.33802816
+        End: 0.28169015
         TurnSpeed: 720
+    - rid: 6745857393258135614
+      type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.014084507
+        End: 0.28169015
+        Distance: 2
+        Direction: 0
+    - rid: 6745857415900561470
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 2
+        Direction: 0
+        RequireHeld: 0
     - rid: 7723411236031561794
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:
