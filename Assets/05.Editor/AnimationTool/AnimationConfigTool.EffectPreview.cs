@@ -35,6 +35,7 @@ namespace ZZZ.Editor.AnimationTool
             public Renderer OverrideRenderer;
             public Material BaseMaterial;
             public EffectProgressDriver[] ProgressDrivers;
+            public List<EffectModule> ModulesSorted;
         }
 
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
@@ -78,18 +79,47 @@ namespace ZZZ.Editor.AnimationTool
                 if (!active) { a.Captured = false; continue; }   // 비활성 → 다음 활성 진입 때 다시 캡처
 
                 PlaceFxAtom(a);   // 오프셋/스케일 편집 실시간 반영 (ParentToSpawnerRoot는 캡처 포즈로 고정)
-                EffectMaterialApplier.Apply(a.Entry.MaterialOverride, a.OverrideRenderer, a.BaseMaterial);   // 룩 통째 스왑
+                EffectMaterialApplier.Apply(EffectModuleSettings.MaterialOverride(a.Entry), a.OverrideRenderer, a.BaseMaterial);   // 룩 통째 스왑
                 if (_fxMpb == null) _fxMpb = new MaterialPropertyBlock();
                 EffectParamApplier.Apply(a.Root, a.Entry, _fxMpb);   // 셰이더 노브 오버라이드 실시간 반영
                 ParticleParamApplier.Apply(a.Entry, a.OverrideTarget, a.Baseline);   // 파티클 모듈 노브(Simulate 전)
-                float speed = a.Entry.PlaybackSpeed > 0f ? a.Entry.PlaybackSpeed : 1f;   // 시뮬 시간 압축으로 근사
+                float speed = EffectModuleSettings.PlaybackSpeed(a.Entry);   // 시뮬 시간 압축으로 근사
                 float playbackTime = Mathf.Min(local, atomDur) * speed;
-                foreach (var ps in a.Top)
-                    if (ps != null) ps.Simulate(playbackTime, true, true);
+                if (a.Entry.Modules != null && a.Entry.Modules.Count > 0)
+                    SimulateFxModules(a, playbackTime);
+                else
+                    foreach (var ps in a.Top)
+                        if (ps != null) ps.Simulate(playbackTime, true, true);
                 foreach (var driver in a.ProgressDrivers)
                     if (driver != null) driver.Evaluate(playbackTime);
             }
             SceneView.RepaintAll();
+        }
+
+        private void SimulateFxModules(FxPreviewAtom atom, float playbackTime)
+        {
+            const float step = 1f / 60f;
+            foreach (ParticleSystem ps in atom.Top)
+                if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            float elapsed = 0f;
+            while (elapsed < playbackTime)
+            {
+                EvaluateFxModules(atom, elapsed);
+                float delta = Mathf.Min(step, playbackTime - elapsed);
+                foreach (ParticleSystem ps in atom.Top)
+                    if (ps != null) ps.Simulate(delta, true, false);
+                elapsed += delta;
+            }
+            EvaluateFxModules(atom, playbackTime);
+        }
+
+        private void EvaluateFxModules(FxPreviewAtom atom, float localTime)
+        {
+            if (_target == null) return;
+            for (int i = 0; i < atom.ModulesSorted.Count; i++)
+                atom.ModulesSorted[i].EvaluatePreview(
+                    atom.Root.transform, _target.transform, localTime);
         }
 
         private void RebuildFxPreview()
@@ -137,10 +167,16 @@ namespace ZZZ.Editor.AnimationTool
 
             var target   = go.GetComponentInChildren<ParticleSystem>(true);
             var renderer = go.GetComponentInChildren<Renderer>(true);
+            var modules = new List<EffectModule>();
+            if (entry.Modules != null)
+                for (int i = 0; i < entry.Modules.Count; i++)
+                    if (entry.Modules[i] != null) modules.Add(entry.Modules[i]);
+            modules.Sort((a, b) => a.EvaluationOrder.CompareTo(b.EvaluationOrder));
             var a = new FxPreviewAtom { Root = go, Top = top, ClipIdx = clipIdx, Notify = notify, Entry = entry, Socket = socket,
                                         OverrideTarget = target, Baseline = ParticleBaseline.Capture(target),
                                         OverrideRenderer = renderer, BaseMaterial = renderer != null ? renderer.sharedMaterial : null,
-                                        ProgressDrivers = go.GetComponentsInChildren<EffectProgressDriver>(true) };
+                                        ProgressDrivers = go.GetComponentsInChildren<EffectProgressDriver>(true),
+                                        ModulesSorted = modules };
             if (entry.FollowSpawner && !toRoot) ApplyFxTransform(a);
             go.SetActive(false);
             _fxAtoms.Add(a);
@@ -416,6 +452,11 @@ namespace ZZZ.Editor.AnimationTool
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
                 e.FindPropertyRelative("ParamOverrides").ClearArray();
+                var modules = e.FindPropertyRelative("Modules");
+                modules.ClearArray();
+                modules.InsertArrayElementAtIndex(0);
+                modules.GetArrayElementAtIndex(0).managedReferenceValue =
+                    new ParticlePlaybackEffectModule();
                 _fxCompositeSO.ApplyModifiedProperties();
                 _fxDirty = true;
             }

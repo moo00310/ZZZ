@@ -130,19 +130,32 @@ namespace ZZZ.Effects
         {
             if (ps == null || entry == null || !baseline.Valid) return;
 
+            ParticleAppearanceEffectModule appearance = EffectModuleSettings.Appearance(entry);
             var main = ps.main;
-            main.startLifetime = entry.StartLifetime > 0f
-                ? (ParticleSystem.MinMaxCurve)entry.StartLifetime : baseline.StartLifetime;
+            float startLifetime = EffectModuleSettings.StartLifetime(entry);
+            main.startLifetime = startLifetime > 0f
+                ? (ParticleSystem.MinMaxCurve)startLifetime : baseline.StartLifetime;
 
             var ov = entry.ParticleOverride;
-            main.startColor = ov != null && ov.OverrideStartColor
-                ? (ParticleSystem.MinMaxGradient)ov.StartColor : baseline.StartColor;
+            bool overrideColor = appearance != null
+                ? appearance.OverrideStartColor
+                : ov != null && ov.OverrideStartColor;
+            Color startColor = appearance != null
+                ? appearance.StartColor
+                : ov != null ? ov.StartColor : Color.white;
+            main.startColor = overrideColor
+                ? (ParticleSystem.MinMaxGradient)startColor : baseline.StartColor;
 
             var sol = ps.sizeOverLifetime;
-            if (ov != null && ov.OverrideSizeCurve)
+            bool overrideSize = appearance != null
+                ? appearance.OverrideSizeCurve
+                : ov != null && ov.OverrideSizeCurve;
+            if (overrideSize)
             {
                 sol.enabled = true;
-                sol.size    = new ParticleSystem.MinMaxCurve(ov.SizeMultiplier, ov.SizeCurve);
+                float multiplier = appearance != null ? appearance.SizeMultiplier : ov.SizeMultiplier;
+                AnimationCurve curve = appearance != null ? appearance.SizeCurve : ov.SizeCurve;
+                sol.size = new ParticleSystem.MinMaxCurve(multiplier, curve);
             }
             else
             {

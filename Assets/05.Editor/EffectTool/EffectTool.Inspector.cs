@@ -103,6 +103,11 @@ namespace ZZZ.Editor.EffectTool
                 e.FindPropertyRelative("Despawn").enumValueIndex = (int)DespawnMode.ParticleStopped;
                 e.FindPropertyRelative("Lifetime").floatValue = 0f;
                 e.FindPropertyRelative("ParamOverrides").ClearArray();
+                var modules = e.FindPropertyRelative("Modules");
+                modules.ClearArray();
+                modules.InsertArrayElementAtIndex(0);
+                modules.GetArrayElementAtIndex(0).managedReferenceValue =
+                    new ParticlePlaybackEffectModule();
             }
 
             _compositeSO.ApplyModifiedProperties();

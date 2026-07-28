@@ -52,12 +52,13 @@ namespace ZZZ.Effects
 
             CancelInvoke();   // 이전 재생의 ReleaseSelf/StopEmitting 예약 취소
 
-            ApplyPlaybackSpeed(entry.PlaybackSpeed > 0f ? entry.PlaybackSpeed : 1f);
+            ApplyPlaybackSpeed(EffectModuleSettings.PlaybackSpeed(entry));
             ApplyMaterialOverride(entry);
             ApplyParamOverrides(entry);
             ApplyParticleOverrides(entry);
-            if (entry.Duration > 0f)
-                Invoke(nameof(StopEmitting), entry.Duration);
+            float duration = EffectModuleSettings.Duration(entry);
+            if (duration > 0f)
+                Invoke(nameof(StopEmitting), duration);
 
             if (_mode == DespawnMode.Fixed)
             {
@@ -133,7 +134,8 @@ namespace ZZZ.Effects
                 _baseMaterial      = _overrideRenderer != null ? _overrideRenderer.sharedMaterial : null;
                 _materialCacheInit = true;
             }
-            EffectMaterialApplier.Apply(entry.MaterialOverride, _overrideRenderer, _baseMaterial);
+            EffectMaterialApplier.Apply(
+                EffectModuleSettings.MaterialOverride(entry), _overrideRenderer, _baseMaterial);
         }
 
         // 구간 이펙트가 끝났을 때(또는 섹션 이탈·캔슬) 외부(EffectHandle)에서 부르는 정지 진입점.

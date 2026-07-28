@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
 using ZZZ;
+using ZZZ.Effects;
 using ZZZ.Player.StateMachine.States;
 
 namespace ZZZ.Player.StateMachine
@@ -72,6 +73,8 @@ namespace ZZZ.Player.StateMachine
 
         private void Awake()
         {
+            EffectService.SetCharacterRoot(transform);
+
             var controller = GetComponent<PlayerController>();
             var animator   = GetComponent<AnimatorBridge>();
             var cc         = GetComponent<CharacterController>();

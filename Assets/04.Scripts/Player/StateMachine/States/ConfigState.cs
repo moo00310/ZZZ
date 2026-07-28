@@ -321,7 +321,8 @@ namespace ZZZ.Player.StateMachine.States
             {
                 case NotifyType.Effect:
                     if (notify.Effect != null)
-                        return EffectService.Play(notify.Effect, Ctx.Transform, notify.IsInterval);
+                        return EffectService.PlayAfterAnimation(
+                            notify.Effect, Ctx.Transform, notify.IsInterval);
                     return null;
                 default:
                     if (!string.IsNullOrEmpty(notify.EventName))

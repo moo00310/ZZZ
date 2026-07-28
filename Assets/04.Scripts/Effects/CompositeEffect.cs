@@ -30,15 +30,15 @@ namespace ZZZ.Effects
         // 텍스처+색+파라미터+블렌드를 한 번에 바꾸고 오서링은 네이티브 머티리얼 인스펙터에서(툴로 안 빨려듦).
         // sharedMaterial 참조 스왑이라 인스턴스화/릭 없음. 같은 셰이더 공유 규율(다른 셰이더/블렌드는 템플릿 프리팹).
         // 셰이더 노브(MPB)와 공존 — 미세 조정은 MPB, 룩 전체 스왑은 이 필드. 메모리 effect-knob-vs-template-criteria.
-        public Material   MaterialOverride;
+        [HideInInspector] public Material MaterialOverride;
 
         [Header("Playback")]
         [Tooltip("방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 방출을 멈추고 잔여 파티클은 자연 소멸 — Looping 이펙트를 조합마다 다른 길이로 쓸 수 있다")]
-        public float Duration      = 0f;
+        [HideInInspector] public float Duration = 0f;
         [Tooltip("재생 속도 배율. 프리팹에 구운 simulationSpeed에 곱해지며, 전체 길이도 1/배율로 줄어든다")]
-        public float PlaybackSpeed = 1f;
+        [HideInInspector] public float PlaybackSpeed = 1f;
         [Tooltip("파티클 Start Lifetime(초) 오버라이드. 0 = 프리팹 기본값(안 덮음). >0이면 덮어써 나오고 사라지는 전체 속도를 조절 — 작을수록 빠른 번쩍. Duration과 같은 '0=중립' 규칙이라 토글 없이 일반 필드")]
-        public float StartLifetime = 0f;
+        [HideInInspector] public float StartLifetime = 0f;
 
         [Header("Placement")]
         public string  Socket         = "";           // 붙일 본/소켓 이름 (빈값=스폰 원점)
@@ -53,6 +53,9 @@ namespace ZZZ.Effects
         // EulerOffset 조준이 어려울 때 — EulerOffset이 월드 회전으로 직접 먹고, PositionOffset도 월드축.
         // (FollowSpawner=소켓 부모 모드에선 무효 — 그땐 소켓 회전을 계속 따라감)
         public bool    IgnoreSocketRotation = false;
+
+        [SerializeReference]
+        public List<EffectModule> Modules = new List<EffectModule>();
 
         // 풀 프리웜/상한은 엔트리가 아니라 프리팹의 EffectPoolConfig 컴포넌트에서 프리팹 단위로 설정한다
         // (풀은 프리팹 단위 전역 공유 — 용량은 프리팹의 속성). 소유권은 캐릭터가 config에서 유도해 등록(EffectOwnership).
@@ -71,7 +74,7 @@ namespace ZZZ.Effects
         // 같은 프리팹/풀을 조합마다 다른 타이밍/색으로 쓴다. 필드별 On 토글 = sparse: 끈 필드는
         // Bind가 프리팹 기본값(베이스라인)으로 되돌린다(풀 재사용 누수 방지). 노브 판정 기준은
         // 메모리 effect-knob-vs-template-criteria 참조. (텍스처는 값이라 셰이더 MPB 노브로 처리)
-        public ParticleParamOverride ParticleOverride = new ParticleParamOverride();
+        [HideInInspector] public ParticleParamOverride ParticleOverride = new ParticleParamOverride();
     }
 
     // 단일 ParticleSystem에 대한 조합별 "토글 오버라이드". 커브/색은 무해한 중립값이 없어

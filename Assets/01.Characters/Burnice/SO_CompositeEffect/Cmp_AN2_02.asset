@@ -16,7 +16,7 @@ MonoBehaviour:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0.025
     MaterialOverride: {fileID: 0}
-    Duration: 0.28732514
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: Bip001 R Toe0
@@ -26,6 +26,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 6745857415900561471
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -43,7 +45,7 @@ MonoBehaviour:
   - Prefab: {fileID: 5055750446988487301, guid: d999b6831c1cf3d46a3674a042e57af3, type: 3}
     StartDelay: 0.025
     MaterialOverride: {fileID: 0}
-    Duration: 0.20732513
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: Bip001 R Toe0
@@ -53,6 +55,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 6745857415900561472
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -98,6 +102,7 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules: []
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -112,3 +117,18 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 6745857415900561471
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.28732514
+        _playbackSpeed: 1
+        _startLifetime: 0
+    - rid: 6745857415900561472
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.20732513
+        _playbackSpeed: 1
+        _startLifetime: 0

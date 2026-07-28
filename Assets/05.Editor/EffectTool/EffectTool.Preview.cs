@@ -100,7 +100,7 @@ namespace ZZZ.Editor.EffectTool
                 if (!active) continue;
 
                 // 머티리얼 스왑(룩 통째) → 셰이더 노브 MPB는 그 위에 얹힘
-                EffectMaterialApplier.Apply(inst.Entry.MaterialOverride, inst.OverrideRenderer, inst.BaseMaterial);
+                EffectMaterialApplier.Apply(EffectModuleSettings.MaterialOverride(inst.Entry), inst.OverrideRenderer, inst.BaseMaterial);
                 // 셰이더 노브 오버라이드 실시간 반영(런타임 Bind와 동일 로직)
                 if (_previewMpb == null) _previewMpb = new MaterialPropertyBlock();
                 EffectParamApplier.Apply(inst.Root, inst.Entry, _previewMpb);
@@ -108,7 +108,7 @@ namespace ZZZ.Editor.EffectTool
                 ParticleParamApplier.Apply(inst.Entry, inst.OverrideTarget, inst.Baseline);
 
                 // PlaybackSpeed는 시뮬 시간 압축으로, Duration은 유효 길이 클램프로 근사
-                float speed = inst.Entry.PlaybackSpeed > 0f ? inst.Entry.PlaybackSpeed : 1f;
+                float speed = EffectModuleSettings.PlaybackSpeed(inst.Entry);
                 float dur   = Mathf.Max(EffectEditorShared.EntryDuration(inst.Entry), 0.05f);
                 float playbackTime = Mathf.Min(local, dur) * speed;
                 foreach (var ps in inst.TopSystems)

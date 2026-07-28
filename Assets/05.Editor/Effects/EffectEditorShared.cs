@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -35,20 +36,22 @@ namespace ZZZ.Editor.Effects
         public static float EntryDuration(CompositeEffectEntry e)
         {
             if (e == null || e.Prefab == null) return 0f;
-            float speed   = e.PlaybackSpeed > 0f ? e.PlaybackSpeed : 1f;
+            float speed   = EffectModuleSettings.PlaybackSpeed(e);
             float natural = PrefabNaturalDuration(e) / speed;
-            return e.Duration > 0f ? Mathf.Min(natural, e.Duration) : natural;
+            float duration = EffectModuleSettings.Duration(e);
+            return duration > 0f ? Mathf.Min(natural, duration) : natural;
         }
 
         // StartLifetime 오버라이드(>0)를 반영한 프리팹 길이 근사. 단일 PS 기준으로
         // duration + (오버라이드 수명 or 구운 수명). 오버라이드 없으면(0) PrefabDuration과 동일.
         private static float PrefabNaturalDuration(CompositeEffectEntry e)
         {
-            if (e.StartLifetime <= 0f) return PrefabDuration(e.Prefab);
+            float startLifetime = EffectModuleSettings.StartLifetime(e);
+            if (startLifetime <= 0f) return PrefabDuration(e.Prefab);
             float baseDur = 0f;
             var ps = e.Prefab.GetComponentInChildren<ParticleSystem>(true);
             if (ps != null) baseDur = ps.main.duration;
-            return baseDur + e.StartLifetime;
+            return baseDur + startLifetime;
         }
 
         public static float CompositeDuration(CompositeEffect c)
@@ -220,19 +223,17 @@ namespace ZZZ.Editor.Effects
         // 프리뷰 구조(Prefab/Socket/부착 방식) 변경 여부를 리턴 — 호출 툴이 재생성 트리거로 쓴다.
         public static bool DrawEntryFields(SerializedProperty e, SerializedProperty prefabProp, GameObject prefab)
         {
+            bool migrated = MigrateLegacyParticleModules(e);
+
             // 구조 필드 — 변경 시 재생성
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
             EditorGUILayout.PropertyField(e.FindPropertyRelative("Socket"), new GUIContent("Socket"));
-            bool structural = EditorGUI.EndChangeCheck();
-
-            // 룩 통째 교체 — null이면 프리팹 기본 머티리얼(렌더러 sharedMaterial 스왑)
-            EditorGUILayout.PropertyField(e.FindPropertyRelative("MaterialOverride"),
-                new GUIContent("Material", "비우면 프리팹 기본. 지정하면 렌더러 머티리얼을 통째 교체(텍스처+색+파라미터). 같은 셰이더 공유 권장"));
+            bool placementChanged = EditorGUI.EndChangeCheck();
+            bool structural = migrated || placementChanged;
 
             // 기본 타이밍(항상 표시)
             EditorGUILayout.PropertyField(e.FindPropertyRelative("StartDelay"));
-            EditorGUILayout.PropertyField(e.FindPropertyRelative("PlaybackSpeed"));
 
             // Option — 부착/추종 방식
             if (FoldGroup(e, "Option"))
@@ -248,17 +249,20 @@ namespace ZZZ.Editor.Effects
                 EditorGUI.indentLevel--;
             }
 
-            // 파티클 노브 — 타이밍/배치 + 모양/색(단일 PS의 조합별 델타)
-            if (FoldGroup(e, "파티클 노브"))
+            // Entry가 소유하는 공통 배치. 파티클 재생·외형·머티리얼은 Effect Modules에서 편집한다.
+            if (FoldGroup(e, "Placement"))
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(e.FindPropertyRelative("Duration"));
-                EditorGUILayout.PropertyField(e.FindPropertyRelative("StartLifetime"),
-                    new GUIContent("Start Lifetime", "0 = 프리팹 기본값(안 덮음). >0이면 덮어써 나오고 사라지는 전체 속도 조절 — 작을수록 빠른 번쩍"));
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("PositionOffset"));
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("EulerOffset"));
                 EditorGUILayout.PropertyField(e.FindPropertyRelative("Scale"));
-                DrawParticleShapeRows(e, prefab);
+                EditorGUI.indentLevel--;
+            }
+
+            if (FoldGroup(e, "Effect Modules"))
+            {
+                EditorGUI.indentLevel++;
+                structural |= DrawEffectModules(e.FindPropertyRelative("Modules"));
                 EditorGUI.indentLevel--;
             }
 
@@ -274,6 +278,146 @@ namespace ZZZ.Editor.Effects
             return structural;
         }
 
+        private static bool MigrateLegacyParticleModules(SerializedProperty entry)
+        {
+            SerializedProperty modules = entry.FindPropertyRelative("Modules");
+            if (modules == null) return false;
+
+            bool changed = false;
+            SerializedProperty duration = entry.FindPropertyRelative("Duration");
+            SerializedProperty speed = entry.FindPropertyRelative("PlaybackSpeed");
+            SerializedProperty lifetime = entry.FindPropertyRelative("StartLifetime");
+            if (!HasModule<ParticlePlaybackEffectModule>(modules)
+                && (duration.floatValue > 0f || lifetime.floatValue > 0f
+                    || !Mathf.Approximately(speed.floatValue, 1f)))
+            {
+                AddModule(modules, new ParticlePlaybackEffectModule
+                {
+                    Duration = duration.floatValue,
+                    PlaybackSpeed = speed.floatValue > 0f ? speed.floatValue : 1f,
+                    StartLifetime = lifetime.floatValue,
+                });
+                duration.floatValue = 0f;
+                speed.floatValue = 1f;
+                lifetime.floatValue = 0f;
+                changed = true;
+            }
+
+            SerializedProperty material = entry.FindPropertyRelative("MaterialOverride");
+            if (!HasModule<MaterialOverrideEffectModule>(modules)
+                && material.objectReferenceValue != null)
+            {
+                AddModule(modules, new MaterialOverrideEffectModule
+                {
+                    Material = material.objectReferenceValue as Material,
+                });
+                material.objectReferenceValue = null;
+                changed = true;
+            }
+
+            SerializedProperty particle = entry.FindPropertyRelative("ParticleOverride");
+            SerializedProperty overrideSize = particle.FindPropertyRelative("OverrideSizeCurve");
+            SerializedProperty overrideColor = particle.FindPropertyRelative("OverrideStartColor");
+            if (!HasModule<ParticleAppearanceEffectModule>(modules)
+                && (overrideSize.boolValue || overrideColor.boolValue))
+            {
+                AddModule(modules, new ParticleAppearanceEffectModule
+                {
+                    OverrideSizeCurve = overrideSize.boolValue,
+                    SizeMultiplier = particle.FindPropertyRelative("SizeMultiplier").floatValue,
+                    SizeCurve = particle.FindPropertyRelative("SizeCurve").animationCurveValue,
+                    OverrideStartColor = overrideColor.boolValue,
+                    StartColor = particle.FindPropertyRelative("StartColor").colorValue,
+                });
+                overrideSize.boolValue = false;
+                overrideColor.boolValue = false;
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool HasModule<T>(SerializedProperty modules) where T : EffectModule
+            => HasModule(modules, typeof(T));
+
+        private static void AddModule(SerializedProperty modules, EffectModule module)
+        {
+            int index = modules.arraySize;
+            modules.InsertArrayElementAtIndex(index);
+            modules.GetArrayElementAtIndex(index).managedReferenceValue = module;
+        }
+
+        private static bool DrawEffectModules(SerializedProperty modules)
+        {
+            if (modules == null) return false;
+            bool changed = false;
+
+            for (int i = 0; i < modules.arraySize; i++)
+            {
+                SerializedProperty module = modules.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(
+                    ObjectNames.NicifyVariableName(ManagedReferenceTypeName(module)),
+                    EditorStyles.miniBoldLabel);
+                if (GUILayout.Button("Remove", EditorStyles.miniButton, GUILayout.Width(58f)))
+                {
+                    modules.DeleteArrayElementAtIndex(i);
+                    changed = true;
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.EndVertical();
+                    break;
+                }
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.PropertyField(module, GUIContent.none, true);
+                EditorGUILayout.EndVertical();
+            }
+
+            if (GUILayout.Button("+ Add Effect Module", EditorStyles.miniButton))
+            {
+                var menu = new GenericMenu();
+                foreach (Type type in TypeCache.GetTypesDerivedFrom<EffectModule>())
+                {
+                    if (type.IsAbstract || type.GetConstructor(Type.EmptyTypes) == null) continue;
+                    Type captured = type;
+                    string label = ObjectNames.NicifyVariableName(type.Name);
+                    if (HasModule(modules, type))
+                    {
+                        menu.AddDisabledItem(new GUIContent(label), true);
+                        continue;
+                    }
+                    menu.AddItem(new GUIContent(ObjectNames.NicifyVariableName(type.Name)), false, () =>
+                    {
+                        int index = modules.arraySize;
+                        modules.InsertArrayElementAtIndex(index);
+                        modules.GetArrayElementAtIndex(index).managedReferenceValue =
+                            Activator.CreateInstance(captured);
+                        modules.serializedObject.ApplyModifiedProperties();
+                    });
+                }
+                menu.ShowAsContext();
+            }
+
+            return changed;
+        }
+
+        private static string ManagedReferenceTypeName(SerializedProperty property)
+        {
+            string fullName = property.managedReferenceFullTypename;
+            if (string.IsNullOrEmpty(fullName)) return "Missing Module";
+            int dot = fullName.LastIndexOf('.');
+            return dot >= 0 ? fullName.Substring(dot + 1) : fullName;
+        }
+
+        private static bool HasModule(SerializedProperty modules, Type type)
+        {
+            string typeName = type.FullName;
+            for (int i = 0; i < modules.arraySize; i++)
+                if (modules.GetArrayElementAtIndex(i).managedReferenceFullTypename.EndsWith(typeName))
+                    return true;
+            return false;
+        }
+
         // 그룹 접기 상태 — 순수 UI라 공유 메서드가 자체 보관(대상 인스턴스ID + 프로퍼티경로 + 그룹명 키).
         // 없으면 펼침(기본). 도메인 리로드 시 초기화되는 건 무방.
         private static readonly HashSet<string> _groupCollapsed = new HashSet<string>();
@@ -285,46 +429,6 @@ namespace ZZZ.Editor.Effects
             bool now = EditorGUILayout.Foldout(expanded, label, true);
             if (now != expanded) { if (now) _groupCollapsed.Remove(key); else _groupCollapsed.Add(key); }
             return now;
-        }
-
-        // ── 파티클 모듈 토글 노브 (단일 PS의 조합별 델타: Size커브/시작색) ──
-        // 셰이더 노브와 달리 프리팹 선언이 필요 없다(파티클 모듈은 어느 PS에나 있는 보편 노브).
-        // 커브/색은 무해한 중립값이 없어 토글 = sparse: 끈 필드는 런타임에서 프리팹 기본값(baseline)으로 되돌린다.
-        // (StartLifetime은 '0=중립'이라 토글 없이 Entry 일반 필드로 그린다 — DrawEntryFields 참조)
-        public static void DrawParticleShapeRows(SerializedProperty entryProp, GameObject prefab)
-        {
-            var root = entryProp.FindPropertyRelative("ParticleOverride");
-            if (root == null) return;
-            if (prefab != null && prefab.GetComponentInChildren<ParticleSystem>(true) == null) return;
-
-            // Size over Lifetime — 커브 왼쪽=나오는 속도, 오른쪽=사라지는 속도
-            var onSize = root.FindPropertyRelative("OverrideSizeCurve");
-            EditorGUILayout.BeginHorizontal();
-            onSize.boolValue = EditorGUILayout.ToggleLeft(
-                new GUIContent("Size o/Life", "크기 커브. 왼쪽 기울기=나오는 속도, 오른쪽 기울기=사라지는 속도, 피크 위치=번쩍 타이밍"),
-                onSize.boolValue, GUILayout.Width(150));
-            using (new EditorGUI.DisabledScope(!onSize.boolValue))
-            {
-                var mult = root.FindPropertyRelative("SizeMultiplier");
-                mult.floatValue = EditorGUILayout.FloatField(mult.floatValue, GUILayout.Width(44));
-                var curve = root.FindPropertyRelative("SizeCurve");
-                curve.animationCurveValue = EditorGUILayout.CurveField(
-                    curve.animationCurveValue, Color.cyan, new Rect(0f, 0f, 1f, 1f));
-            }
-            EditorGUILayout.EndHorizontal();
-
-            // Start Color (HDR) — 밝기/색
-            var onCol = root.FindPropertyRelative("OverrideStartColor");
-            EditorGUILayout.BeginHorizontal();
-            onCol.boolValue = EditorGUILayout.ToggleLeft(
-                new GUIContent("Start Color", "시작 색(HDR). Intensity를 올리면 블룸이 터진다"),
-                onCol.boolValue, GUILayout.Width(150));
-            using (new EditorGUI.DisabledScope(!onCol.boolValue))
-            {
-                var c = root.FindPropertyRelative("StartColor");
-                c.colorValue = EditorGUILayout.ColorField(GUIContent.none, c.colorValue, true, true, true);
-            }
-            EditorGUILayout.EndHorizontal();
         }
 
         // ── 조합 내부 StartDelay 타임라인 ──
@@ -372,8 +476,10 @@ namespace ZZZ.Editor.Effects
                     EditorGUI.DrawRect(barRect, col);
 
                     string info = $"{e.StartDelay:0.##}s";
-                    if (e.Duration > 0f) info += $" ▸{e.Duration:0.##}s";
-                    if (e.PlaybackSpeed > 0f && !Mathf.Approximately(e.PlaybackSpeed, 1f)) info += $" ×{e.PlaybackSpeed:0.##}";
+                    float duration = EffectModuleSettings.Duration(e);
+                    float speed = EffectModuleSettings.PlaybackSpeed(e);
+                    if (duration > 0f) info += $" ▸{duration:0.##}s";
+                    if (!Mathf.Approximately(speed, 1f)) info += $" ×{speed:0.##}";
                     GUI.Label(new Rect(barX + 3f, y + 3f, barW - 4f, rowH - 6f), info, EditorStyles.whiteMiniLabel);
 
                     // 우측 엣지 = Duration 리사이즈 그립 (이동 드래그보다 먼저 처리해 이벤트를 선점)
@@ -429,10 +535,13 @@ namespace ZZZ.Editor.Effects
                         var entry = c.Entries[index];
                         float d = (e.mousePosition.x - barX) / pxPerSec;
                         if (e.control || e.command) d = Mathf.Round(d * 20f) / 20f;   // 0.05s 스냅
-                        float speed   = entry.PlaybackSpeed > 0f ? entry.PlaybackSpeed : 1f;
+                        float speed   = EffectModuleSettings.PlaybackSpeed(entry);
                         float natural = PrefabDuration(entry.Prefab) / speed;
                         Undo.RecordObject(c, "Edit Effect Duration");
-                        entry.Duration = d >= natural - 0.01f ? 0f : Mathf.Max(0.05f, d);
+                        float duration = d >= natural - 0.01f ? 0f : Mathf.Max(0.05f, d);
+                        ParticlePlaybackEffectModule playback = EffectModuleSettings.Playback(entry);
+                        if (playback != null) playback.Duration = duration;
+                        else entry.Duration = duration;
                         EditorUtility.SetDirty(c);
                         e.Use();
                     }

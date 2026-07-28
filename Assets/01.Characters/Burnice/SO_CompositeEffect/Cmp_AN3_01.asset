@@ -26,6 +26,8 @@ MonoBehaviour:
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 914700000000000101
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -53,6 +55,8 @@ MonoBehaviour:
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 914700000000000102
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -67,3 +71,14 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 914700000000000101
+      type: {class: FaceOutwardEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _rotationOffset: {x: 0, y: 0, z: 0}
+    - rid: 914700000000000102
+      type: {class: FaceOutwardEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _rotationOffset: {x: 0, y: 0, z: 0}

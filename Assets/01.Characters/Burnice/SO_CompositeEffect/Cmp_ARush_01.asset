@@ -1,0 +1,212 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfa81667f6201a54f8454b3433546da5, type: 3}
+  m_Name: Cmp_ARush_01
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
+  Entries:
+  - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+    StartDelay: 0
+    MaterialOverride: {fileID: 0}
+    Duration: 0.5
+    PlaybackSpeed: 1
+    StartLifetime: 0.5
+    Socket:
+    PositionOffset: {x: 0, y: 0.5, z: 0.8}
+    EulerOffset: {x: 0, y: 0, z: 0}
+    Scale: {x: 1.7, y: 1.7, z: 2.2}
+    FollowSpawner: 0
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
+    Modules: []
+    Despawn: 0
+    Lifetime: 0
+    ParamOverrides:
+    - ShaderProperty: _isGray
+      Type: 0
+      FloatValue: 1
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 0
+    - ShaderProperty: _Seed
+      Type: 1
+      FloatValue: 0
+      ColorValue: {r: 0, g: 0, b: 0, a: 0}
+      Randomize: 1
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 0
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
+      OverrideStartColor: 0
+      StartColor: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+    StartDelay: 0.19
+    MaterialOverride: {fileID: 0}
+    Duration: 0
+    PlaybackSpeed: 1
+    StartLifetime: 0
+    Socket:
+    PositionOffset: {x: 0, y: 0, z: 0}
+    EulerOffset: {x: 0, y: 0, z: 0}
+    Scale: {x: 1, y: 1, z: 1}
+    FollowSpawner: 1
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 1
+    Modules:
+    - rid: 914700000000000001
+    - rid: 914700000000000002
+    - rid: 914700000000000003
+    - rid: 6745857415900561473
+    Despawn: 0
+    Lifetime: 0
+    ParamOverrides: []
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 0
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
+      OverrideStartColor: 0
+      StartColor: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+    StartDelay: 0.19
+    MaterialOverride: {fileID: 0}
+    Duration: 0
+    PlaybackSpeed: 1
+    StartLifetime: 0
+    Socket:
+    PositionOffset: {x: 0, y: 0, z: 0}
+    EulerOffset: {x: 0, y: 0, z: 0}
+    Scale: {x: 1, y: 1, z: 1}
+    FollowSpawner: 0
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
+    Modules:
+    - rid: 6745857415900561474
+    - rid: 6745857415900561475
+    - rid: 6745857415900561476
+    - rid: 6745857415900561477
+    Despawn: 0
+    Lifetime: 0
+    ParamOverrides: []
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 0
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
+      OverrideStartColor: 0
+      StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 914700000000000001
+      type: {class: ArcMotionEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _centerOffset: {x: 0, y: 0.6, z: 0}
+        _radius: 1.5
+        _startAngle: 315
+        _arcAngle: 140
+        _clockwise: 1
+        _duration: 0.1
+        _curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 914700000000000002
+      type: {class: FaceOutwardEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _rotationOffset: {x: 0, y: 0, z: 0}
+    - rid: 914700000000000003
+      type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+    - rid: 6745857415900561473
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.12
+        _playbackSpeed: 1
+        _startLifetime: 0.5
+    - rid: 6745857415900561474
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.12
+        _playbackSpeed: 1
+        _startLifetime: 0.5
+    - rid: 6745857415900561475
+      type: {class: ArcMotionEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _centerOffset: {x: 0, y: 0.4, z: 0}
+        _radius: 1.5
+        _startAngle: 45
+        _arcAngle: 140
+        _clockwise: 0
+        _duration: 0.1
+        _curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 6745857415900561476
+      type: {class: FaceOutwardEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _rotationOffset: {x: 0, y: 0, z: 0}
+    - rid: 6745857415900561477
+      type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:

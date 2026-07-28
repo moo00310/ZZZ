@@ -437,6 +437,49 @@ Assets/05.Editor/
 
 ---
 
+## Entry 이펙트 모듈
+
+프리팹의 시각 설정을 복제하지 않고 조합마다 다른 움직임을 주기 위해
+`CompositeEffectEntry.Modules`가 `[SerializeReference]` 모듈 목록을 보유한다.
+Effect Tool은 구체 기능을 직접 알지 않고 `EffectModule` 파생 타입을 검색해 추가·편집한다.
+
+| 모듈 | 책임 |
+|---|---|
+| `ArcMotionEffectModule` | 캐릭터 중심 기준 원호 위치와 진행 시간 |
+| `FaceOutwardEffectModule` | 현재 방사 방향으로 회전과 축 오프셋 적용 |
+| `BakeToWorldEffectModule` | 움직임 중 Custom 좌표계를 사용하고 종료 후 World 좌표로 변환 |
+| `ParticlePlaybackEffectModule` | Duration, Playback Speed, Start Lifetime |
+| `ParticleAppearanceEffectModule` | Size over Lifetime 커브와 Start Color |
+| `MaterialOverrideEffectModule` | 렌더러 sharedMaterial 교체 |
+
+런타임에서는 풀 인스턴스의 `EffectModuleRunner`가 Entry 설정으로부터 실행 상태를 새로 만든다.
+모듈 설정 객체에는 시간·Transform 같은 인스턴스 상태를 저장하지 않는다. 모듈 실행 순서는
+위치 → 회전 → 시뮬레이션 채널 순으로 Runner가 정렬하므로 Tool의 목록 순서와 무관하다.
+
+에디터 프리뷰는 같은 모듈의 `EvaluatePreview`를 사용하고 파티클을 작은 시간 단계로 시뮬레이션해
+런타임의 이동 방출 궤적을 재현한다.
+
+파티클 노브와 머티리얼은 모듈이 설정을 소유하지만 실제 적용과 baseline 복원은
+`PooledEffectHandle`이 담당한다. 풀 인스턴스가 다른 Entry에 재사용되어도 이전 재생의 값이 남지 않는다.
+기존 Entry 필드는 직렬화 호환용 fallback으로 유지하며, Effect Tool에서 에셋을 열면 값이 있는 항목만
+대응 모듈로 옮기고 기존 필드는 중립값으로 초기화한다.
+
+### 캐릭터 소켓 동기화와 좌표계 전환
+
+- Effect Notify는 상태 갱신 중 판정하지만 `PlayAfterAnimation`으로 예약해 같은 프레임의
+  `LateUpdate`에서 최신 Animator 소켓 포즈를 읽고 생성한다. Start Delay가 있는 Entry도
+  지연 시간이 끝난 프레임의 LateUpdate에서 생성한다.
+- 현재 플레이어 전용 단계에서는 `PlayerStateMachine`이 캐릭터 루트를 한 번 등록하고,
+  `EffectService`가 Custom Simulation Space를 그 루트에 연결한다. 다중 캐릭터 지원 시에는
+  전역 루트 대신 재생 주체별 루트를 전달하도록 확장한다.
+- `ArcMotionEffectModule`은 앞을 0도로 하는 캐릭터 기준 원호를 계산한다. 진행 중 파티클은
+  Custom 공간에서 캐릭터를 따라가고, `BakeToWorldEffectModule`이 스윙 종료 후 위치·속도·축을
+  World 공간으로 변환해 후속 동작에는 끌려가지 않게 한다.
+- 파티클 프리팹은 방출과 렌더링 원본만 보유한다. 기존 `RadialParticleEmitter` 같은 연출용
+  컴포넌트는 제거하고, 원호·방향·좌표계·노브는 CompositeEffect Entry 모듈로 조합한다.
+
+---
+
 ## 남은 것 / 로드맵
 
 - **구간형(지속) 노티파이** — ✅ 구현됨. `TrackNotify.EndNormalizedTime`로 `[Start, End]` 구간 유지 → [구간 이펙트](#구간interval-이펙트--시점이-아니라-start-end) 참조. 남은 건 플레이 모드 실전 검증(트레일)

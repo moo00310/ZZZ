@@ -12,6 +12,7 @@ namespace ZZZ.Effects
         private static Dictionary<GameObject, EffectPool> s_pools;
         private static Transform            s_poolRoot;
         private static EffectServiceRunner  s_runner;
+        private static Transform            s_characterRoot;
 
         // 도메인 리로드 없는 Enter Play Mode 설정에서도 이전 플레이의 정적 상태가 새지 않도록 리셋.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -20,6 +21,15 @@ namespace ZZZ.Effects
             s_pools    = new Dictionary<GameObject, EffectPool>();
             s_poolRoot = null;
             s_runner   = null;
+            s_characterRoot = null;
+        }
+
+        // 현재는 플레이어 전용 이펙트만 Custom Simulation Space를 사용한다.
+        // 몬스터나 다중 캐릭터로 확장할 때는 전역 참조 대신 재생 주체별 루트를 전달해야 한다.
+        public static void SetCharacterRoot(Transform characterRoot)
+        {
+            s_characterRoot = characterRoot;
+            GetRunner();
         }
 
         // 조합 안의 각 Entry를 자기 StartDelay만큼 지연시켜 재생한다. 지연 중 spawner가 파괴되면 스킵.
@@ -30,6 +40,28 @@ namespace ZZZ.Effects
             if (composite == null || spawner == null) return null;
 
             var handle = trackForStop ? new EffectHandle() : null;
+            PlayEntries(composite, spawner, handle, false);
+            return handle;
+        }
+
+        // Notify 판정은 Update에서 유지하되 실제 생성은 Animator와 캐릭터 루트 이동이 반영된 뒤 처리한다.
+        public static EffectHandle PlayAfterAnimation(
+            CompositeEffect composite, Transform spawner, bool trackForStop = false)
+        {
+            if (composite == null || spawner == null) return null;
+
+            var handle = trackForStop ? new EffectHandle() : null;
+            GetRunner().EnqueueLateUpdate(() =>
+            {
+                if (spawner == null || (handle != null && handle.IsStopped)) return;
+                PlayEntries(composite, spawner, handle, true);
+            });
+            return handle;
+        }
+
+        private static void PlayEntries(
+            CompositeEffect composite, Transform spawner, EffectHandle handle, bool afterAnimation)
+        {
             foreach (CompositeEffectEntry entry in composite.Entries)
             {
                 if (entry == null || entry.Prefab == null) continue;
@@ -48,12 +80,22 @@ namespace ZZZ.Effects
                     GetRunner().Delay(entry.StartDelay, () =>
                     {
                         if (spawner == null) return;   // 지연 중 스포너가 파괴된 경우
+                        if (afterAnimation)
+                        {
+                            GetRunner().EnqueueLateUpdate(() =>
+                            {
+                                if (spawner == null || (h != null && h.IsStopped)) return;
+                                var lateSpawned = PlayEntry(e, spawner);
+                                h?.Add(lateSpawned);
+                            });
+                            return;
+                        }
+
                         var spawned = PlayEntry(e, spawner);
                         h?.Add(spawned);   // 이미 Stop됐으면 핸들이 즉시 정지 처리
                     });
                 }
             }
-            return handle;
         }
 
         private static PooledEffectHandle PlayEntry(CompositeEffectEntry entry, Transform spawner)
@@ -63,6 +105,8 @@ namespace ZZZ.Effects
 
             Transform anchor = FindSocket(spawner, entry.Socket);
             PlaceInstance(instance, entry, anchor, spawner);
+            BindCustomSimulationSpace(instance);
+            BindEffectModules(instance, entry, spawner);
 
             var handle = instance.GetComponent<PooledEffectHandle>();
             if (handle == null) handle = instance.AddComponent<PooledEffectHandle>();
@@ -71,6 +115,30 @@ namespace ZZZ.Effects
             instance.SetActive(true);
             RestartParticles(instance);
             return handle;
+        }
+
+        private static void BindCustomSimulationSpace(GameObject instance)
+        {
+            if (s_characterRoot == null) return;
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem.MainModule main = systems[i].main;
+                if (main.simulationSpace == ParticleSystemSimulationSpace.Custom
+                    && main.customSimulationSpace != s_characterRoot)
+                    main.customSimulationSpace = s_characterRoot;
+            }
+        }
+
+        private static void BindEffectModules(
+            GameObject instance, CompositeEffectEntry entry, Transform characterRoot)
+        {
+            if (entry.Modules == null || entry.Modules.Count == 0) return;
+
+            var runner = instance.GetComponent<EffectModuleRunner>();
+            if (runner == null) runner = instance.AddComponent<EffectModuleRunner>();
+            runner.Bind(entry.Modules, characterRoot);
         }
 
         // 풀 개요 모니터(에디터 툴)용 읽기 전용 스냅샷. Play 모드에서만 의미 있음.

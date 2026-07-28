@@ -10,6 +10,8 @@ namespace ZZZ.Effects
         private readonly List<PooledEffectHandle> _instances = new List<PooledEffectHandle>();
         private bool _stopped;
 
+        internal bool IsStopped => _stopped;
+
         // 지연(StartDelay) 엔트리는 나중에 스폰되므로 그때 등록된다.
         // 이미 Stop된 뒤에 늦게 스폰된 인스턴스는 붙잡지 않고 즉시 정지시킨다(누수 방지).
         internal void Add(PooledEffectHandle handle)
