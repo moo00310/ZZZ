@@ -478,6 +478,37 @@ Effect Tool은 구체 기능을 직접 알지 않고 `EffectModule` 파생 타�
 - 파티클 프리팹은 방출과 렌더링 원본만 보유한다. 기존 `RadialParticleEmitter` 같은 연출용
   컴포넌트는 제거하고, 원호·방향·좌표계·노브는 CompositeEffect Entry 모듈로 조합한다.
 
+### 상태 전환 수명 정책
+
+Effect Notify는 `TransitionMode`로 상태·구간 전환 시 수명을 결정한다. 기본값은 `Keep`이다.
+
+| 모드 | 동작 |
+|---|---|
+| `Keep` | Notify 시점에 즉시 재생하고 ConfigState의 소유권을 버린다. 프리팹의 자연 종료나 Duration까지 유지된다. |
+| `Stop` | Notify 시점에 즉시 재생하고 현재 상태를 나갈 때 `EffectHandle.Stop()`으로 정지한다. |
+| `Next` | Notify 시점에는 생성하지 않고 예약한다. 실제 Link 목적지가 `NextSection`과 일치할 때만 생성하며, 목적지 상태가 소유권을 넘겨받아 그 상태를 나갈 때 정지한다. |
+
+`Next`는 현재 섹션의 Link 목적지 중 하나를 Animation Tool의 `Next Section` 드롭다운에서 고른다.
+다른 분기가 선택되면 예약을 폐기하므로 잘못된 분기에서 한 프레임 생성됐다가 사라지는 현상이 없다.
+목적지에서 생성할 때도 `PlayAfterAnimation`을 사용해 중간 프레임 진입 후 최신 소켓 포즈를 읽는다.
+
+구간 Effect는 전환 정책과 별개로 같은 구간 안에서 `EndNormalizedTime`에 도달하면 정지한다.
+`Next`로 전달된 Effect와 `Stop` Effect는 종료 요청에서 `BakeToWorldEffectModule`을 먼저 실행한 뒤
+방출을 멈춘다. 오래 유지한 `EffectHandle`이 이미 풀에 반환되어 다른 재생에 쓰인 인스턴스를
+잘못 정지하지 않도록 `PooledEffectHandle`의 바인딩 세대가 일치할 때만 종료 요청을 적용한다.
+
+### Bake To World와 소켓 추종
+
+`BakeToWorldEffectModule.Follow Root`는 World 베이크 전 시뮬레이션 기준을 선택한다.
+
+- 켬: 캐릭터 루트 기준 Custom 공간을 사용한다.
+- 끔: Effect의 Local 공간을 사용해 `FollowSpawner` 소켓을 그대로 따라간다.
+- 종료 요청: 모든 하위 `ParticleSystem`의 위치·속도·회전축을 World 공간으로 변환하고 방출을 멈춘다.
+
+소켓 빔처럼 재생 중 무기를 따라야 하는 Effect는 `FollowSpawner`를 켜고 `Follow Root`를 끈다.
+Animation Tool의 모듈 프리뷰는 Clear 후 첫 시뮬레이션 스텝에서 파티클을 다시 시작해 런타임과
+같은 이펙트를 표시한다.
+
 ---
 
 ## 남은 것 / 로드맵

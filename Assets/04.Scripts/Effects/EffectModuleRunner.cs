@@ -12,6 +12,7 @@ namespace ZZZ.Effects
         private EffectModuleContext _context;
         private IReadOnlyList<EffectModule> _modules;
         private Transform _characterRoot;
+        private bool _stopRequested;
 
         internal void Bind(IReadOnlyList<EffectModule> modules, Transform characterRoot)
         {
@@ -29,6 +30,7 @@ namespace ZZZ.Effects
                 CharacterRoot = _characterRoot,
                 ParticleSystems = GetComponentsInChildren<ParticleSystem>(true),
             };
+            _stopRequested = false;
 
             _runtimes.Clear();
             for (int i = 0; i < _modules.Count; i++)
@@ -56,6 +58,15 @@ namespace ZZZ.Effects
                 _runtimes[i].LateTick(_context);
         }
 
+        internal void RequestStop()
+        {
+            if (_context == null || _stopRequested) return;
+
+            _stopRequested = true;
+            for (int i = _runtimes.Count - 1; i >= 0; i--)
+                _runtimes[i].RequestStop(_context);
+        }
+
         private void OnDisable()
         {
             if (_context != null)
@@ -66,6 +77,7 @@ namespace ZZZ.Effects
             _context = null;
             _modules = null;
             _characterRoot = null;
+            _stopRequested = false;
         }
     }
 }

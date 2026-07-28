@@ -16,7 +16,7 @@ MonoBehaviour:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0.0275
     MaterialOverride: {fileID: 0}
-    Duration: 0.5
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: 
@@ -26,6 +26,8 @@ MonoBehaviour:
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
+    Modules:
+    - rid: 6745857424160194633
     Despawn: 0
     Lifetime: 0
     ParamOverrides:
@@ -85,9 +87,9 @@ MonoBehaviour:
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
     StartDelay: 0
     MaterialOverride: {fileID: 0}
-    Duration: 0.2
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.2
+    StartLifetime: 0
     Socket: Bip001 Prop2
     PositionOffset: {x: -0.2, y: 0, z: 0}
     EulerOffset: {x: 10, y: 13, z: 0}
@@ -95,6 +97,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 6745857424160194634
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -139,9 +143,9 @@ MonoBehaviour:
   - Prefab: {fileID: 5055750446988487301, guid: d999b6831c1cf3d46a3674a042e57af3, type: 3}
     StartDelay: 0.03
     MaterialOverride: {fileID: 0}
-    Duration: 0.2
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.2
+    StartLifetime: 0
     Socket: 
     PositionOffset: {x: 0, y: 0.5, z: 1.4}
     EulerOffset: {x: 20, y: 0, z: 0}
@@ -149,11 +153,14 @@ MonoBehaviour:
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
+    Modules:
+    - rid: 6745857424160194635
+    - rid: 6745857424160194636
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
     ParticleOverride:
-      OverrideSizeCurve: 1
+      OverrideSizeCurve: 0
       SizeMultiplier: 1
       SizeCurve:
         serializedVersion: 2
@@ -188,5 +195,66 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      OverrideStartColor: 1
+      OverrideStartColor: 0
       StartColor: {r: 1, g: 1, b: 1, a: 1}
+  references:
+    version: 2
+    RefIds:
+    - rid: 6745857424160194633
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.5
+        _playbackSpeed: 1
+        _startLifetime: 0
+    - rid: 6745857424160194634
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.2
+        _playbackSpeed: 1
+        _startLifetime: 0.2
+    - rid: 6745857424160194635
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.2
+        _playbackSpeed: 1
+        _startLifetime: 0.2
+    - rid: 6745857424160194636
+      type: {class: ParticleAppearanceEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _overrideSizeCurve: 1
+        _sizeMultiplier: 1
+        _sizeCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.15
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 0
+            inSlope: -2.1058106
+            outSlope: -2.1058106
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.026603727
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        _overrideStartColor: 1
+        _startColor: {r: 1, g: 1, b: 1, a: 1}

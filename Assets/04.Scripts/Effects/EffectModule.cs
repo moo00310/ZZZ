@@ -23,6 +23,7 @@ namespace ZZZ.Effects
         internal virtual void Start(EffectModuleContext context) { }
         internal virtual void Tick(EffectModuleContext context, float deltaTime) { }
         internal virtual void LateTick(EffectModuleContext context) { }
+        internal virtual void RequestStop(EffectModuleContext context) { }
         internal virtual void Stop(EffectModuleContext context) { }
     }
 

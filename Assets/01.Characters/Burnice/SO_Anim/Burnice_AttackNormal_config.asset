@@ -55,24 +55,28 @@ MonoBehaviour:
       EventName: OnAttackHit
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 0
     - Type: 0
       NormalizedTime: 0.047407407
       EventName: Effect_Test
       Effect: {fileID: 11400000, guid: f7c5c63a618545e4cb550421960871d2, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     - Type: 0
       NormalizedTime: 0.20444444
       EventName: Effect_2
       Effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     - Type: 3
       NormalizedTime: 0.19753087
       EventName: OnAttackHit
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018880
@@ -161,12 +165,14 @@ MonoBehaviour:
       EventName: Effect
       Effect: {fileID: 11400000, guid: a4dd9f49872cc794ea851d439ca870b1, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     - Type: 0
       NormalizedTime: 0.28105316
       EventName: Effect
       Effect: {fileID: 11400000, guid: ad699fa013387ee46b1d91ccb23e1f44, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     Modules:
     - rid: 6745857324881018885
@@ -254,6 +260,7 @@ MonoBehaviour:
       EventName: Effect
       Effect: {fileID: 11400000, guid: deac0faed403ccb48990634589bdbfd2, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     Modules:
     - rid: 6745857324881018890
@@ -339,8 +346,9 @@ MonoBehaviour:
     - Type: 0
       NormalizedTime: 0.087389834
       EventName: Effect
-      Effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
+      Effect: {fileID: 11400000, guid: 2926b2c5c9984014cb004ef9253f880f, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     Modules:
     - rid: 6745857324881018895
@@ -429,6 +437,7 @@ MonoBehaviour:
       EventName: Effect
       Effect: {fileID: 11400000, guid: 64547889d77e6344fa198847250c1ec9, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     Modules:
     - rid: 6745857304624365634
@@ -517,6 +526,7 @@ MonoBehaviour:
       EventName: Effect
       Effect: {fileID: 11400000, guid: d46e3362105eeec45a32a847258bad67, type: 2}
       EndNormalizedTime: 0
+      TransitionMode: 0
       Locked: 1
     Modules:
     - rid: 6745857324881018904

@@ -758,6 +758,8 @@ namespace ZZZ.Editor.AnimationTool
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
             string eName = EditorGUILayout.TextField("Event Name",   notify.EventName);
             float endT = notify.EndNormalizedTime;
+            EffectTransitionMode transitionMode = notify.TransitionMode;
+            string nextSection = notify.NextSection;
             if (type == NotifyType.Effect)
             {
                 endT = FrameField("구간 끝 (f)",
@@ -766,6 +768,35 @@ namespace ZZZ.Editor.AnimationTool
                 if (endT > normT)
                     EditorGUILayout.LabelField(" ", "구간 이펙트 (유지 중 방출 → 끝에서 정지)",
                         EditorStyles.miniLabel);
+                transitionMode = (EffectTransitionMode)EditorGUILayout.EnumPopup(
+                    new GUIContent("Transition Effect",
+                        "Keep: Notify에서 재생 후 자연 소멸. Stop: Notify에서 재생 후 현재 상태 이탈 시 정지. Next: 지정한 다음 섹션으로 실제 전환될 때만 재생하고 그 섹션 이탈 시 정지."),
+                    notify.TransitionMode);
+                if (transitionMode == EffectTransitionMode.Next)
+                {
+                    var sectionOptions = new List<string> { "" };
+                    for (int i = 0; i < tc.Links.Count; i++)
+                    {
+                        string targetSection = tc.Links[i].TargetSection;
+                        if (!string.IsNullOrEmpty(targetSection)
+                            && !sectionOptions.Contains(targetSection))
+                            sectionOptions.Add(targetSection);
+                    }
+                    if (!string.IsNullOrEmpty(nextSection)
+                        && !sectionOptions.Contains(nextSection))
+                        sectionOptions.Add(nextSection);
+
+                    string[] sectionLabels = new string[sectionOptions.Count];
+                    sectionLabels[0] = "(Select Section)";
+                    for (int i = 1; i < sectionOptions.Count; i++)
+                        sectionLabels[i] = sectionOptions[i];
+                    int selectedSection = Mathf.Max(0, sectionOptions.IndexOf(nextSection));
+                    selectedSection = EditorGUILayout.Popup(
+                        new GUIContent("Next Section",
+                            "실제 전환 목적지가 이 섹션일 때만 이펙트 소유권을 전달합니다."),
+                        selectedSection, sectionLabels);
+                    nextSection = sectionOptions[selectedSection];
+                }
             }
             if (EditorGUI.EndChangeCheck())
             {
@@ -774,6 +805,8 @@ namespace ZZZ.Editor.AnimationTool
                 notify.Type = type; notify.NormalizedTime = normT;
                 notify.EventName = eName;
                 notify.EndNormalizedTime = endT; notify.Locked = locked;
+                notify.TransitionMode = transitionMode;
+                notify.NextSection = nextSection;
                 EditorUtility.SetDirty(_config);
                 if (typeChanged) _fxDirty = true;   // Effect↔다른 타입 전환 시 프리뷰 재생성
             }

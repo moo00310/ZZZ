@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfa81667f6201a54f8454b3433546da5, type: 3}
+  m_Name: Cmp_AEn1_L
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
+  Entries:
+  - Prefab: {fileID: 8974169409375155309, guid: 3c79477f966537343b1ab0d814733c58, type: 3}
+    StartDelay: 0
+    MaterialOverride: {fileID: 0}
+    Duration: 0
+    PlaybackSpeed: 1
+    StartLifetime: 0
+    Socket: FX_L_Weapon
+    PositionOffset: {x: 0, y: -0.3, z: 0}
+    EulerOffset: {x: 90, y: 0, z: 0}
+    Scale: {x: 1, y: 1, z: 1}
+    FollowSpawner: 1
+    ParentToSpawnerRoot: 0
+    IgnoreSocketRotation: 0
+    Modules:
+    - rid: 6745857424160194630
+    Despawn: 0
+    Lifetime: 0
+    ParamOverrides: []
+    ParticleOverride:
+      OverrideSizeCurve: 0
+      SizeMultiplier: 0
+      SizeCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
+      OverrideStartColor: 0
+      StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 6745857424160194630
+      type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _followRoot: 0

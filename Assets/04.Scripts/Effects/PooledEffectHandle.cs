@@ -26,6 +26,10 @@ namespace ZZZ.Effects
         private float[]          _baseSimSpeeds;
         private float            _appliedSpeed = 1f;
         private WeaponTrailController[] _trailControllers;
+        private EffectModuleRunner _moduleRunner;
+        private int _bindingVersion;
+
+        internal int BindingVersion => _bindingVersion;
 
         // 셰이더 노브 오버라이드(MPB)용 캐시 — 프리팹의 선언(EffectParameterSet)과 대상 렌더러.
         // 인스턴스 구조는 재사용 내내 안 바뀌므로 최초 1회만 수집한다.
@@ -47,8 +51,10 @@ namespace ZZZ.Effects
 
         public void Bind(EffectPool pool, CompositeEffectEntry entry)
         {
+            unchecked { _bindingVersion++; }
             _pool = pool;
             _mode = entry.Despawn;
+            if (_moduleRunner == null) _moduleRunner = GetComponent<EffectModuleRunner>();
 
             CancelInvoke();   // 이전 재생의 ReleaseSelf/StopEmitting 예약 취소
 
@@ -141,8 +147,11 @@ namespace ZZZ.Effects
         // 구간 이펙트가 끝났을 때(또는 섹션 이탈·캔슬) 외부(EffectHandle)에서 부르는 정지 진입점.
         // 방출만 멈추고 살아있는 파티클은 자연 소멸시킨다 — ParticleStopped 모드면 소멸 후 자동 반납된다.
         // Fixed 모드는 자연 정지 콜백이 없으므로 Lifetime 타이머를 기다리지 않고 방출 정지 후 즉시 반납한다.
-        public void StopWindowed()
+        internal void StopWindowed(int bindingVersion)
         {
+            if (bindingVersion != _bindingVersion) return;
+            if (_moduleRunner != null) _moduleRunner.RequestStop();
+
             if (_mode == DespawnMode.Fixed)
             {
                 StopEmitting();

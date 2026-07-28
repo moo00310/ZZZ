@@ -16,9 +16,9 @@ MonoBehaviour:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
     StartDelay: 0
     MaterialOverride: {fileID: 0}
-    Duration: 0.5
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.5
+    StartLifetime: 0
     Socket:
     PositionOffset: {x: 0, y: 0.5, z: 0.8}
     EulerOffset: {x: 0, y: 0, z: 0}
@@ -26,7 +26,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
-    Modules: []
+    Modules:
+    - rid: 6745857424160194631
     Despawn: 0
     Lifetime: 0
     ParamOverrides:
@@ -158,6 +159,7 @@ MonoBehaviour:
     - rid: 914700000000000003
       type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
+        _followRoot: 1
     - rid: 6745857415900561473
       type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
@@ -210,3 +212,10 @@ MonoBehaviour:
     - rid: 6745857415900561477
       type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
+        _followRoot: 1
+    - rid: 6745857424160194631
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.5
+        _playbackSpeed: 1
+        _startLifetime: 0.5

@@ -164,11 +164,21 @@ namespace ZZZ
         [Range(0f, 1f)]
         public float EndNormalizedTime = 0f;
 
+        public EffectTransitionMode TransitionMode = EffectTransitionMode.Keep;
+        public string NextSection = "";
+
         // 고정(Lock): 켜지면 타임라인에서 드래그로 시점이 밀리지 않는다 — 값이 확정된 Notify를
         // 실수로 옮기는 사고 방지용. 선택/편집(인스펙터)·삭제는 그대로 가능, 이동만 막는다.
         public bool Locked = false;
 
         public bool IsInterval => EndNormalizedTime > NormalizedTime;
+    }
+
+    public enum EffectTransitionMode
+    {
+        Keep,
+        Stop,
+        Next
     }
 
     public enum NotifyType

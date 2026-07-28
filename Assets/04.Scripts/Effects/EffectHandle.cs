@@ -7,8 +7,20 @@ namespace ZZZ.Effects
     // 단발(point) 재생은 이 토큰을 그냥 버린다(기존 자동 반납에 맡김) — 구간 이펙트만 Stop을 호출한다.
     public sealed class EffectHandle
     {
-        private readonly List<PooledEffectHandle> _instances = new List<PooledEffectHandle>();
+        private readonly List<InstanceRef> _instances = new List<InstanceRef>();
         private bool _stopped;
+
+        private readonly struct InstanceRef
+        {
+            public readonly PooledEffectHandle Handle;
+            public readonly int BindingVersion;
+
+            public InstanceRef(PooledEffectHandle handle)
+            {
+                Handle = handle;
+                BindingVersion = handle.BindingVersion;
+            }
+        }
 
         internal bool IsStopped => _stopped;
 
@@ -17,8 +29,13 @@ namespace ZZZ.Effects
         internal void Add(PooledEffectHandle handle)
         {
             if (handle == null) return;
-            if (_stopped) { handle.StopWindowed(); return; }
-            _instances.Add(handle);
+            var instance = new InstanceRef(handle);
+            if (_stopped)
+            {
+                handle.StopWindowed(instance.BindingVersion);
+                return;
+            }
+            _instances.Add(instance);
         }
 
         // 구간 종료 / 섹션 이탈·인터럽트 — 스폰된 모든 인스턴스의 방출을 멈춘다.
@@ -27,7 +44,8 @@ namespace ZZZ.Effects
         {
             _stopped = true;
             for (int i = 0; i < _instances.Count; i++)
-                if (_instances[i] != null) _instances[i].StopWindowed();
+                if (_instances[i].Handle != null)
+                    _instances[i].Handle.StopWindowed(_instances[i].BindingVersion);
             _instances.Clear();
         }
     }

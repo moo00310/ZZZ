@@ -20,7 +20,18 @@ namespace ZZZ.Player.StateMachine.States
         private bool[]          _notifyFired;
         // 구간(Interval) 이펙트의 활성 핸들 — 단발이거나 미진행이면 null. _notifyFired와 인덱스 정렬, 섹션 스코프.
         private EffectHandle[]  _notifyActive;
+        private EffectTransitionMode[] _notifyTransitionModes;
+        private string[]        _notifyNextSections;
+        private readonly List<EffectHandle> _carriedEffects = new List<EffectHandle>();
+        private readonly List<PendingNextEffect> _pendingNextEffects =
+            new List<PendingNextEffect>();
         private float           _clipTime; // 현재 섹션 진입 후 경과 시간(초) — 전환마다 0으로 리셋
+
+        private sealed class PendingNextEffect
+        {
+            public CompositeEffect Effect;
+            public string NextSection;
+        }
 
         // OnEndIfMatched 링크의 윈도우 래치 상태 — 섹션 진입마다 비운다(섹션 스코프).
         private readonly HashSet<ClipLink> _latched = new HashSet<ClipLink>();
@@ -64,7 +75,13 @@ namespace ZZZ.Player.StateMachine.States
         private void SwitchConfig(AnimationConfig config, string section, float blend, float startOffset = 0f)
         {
             _config = config;
-            if (_config == null || _config.Clips.Count == 0) { StopActiveIntervals(); _active = -1; return; }
+            if (_config == null || _config.Clips.Count == 0)
+            {
+                StopTrackedEffects(false);
+                _pendingNextEffects.Clear();
+                _active = -1;
+                return;
+            }
 
             int idx = !string.IsNullOrEmpty(section)
                 ? _config.IndexOfSection(section)
@@ -225,14 +242,23 @@ namespace ZZZ.Player.StateMachine.States
         // startOffset(normalizedTime, 0~1) = 대상 클립을 그 지점부터 재생(중간 프레임 진입). 0 = 처음부터.
         private void PlayActive(float blend, float startOffset = 0f)
         {
-            StopActiveIntervals();   // 떠나는 섹션의 진행 중 구간 이펙트 정지(전이/재진입 시 누수 방지)
+            string destinationSection = _config.Clips[_active].SectionName;
+            StopTrackedEffects(true, destinationSection);
+            PlayPendingNextEffects(destinationSection);
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
             Signals.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
             Signals.ParryActive  = false;    // 섹션 진입 시 패링 해제 — parry 모듈이 윈도우 동안만 다시 켠다
 
             var tc = _config.Clips[_active];
-            if (tc.Clip == null) { _notifyFired = null; _notifyActive = null; return; }
+            if (tc.Clip == null)
+            {
+                _notifyFired = null;
+                _notifyActive = null;
+                _notifyTransitionModes = null;
+                _notifyNextSections = null;
+                return;
+            }
 
             // 중간 프레임 진입 — 로직 타임라인(_clipTime)과 애니 시작점을 같은 normalizedTime으로 맞춘다.
             // SectionNormalizedTime = _clipTime * Speed / length 이므로 _clipTime = off * length / Speed.
@@ -268,6 +294,13 @@ namespace ZZZ.Player.StateMachine.States
 
             _notifyFired  = new bool[tc.Notifies.Count];
             _notifyActive = new EffectHandle[tc.Notifies.Count];
+            _notifyTransitionModes = new EffectTransitionMode[tc.Notifies.Count];
+            _notifyNextSections = new string[tc.Notifies.Count];
+            for (int i = 0; i < tc.Notifies.Count; i++)
+            {
+                _notifyTransitionModes[i] = tc.Notifies[i].TransitionMode;
+                _notifyNextSections[i] = tc.Notifies[i].NextSection;
+            }
             // 중간 진입 시 그 지점 이전의 Notify는 이미 지난 것으로 처리 — 진입하자마자 무더기 발동 방지.
             if (startOffset > 0f)
                 for (int i = 0; i < tc.Notifies.Count; i++)
@@ -301,12 +334,17 @@ namespace ZZZ.Player.StateMachine.States
                 if (!_notifyFired[i] && p >= notify.NormalizedTime)
                 {
                     _notifyFired[i] = true;
-                    EffectHandle handle = DispatchNotify(notify);
-                    if (notify.IsInterval) _notifyActive[i] = handle;
+                    EffectHandle handle = notify.Type == NotifyType.Effect
+                        && notify.TransitionMode == EffectTransitionMode.Next
+                        ? QueueNextEffect(notify)
+                        : DispatchNotify(notify);
+                    if (notify.Type == NotifyType.Effect && handle != null)
+                        _notifyActive[i] = handle;
                 }
 
                 // 종료 — 구간 이펙트가 진행 중이고 끝 시점을 지났으면 방출 정지(잔여 파티클은 자연 소멸).
-                if (_notifyActive[i] != null && p >= notify.EndNormalizedTime)
+                if (notify.IsInterval && _notifyActive[i] != null
+                    && p >= notify.EndNormalizedTime)
                 {
                     _notifyActive[i].Stop();
                     _notifyActive[i] = null;
@@ -322,7 +360,7 @@ namespace ZZZ.Player.StateMachine.States
                 case NotifyType.Effect:
                     if (notify.Effect != null)
                         return EffectService.PlayAfterAnimation(
-                            notify.Effect, Ctx.Transform, notify.IsInterval);
+                            notify.Effect, Ctx.Transform, true);
                     return null;
                 default:
                     if (!string.IsNullOrEmpty(notify.EventName))
@@ -332,13 +370,66 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
-        // 진행 중인 구간 이펙트를 전부 정지(섹션 이탈·인터럽트·종료 시 누수 방지).
-        private void StopActiveIntervals()
+        private EffectHandle QueueNextEffect(TrackNotify notify)
         {
+            if (notify.Effect == null || string.IsNullOrEmpty(notify.NextSection)) return null;
+            _pendingNextEffects.Add(new PendingNextEffect
+            {
+                Effect = notify.Effect,
+                NextSection = notify.NextSection,
+            });
+            return null;
+        }
+
+        private void PlayPendingNextEffects(string destinationSection)
+        {
+            for (int i = 0; i < _pendingNextEffects.Count; i++)
+            {
+                PendingNextEffect pending = _pendingNextEffects[i];
+                if (!string.Equals(pending.NextSection, destinationSection,
+                    System.StringComparison.Ordinal))
+                    continue;
+
+                EffectHandle handle = EffectService.PlayAfterAnimation(
+                    pending.Effect, Ctx.Transform, true);
+                if (handle != null) _carriedEffects.Add(handle);
+            }
+            _pendingNextEffects.Clear();
+        }
+
+        // 진행 중인 구간 이펙트를 전부 정지(섹션 이탈·인터럽트·종료 시 누수 방지).
+        private void StopTrackedEffects(bool transferNext, string destinationSection = null)
+        {
+            for (int i = 0; i < _carriedEffects.Count; i++)
+                _carriedEffects[i]?.Stop();
+            _carriedEffects.Clear();
+
             if (_notifyActive == null) return;
             for (int i = 0; i < _notifyActive.Length; i++)
             {
-                if (_notifyActive[i] != null) _notifyActive[i].Stop();
+                EffectHandle handle = _notifyActive[i];
+                if (handle != null)
+                {
+                    EffectTransitionMode mode = _notifyTransitionModes != null
+                        && i < _notifyTransitionModes.Length
+                        ? _notifyTransitionModes[i]
+                        : EffectTransitionMode.Keep;
+                    if (mode == EffectTransitionMode.Stop)
+                        handle.Stop();
+                    else if (mode == EffectTransitionMode.Next)
+                    {
+                        string nextSection = _notifyNextSections != null
+                            && i < _notifyNextSections.Length
+                            ? _notifyNextSections[i]
+                            : null;
+                        bool matchesDestination = transferNext
+                            && !string.IsNullOrEmpty(nextSection)
+                            && string.Equals(nextSection, destinationSection,
+                                System.StringComparison.Ordinal);
+                        if (matchesDestination) _carriedEffects.Add(handle);
+                        else handle.Stop();
+                    }
+                }
                 _notifyActive[i] = null;
             }
         }
@@ -346,8 +437,11 @@ namespace ZZZ.Player.StateMachine.States
         // 현재는 항상 활성이라 호출되지 않지만, 무적 누수 방지를 위한 정리 진입점으로 남겨둔다.
         public void Exit()
         {
-            StopActiveIntervals();
+            StopTrackedEffects(false);
+            _pendingNextEffects.Clear();
             _notifyFired = null;
+            _notifyTransitionModes = null;
+            _notifyNextSections = null;
             Ctx.Mover.ClearWarpTarget();
             Signals.Invulnerable = false;
             Signals.ParryActive  = false;

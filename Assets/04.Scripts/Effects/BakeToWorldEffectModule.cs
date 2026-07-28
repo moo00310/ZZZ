@@ -1,11 +1,16 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ZZZ.Effects
 {
     [Serializable]
     public sealed class BakeToWorldEffectModule : EffectModule
     {
+        [FormerlySerializedAs("_followEffectBeforeBake")]
+        [SerializeField, Tooltip("World 베이크 전까지 파티클을 캐릭터 루트 기준으로 유지합니다. 끄면 이펙트/소켓을 따라갑니다.")]
+        private bool _followRoot = true;
+
         internal override int Order => 300;
         internal override EffectModuleRuntime CreateRuntime() => new Runtime(this);
 
@@ -33,7 +38,7 @@ namespace ZZZ.Effects
                 _emissionEnabled = new bool[context.ParticleSystems.Length];
                 for (int i = 0; i < context.ParticleSystems.Length; i++)
                     _emissionEnabled[i] = context.ParticleSystems[i].emission.enabled;
-                SetSimulationSpace(context, ParticleSystemSimulationSpace.Custom);
+                SetSimulationSpace(context, !_config._followRoot);
             }
 
             internal override void Tick(EffectModuleContext context, float deltaTime)
@@ -55,8 +60,17 @@ namespace ZZZ.Effects
                 if (!_bakePending) return;
                 _bakePending = false;
 
-                for (int i = 0; i < context.ParticleSystems.Length; i++)
-                    Bake(context.ParticleSystems[i]);
+                BakeAll(context);
+            }
+
+            internal override void RequestStop(EffectModuleContext context)
+            {
+                if (_finished && !_bakePending) return;
+
+                StopEmission(context);
+                _bakePending = false;
+                _finished = true;
+                BakeAll(context);
             }
 
             internal override void Stop(EffectModuleContext context)
@@ -72,13 +86,15 @@ namespace ZZZ.Effects
             }
 
             private static void SetSimulationSpace(
-                EffectModuleContext context, ParticleSystemSimulationSpace space)
+                EffectModuleContext context, bool followEffect)
             {
                 for (int i = 0; i < context.ParticleSystems.Length; i++)
                 {
                     ParticleSystem.MainModule main = context.ParticleSystems[i].main;
-                    main.customSimulationSpace = context.CharacterRoot;
-                    main.simulationSpace = space;
+                    main.customSimulationSpace = followEffect ? null : context.CharacterRoot;
+                    main.simulationSpace = followEffect
+                        ? ParticleSystemSimulationSpace.Local
+                        : ParticleSystemSimulationSpace.Custom;
                 }
             }
 
@@ -95,8 +111,10 @@ namespace ZZZ.Effects
             private void Bake(ParticleSystem particleSystem)
             {
                 ParticleSystem.MainModule main = particleSystem.main;
-                Transform simulationRoot = main.customSimulationSpace;
-                if (main.simulationSpace != ParticleSystemSimulationSpace.Custom
+                Transform simulationRoot = main.simulationSpace == ParticleSystemSimulationSpace.Local
+                    ? particleSystem.transform
+                    : main.customSimulationSpace;
+                if (main.simulationSpace == ParticleSystemSimulationSpace.World
                     || simulationRoot == null)
                     return;
 
@@ -116,6 +134,12 @@ namespace ZZZ.Effects
                 main.simulationSpace = ParticleSystemSimulationSpace.World;
                 main.customSimulationSpace = null;
                 if (count > 0) particleSystem.SetParticles(_particles, count);
+            }
+
+            private void BakeAll(EffectModuleContext context)
+            {
+                for (int i = 0; i < context.ParticleSystems.Length; i++)
+                    Bake(context.ParticleSystems[i]);
             }
         }
     }

@@ -85,7 +85,14 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.11029411
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+      EndNormalizedTime: 1
+      TransitionMode: 1
+      Locked: 1
     Modules:
     - rid: 6745857324881018908
     - rid: 6745857324881018909
@@ -230,7 +237,14 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.07874016
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 1
+      Locked: 0
     Modules:
     - rid: 6745857324881018915
     - rid: 6745857324881018916
@@ -372,7 +386,14 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.16176471
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 1
+      Locked: 1
     Modules:
     - rid: 6745857324881018919
   - SectionName: Attack_Normal_Enhance_03_Explode

@@ -107,8 +107,9 @@ namespace ZZZ.Editor.AnimationTool
             {
                 EvaluateFxModules(atom, elapsed);
                 float delta = Mathf.Min(step, playbackTime - elapsed);
+                bool restart = elapsed <= 0f;
                 foreach (ParticleSystem ps in atom.Top)
-                    if (ps != null) ps.Simulate(delta, true, false);
+                    if (ps != null) ps.Simulate(delta, true, restart);
                 elapsed += delta;
             }
             EvaluateFxModules(atom, playbackTime);
