@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --base main --head feat/link-condition-polymorphic --title 'feat: 링크 전이 조건 폴리모픽화 \\(LinkCondition\\)' --body ' *)",
+      "Bash(gh pr edit 5 --title 'feat: ConfigState 몬스터 대응 — 조건 폴리모픽화 + 실행 의존 인터페이스 추출' --body ' *)",
+      "Bash(git fetch *)",
+      "Bash(gh pr *)",
+      "Bash(git cherry-pick *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git mv *)",
+      "Bash(git stash *)",
+      "Bash(git switch *)",
+      "Bash(git rm *)",
+      "Bash(git -C e:/Unity/project status --short \"Assets/01.Characters/Burnice/SO/Burnice_AttackNormal_config.asset\")",
+      "Bash(python -)",
+      "Bash(python \"C:/Users/moo/AppData/Local/Temp/claude/e--Unity-project/f8ea449b-0695-4050-88c7-b541c5ed8384/scratchpad/migrate_conditions.py\")",
+      "Bash(python \"C:/Users/moo/AppData/Local/Temp/claude/e--Unity-project/f8ea449b-0695-4050-88c7-b541c5ed8384/scratchpad/migrate_conditions.py\" --apply)",
+      "Bash(python \"C:/Users/moo/AppData/Local/Temp/claude/e--Unity-project/f8ea449b-0695-4050-88c7-b541c5ed8384/scratchpad/verify_conditions.py\")",
+      "Bash(git ls-tree *)",
+      "Bash(grep -E \"Core/|^Assets/04.Scripts/\\(AnimationConfig|ConfigDriving|LinkCondition\\)\\\\.cs$\")",
+      "Bash(git merge *)",
+      "Bash(git checkout *)"
+    ]
+  }
+}
