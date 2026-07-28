@@ -85,7 +85,7 @@ namespace ZZZ.Editor.AnimationTool
             GUILayout.Label("Speed", GUILayout.Width(38));
             _previewSpeed = EditorGUILayout.Slider(_previewSpeed, 0.1f, 2f, GUILayout.Width(90));
             GUILayout.Label("Scale", GUILayout.Width(36));
-            _pxPerSec = EditorGUILayout.Slider(_pxPerSec, 20f, 250f, GUILayout.Width(90));
+            _pxPerSec = EditorGUILayout.Slider(_pxPerSec, 20f, MaxTimelineZoom, GUILayout.Width(90));
 
             EditorGUILayout.EndHorizontal();
 

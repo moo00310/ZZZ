@@ -60,6 +60,7 @@ namespace ZZZ.Editor.AnimationTool
                         _reorderTargetIdx = i;
                         _selectedClip     = i;
                         _selectedNotify   = -1;
+                        FocusClipInTimeline(i, area.width - LabelW);
                         hitSomething      = true;
                         ev.Use(); Repaint();
                         break;
@@ -279,6 +280,17 @@ namespace ZZZ.Editor.AnimationTool
                     break;
                 }
             }
+        }
+
+        private void FocusClipInTimeline(int clipIndex, float viewWidth)
+        {
+            if (clipIndex < 0 || clipIndex >= _config.Clips.Count || viewWidth <= 0f) return;
+
+            const float leftPadding = 12f;
+            float clipStartX = GetClipStartTime(clipIndex) * _pxPerSec;
+            float contentWidth = GetTotalDuration() * _pxPerSec + 40f;
+            float maxScrollX = Mathf.Max(0f, contentWidth - viewWidth);
+            _scrollX = Mathf.Clamp(clipStartX - leftPadding, 0f, maxScrollX);
         }
 
         private bool TryBeginModuleWindowDrag(Vector2 mousePosition)

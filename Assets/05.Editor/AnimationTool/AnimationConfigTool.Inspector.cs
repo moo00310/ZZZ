@@ -148,7 +148,14 @@ namespace ZZZ.Editor.AnimationTool
         private void DrawModules(TrackClip tc)
         {
             DrawSeparator();
-            EditorGUILayout.LabelField($"Modules  ({tc.Modules.Count})", EditorStyles.boldLabel);
+            bool expanded = DrawInspectorSectionHeader(
+                $"Modules  ({tc.Modules.Count})", _expandedInspectorModules.Contains(tc));
+            if (expanded)
+                _expandedInspectorModules.Add(tc);
+            else
+                _expandedInspectorModules.Remove(tc);
+
+            if (!expanded) return;
 
             int removeAt = -1;
             for (int i = 0; i < tc.Modules.Count; i++)
@@ -290,12 +297,12 @@ namespace ZZZ.Editor.AnimationTool
                 EditorUtility.SetDirty(_config);
             }
 
-            DrawModules(tc);
-
             // Loop은 클립 임포트 설정(Loop Time)에서 자동 표시 — 편집 불가
             using (new EditorGUI.DisabledScope(true))
                 EditorGUILayout.Toggle(new GUIContent("Loop (클립 설정)",
                     "클립 임포트의 Loop Time 설정을 그대로 표시 (config에서 관리 안 함)"), tc.IsLooping);
+
+            DrawModules(tc);
 
             if (tc.Clip != null)
                 EditorGUILayout.LabelField(
@@ -305,13 +312,32 @@ namespace ZZZ.Editor.AnimationTool
 
             // ── Links (다음 섹션 분기) ───────────────────────────
             DrawSeparator();
-            EditorGUILayout.LabelField($"Links  ({tc.Links.Count})  —  헤더 클릭=펼치기+강조 / ▲▼=순서",
-                EditorStyles.boldLabel);
-            DrawLinksEditor(tc.Links, idx);
+            bool linksExpanded = DrawInspectorSectionHeader(
+                $"Links  ({tc.Links.Count})", _expandedInspectorLinks.Contains(tc));
+            if (linksExpanded)
+            {
+                _expandedInspectorLinks.Add(tc);
+                EditorGUILayout.LabelField("링크 헤더 클릭=펼치기+강조 / ▲▼=순서", EditorStyles.miniLabel);
+                DrawLinksEditor(tc.Links, idx);
+            }
+            else
+            {
+                _expandedInspectorLinks.Remove(tc);
+            }
 
             DrawSeparator();
             EditorGUILayout.LabelField($"Notifies  ({tc.Notifies.Count})  —  우클릭 추가",
                 EditorStyles.miniLabel);
+        }
+
+        private static bool DrawInspectorSectionHeader(string title, bool expanded)
+        {
+            var style = new GUIStyle(EditorStyles.foldoutHeader)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+            };
+            return EditorGUILayout.Foldout(expanded, title, true, style);
         }
 
         // ownerClip >= 0 이면 링크 선택 가능(타임라인에 그 링크만 강조). -1 = Global 등 비선택.

@@ -57,6 +57,7 @@ namespace ZZZ.Editor.AnimationTool
         private const float ClipGap   = 3f;
         private const float LabelW    = 144f;
         private const float ModuleLaneH = 18f;
+        private const float MaxTimelineZoom = 500f;
         private const float HScrollH  = 14f;    // 하단 가로 스크롤바 높이
         private const float NotifyHitRadius = 9f; // Notify 클릭 허용 반경(px) — 얇은 마커도 쉽게 집히게
 
@@ -72,6 +73,8 @@ namespace ZZZ.Editor.AnimationTool
         private readonly System.Collections.Generic.List<int> _notifyHitBuf =
             new System.Collections.Generic.List<int>();   // 겹친 Notify 순환 선택용 후보 버퍼
         private readonly HashSet<TrackClip> _expandedModuleClips = new HashSet<TrackClip>();
+        private readonly HashSet<TrackClip> _expandedInspectorModules = new HashSet<TrackClip>();
+        private readonly HashSet<TrackClip> _expandedInspectorLinks = new HashSet<TrackClip>();
         private bool _showTrack;       // Track/Global Links 인스펙터 표시 여부 (상단 버튼으로만 켬)
         private int  _selectedLink = -1;   // 선택 클립에서 '편집 중'인 링크 인덱스 (-1=없음) → 그 링크만 강조
         private int  _linkOwnerClip = -1;  // _selectedLink가 속한 클립 (클립 바뀌면 링크 선택 초기화용)
