@@ -184,6 +184,8 @@ namespace ZZZ.Editor.AnimationTool
                 float boostSpeed = m is StartBoostModule boost ? boost.Speed : 0f;
                 float boostDuration = m is StartBoostModule boostTime ? boostTime.Duration : 0f;
                 float backScale = m is BackMotionScaleModule back ? back.Scale : 0f;
+                float rotationScale = m is SectionTurnModule turn ? turn.RotationScale : 1f;
+                float targetAngle = m is SectionTurnModule turnTarget ? turnTarget.TargetAngle : 0f;
 
                 if (m is AdditionalMovementModule)
                 {
@@ -204,6 +206,11 @@ namespace ZZZ.Editor.AnimationTool
                 }
                 else if (m is BackMotionScaleModule)
                     backScale = EditorGUILayout.FloatField("   Scale", backScale);
+                else if (m is SectionTurnModule)
+                {
+                    rotationScale = EditorGUILayout.FloatField("   Rotation Scale", rotationScale);
+                    targetAngle = EditorGUILayout.FloatField("   Target Angle", targetAngle);
+                }
 
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -229,6 +236,11 @@ namespace ZZZ.Editor.AnimationTool
                     }
                     else if (m is BackMotionScaleModule backMotion)
                         backMotion.Scale = Mathf.Max(0f, backScale);
+                    else if (m is SectionTurnModule sectionTurn)
+                    {
+                        sectionTurn.RotationScale = Mathf.Max(0f, rotationScale);
+                        sectionTurn.TargetAngle = Mathf.Max(0f, targetAngle);
+                    }
                     EditorUtility.SetDirty(_config);
                 }
             }
@@ -770,9 +782,10 @@ namespace ZZZ.Editor.AnimationTool
                         EditorStyles.miniLabel);
                 transitionMode = (EffectTransitionMode)EditorGUILayout.EnumPopup(
                     new GUIContent("Transition Effect",
-                        "Keep: Notify에서 재생 후 자연 소멸. Stop: Notify에서 재생 후 현재 상태 이탈 시 정지. Next: 지정한 다음 섹션으로 실제 전환될 때만 재생하고 그 섹션 이탈 시 정지."),
+                        "Keep: Notify에서 재생 후 자연 소멸. Stop: Notify에서 재생 후 현재 상태 이탈 시 정지하며, Carry Section 지정 시 그 섹션 이탈까지 유지. Next: 지정한 다음 섹션으로 실제 전환될 때만 재생하고 그 섹션 이탈 시 정지."),
                     notify.TransitionMode);
-                if (transitionMode == EffectTransitionMode.Next)
+                if (transitionMode == EffectTransitionMode.Stop
+                    || transitionMode == EffectTransitionMode.Next)
                 {
                     var sectionOptions = new List<string> { "" };
                     for (int i = 0; i < tc.Links.Count; i++)
@@ -791,9 +804,12 @@ namespace ZZZ.Editor.AnimationTool
                     for (int i = 1; i < sectionOptions.Count; i++)
                         sectionLabels[i] = sectionOptions[i];
                     int selectedSection = Mathf.Max(0, sectionOptions.IndexOf(nextSection));
+                    bool carriesFromCurrent = transitionMode == EffectTransitionMode.Stop;
                     selectedSection = EditorGUILayout.Popup(
-                        new GUIContent("Next Section",
-                            "실제 전환 목적지가 이 섹션일 때만 이펙트 소유권을 전달합니다."),
+                        new GUIContent(carriesFromCurrent ? "Carry Section" : "Next Section",
+                            carriesFromCurrent
+                                ? "비워두면 현재 섹션 이탈 시 정지합니다. 지정하면 해당 섹션까지 유지하고 그 섹션 이탈 시 정지합니다."
+                                : "실제 전환 목적지가 이 섹션일 때만 다음 섹션에서 이펙트를 생성합니다."),
                         selectedSection, sectionLabels);
                     nextSection = sectionOptions[selectedSection];
                 }

@@ -281,7 +281,7 @@ MonoBehaviour:
     - TargetConfig: {fileID: 11400000, guid: 4b8e2d1a6f9c47538a0e1c5b3d7f9a26, type: 2}
       TargetSection: Attack_Normal_Enhance_03
       BlendDuration: 0.2
-      EntryOffset: 0.5
+      EntryOffset: 0.47058824
       Condition:
         rid: 7723411238959710337
       Timing: 2
@@ -307,6 +307,8 @@ MonoBehaviour:
       Locked: 0
     Modules:
     - rid: 6745857324881018930
+    - rid: 6745857446944964671
+    - rid: 6745857446944964672
   GlobalLinks: []
   references:
     version: 2
@@ -318,7 +320,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018922
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018923
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -349,6 +352,16 @@ MonoBehaviour:
       data:
         Start: 0
         End: 1
+    - rid: 6745857446944964671
+      type: {class: RootRotationKillModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+    - rid: 6745857446944964672
+      type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.08
+        End: 0.48
+        Distance: 1
+        Direction: 1
     - rid: 7723410972547481664
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

@@ -49,6 +49,9 @@ namespace ZZZ.Player
         private float               _prevRootNormFrac;   // 직전 프레임 normalizedTime의 소수부 (루프 wrap 검출용)
         private float               _prevRootYaw;        // 직전 프레임 Root 본 yaw(도) — transform 적용용
         private float               _rootYawComp;        // 섹션 시작 이후 transform에 적용한 누적 Root yaw(도) — 메시 카운터/위치 보정용
+        private float               _rootYawApplied;
+        private Quaternion          _rootRotationKillBaseline;
+        private bool                _killRootRotation;
         private bool                _flushRootRotPending; // 섹션 진입 시 회전 추출 baseline/누적 리셋 대기
         private bool                _wasExtracting;      // 직전 프레임에 추출 중이었는지 (진입 baseline 검출용)
 
@@ -75,11 +78,32 @@ namespace ZZZ.Player
         public bool SmoothLoopSpeed { get; set; } = false;  // 루프 전진 평속화 (틱 제거). 기본 끔 — 섹션(TrackClip)별로 ConfigState가 설정
         public bool ExtractRootRotation { get; set; } = false;  // 이 섹션에서 Root 본 yaw를 transform에 적용 (턴 섹션). ConfigState가 설정
         public bool RootRotationWindowActive { get; set; } = true;
+        public float RootRotationScale { get; set; } = 1f;
+        public float RootRotationTargetAngle { get; set; }
+        public bool KillRootRotation
+        {
+            get => _killRootRotation;
+            set
+            {
+                if (value && !_killRootRotation)
+                    _rootRotationKillBaseline = transform.rotation;
+                _killRootRotation = value;
+            }
+        }
         public float BackMotionScale { get; set; } = 1f;        // 후진(-Z) 루트모션 증폭 배율. 섹션(TrackClip)별로 ConfigState가 설정
 
         // 실제 수평 이동 속도 (루트모션 포함) — 애니메이터 블렌드/HUD 표시용
         public float   CurrentSpeed  => new Vector3(_cc.velocity.x, 0f, _cc.velocity.z).magnitude;
         public Vector3 MoveDirection => _moveDirection;
+        public Vector3 ViewForward
+        {
+            get
+            {
+                Vector3 forward = _mainCamera != null ? _mainCamera.transform.forward : transform.forward;
+                forward.y = 0f;
+                return forward.sqrMagnitude > 0.0001f ? forward.normalized : transform.forward;
+            }
+        }
 
         // 원시 WASD 입력 기준 방향 (W=Forward) — 콤보 Link 조건 판정용
         public MoveDir CurrentMoveDir
@@ -278,6 +302,8 @@ namespace ZZZ.Player
 
             bool transitioning = UpdateTransitionFlags();
             UpdateRootRotation(transitioning);   // Root yaw → transform + 메시 카운터
+            if (KillRootRotation)
+                transform.rotation = _rootRotationKillBaseline;
             ApplyRootMotion(transitioning);      // Bip001 수평 델타 → CharacterController
         }
 
@@ -306,20 +332,36 @@ namespace ZZZ.Player
                 if (!RootRotationWindowActive || enter || transitioning)
                 {
                     _prevRootYaw = rootCur;
-                    if (enter) _rootYawComp = 0f;
+                    if (enter)
+                    {
+                        _rootYawComp = 0f;
+                        _rootYawApplied = 0f;
+                    }
                 }
                 else
                 {
                     float rootDelta = Mathf.DeltaAngle(_prevRootYaw, rootCur);
                     _rootYawComp += rootDelta;
                     _prevRootYaw  = rootCur;
-                    if (Mathf.Abs(rootDelta) > 1e-5f)
-                        transform.rotation = Quaternion.AngleAxis(rootDelta, Vector3.up) * transform.rotation;
+                    float scaledRootDelta = rootDelta * RootRotationScale;
+                    if (RootRotationTargetAngle > 0f)
+                    {
+                        float remaining = Mathf.Max(0f,
+                            RootRotationTargetAngle - Mathf.Abs(_rootYawApplied));
+                        scaledRootDelta = Mathf.Clamp(scaledRootDelta, -remaining, remaining);
+                    }
+                    _rootYawApplied += scaledRootDelta;
+                    if (Mathf.Abs(scaledRootDelta) > 1e-5f)
+                        transform.rotation = Quaternion.AngleAxis(scaledRootDelta, Vector3.up) * transform.rotation;
                 }
                 _wasExtracting       = true;
                 _flushRootRotPending = false;
             }
-            else _wasExtracting = false;
+            else
+            {
+                _wasExtracting = false;
+                _rootYawApplied = 0f;
+            }
 
             // 카운터 — 즉시 전환(페이드 없음). 턴 힙(+180)·run 힙(+0)이 ~180 달라 블렌드로 섞으면 Bip001
             // yaw가 slerp로 비선형 휘청 → 카운터(선형)가 못 따라간다. 그래서 턴→run 링크 BlendDuration=0

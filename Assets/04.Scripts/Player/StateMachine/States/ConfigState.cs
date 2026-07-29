@@ -235,16 +235,19 @@ namespace ZZZ.Player.StateMachine.States
                 SwitchConfig(_homeConfig, null, link.BlendDuration, link.EntryOffset);
                 return;
             }
+            bool sameSectionReentry = ti == _active;
             _active = ti;
-            PlayActive(link.BlendDuration, link.EntryOffset);
+            PlayActive(link.BlendDuration, link.EntryOffset, sameSectionReentry);
         }
 
         // startOffset(normalizedTime, 0~1) = 대상 클립을 그 지점부터 재생(중간 프레임 진입). 0 = 처음부터.
-        private void PlayActive(float blend, float startOffset = 0f)
+        private void PlayActive(float blend, float startOffset = 0f,
+            bool sameSectionReentry = false)
         {
             string destinationSection = _config.Clips[_active].SectionName;
-            StopTrackedEffects(true, destinationSection);
-            PlayPendingNextEffects(destinationSection);
+            if (!sameSectionReentry)
+                StopTrackedEffects(true, destinationSection);
+            PlayPendingNextEffects(destinationSection, sameSectionReentry);
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
             Signals.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
@@ -281,6 +284,9 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Mover.SmoothLoopSpeed = false;
             Ctx.Mover.BackMotionScale = 1f;
             Ctx.Mover.ExtractRootRotation = false;
+            Ctx.Mover.RootRotationScale = 1f;
+            Ctx.Mover.RootRotationTargetAngle = 0f;
+            Ctx.Mover.KillRootRotation = false;
             Ctx.Mover.RootRotationWindowActive = false;
             Ctx.Mover.ClearWarpTarget();
             Ctx.Mover.AddStartBoost(0f, 0f);
@@ -292,8 +298,32 @@ namespace ZZZ.Player.StateMachine.States
             for (int i = 0; i < tc.Modules.Count; i++)
                 tc.Modules[i]?.OnEnter(tc, _sc);
 
-            _notifyFired  = new bool[tc.Notifies.Count];
-            _notifyActive = new EffectHandle[tc.Notifies.Count];
+            bool preserveEffectState = sameSectionReentry
+                && _notifyFired != null
+                && _notifyFired.Length == tc.Notifies.Count
+                && _notifyActive != null
+                && _notifyActive.Length == tc.Notifies.Count;
+            if (!preserveEffectState)
+            {
+                _notifyFired = new bool[tc.Notifies.Count];
+                _notifyActive = new EffectHandle[tc.Notifies.Count];
+            }
+            for (int i = 0; i < tc.Notifies.Count; i++)
+            {
+                if (!preserveEffectState) continue;
+
+                TrackNotify notify = tc.Notifies[i];
+                bool preserveNotify = notify.Type == NotifyType.Effect
+                    && (notify.TransitionMode == EffectTransitionMode.Next
+                        || notify.TransitionMode == EffectTransitionMode.Stop
+                        && _notifyActive[i] != null);
+                if (!preserveNotify)
+                {
+                    _notifyFired[i] = false;
+                    _notifyActive[i] = null;
+                }
+            }
+
             _notifyTransitionModes = new EffectTransitionMode[tc.Notifies.Count];
             _notifyNextSections = new string[tc.Notifies.Count];
             for (int i = 0; i < tc.Notifies.Count; i++)
@@ -381,9 +411,10 @@ namespace ZZZ.Player.StateMachine.States
             return null;
         }
 
-        private void PlayPendingNextEffects(string destinationSection)
+        private void PlayPendingNextEffects(string destinationSection,
+            bool preserveUnmatched = false)
         {
-            for (int i = 0; i < _pendingNextEffects.Count; i++)
+            for (int i = _pendingNextEffects.Count - 1; i >= 0; i--)
             {
                 PendingNextEffect pending = _pendingNextEffects[i];
                 if (!string.Equals(pending.NextSection, destinationSection,
@@ -393,11 +424,12 @@ namespace ZZZ.Player.StateMachine.States
                 EffectHandle handle = EffectService.PlayAfterAnimation(
                     pending.Effect, Ctx.Transform, true);
                 if (handle != null) _carriedEffects.Add(handle);
+                _pendingNextEffects.RemoveAt(i);
             }
-            _pendingNextEffects.Clear();
+            if (!preserveUnmatched) _pendingNextEffects.Clear();
         }
 
-        // 진행 중인 구간 이펙트를 전부 정지(섹션 이탈·인터럽트·종료 시 누수 방지).
+        // 추적 중인 이펙트를 실제 섹션 이탈·인터럽트·종료 시 정리한다.
         private void StopTrackedEffects(bool transferNext, string destinationSection = null)
         {
             for (int i = 0; i < _carriedEffects.Count; i++)
@@ -414,9 +446,8 @@ namespace ZZZ.Player.StateMachine.States
                         && i < _notifyTransitionModes.Length
                         ? _notifyTransitionModes[i]
                         : EffectTransitionMode.Keep;
-                    if (mode == EffectTransitionMode.Stop)
-                        handle.Stop();
-                    else if (mode == EffectTransitionMode.Next)
+                    if (mode == EffectTransitionMode.Stop
+                        || mode == EffectTransitionMode.Next)
                     {
                         string nextSection = _notifyNextSections != null
                             && i < _notifyNextSections.Length
@@ -443,6 +474,7 @@ namespace ZZZ.Player.StateMachine.States
             _notifyTransitionModes = null;
             _notifyNextSections = null;
             Ctx.Mover.ClearWarpTarget();
+            Ctx.Mover.KillRootRotation = false;
             Signals.Invulnerable = false;
             Signals.ParryActive  = false;
         }
@@ -466,6 +498,22 @@ namespace ZZZ.Player.StateMachine.States
             if (_config == null || _active < 0 || _active >= _config.Clips.Count) return false;
             return HasInputLink(_config.Clips[_active].Links, input)
                 || HasInputLink(_config.GlobalLinks, input);
+        }
+
+        public bool ActiveSectionBlocks(ComboInput input)
+        {
+            if (_config == null || _active < 0 || _active >= _config.Clips.Count) return false;
+
+            TrackClip tc = _config.Clips[_active];
+            float nt = SectionNormalizedTime(tc);
+            var modules = tc.Modules;
+            if (modules == null) return false;
+
+            for (int i = 0; i < modules.Count; i++)
+            {
+                if (modules[i] != null && modules[i].BlocksInput(tc, nt, input)) return true;
+            }
+            return false;
         }
 
         private static bool HasInputLink(List<ClipLink> links, ComboInput input)

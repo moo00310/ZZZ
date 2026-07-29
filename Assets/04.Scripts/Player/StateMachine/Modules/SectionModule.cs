@@ -10,6 +10,7 @@ namespace ZZZ
     {
         public virtual void OnEnter(TrackClip tc, SectionContext c) { }
         public virtual void Tick(TrackClip tc, float nt, SectionContext c) { }
+        public virtual bool BlocksInput(TrackClip tc, float nt, ComboInput input) => false;
 
         // 인스펙터/툴 표시용 — DisplayName은 값 포함 인스턴스 요약, MenuName은 추가 메뉴에 뜨는 타입 이름.
         public virtual string DisplayName => GetType().Name;

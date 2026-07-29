@@ -47,7 +47,7 @@ MonoBehaviour:
       Condition:
         rid: 7723411238959710241
       Timing: 0
-      WindowStart: 0.16911764
+      WindowStart: 0.44117647
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 0698a6c15ecbc5848b95d4f5cecdacd8, type: 2}
       TargetSection: Evade_Left
@@ -87,17 +87,16 @@ MonoBehaviour:
       WindowEnd: 1
     Notifies:
     - Type: 0
-      NormalizedTime: 0.11029411
+      NormalizedTime: 0.11029412
       EventName: Effect
       Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
       EndNormalizedTime: 1
       TransitionMode: 1
+      NextSection: Attack_Normal_Enhance_03
       Locked: 1
     Modules:
     - rid: 6745857324881018908
     - rid: 6745857324881018909
-    - rid: 6745857324881018910
-    - rid: 6745857324881018911
   - SectionName: Attack_Normal_Enhance_01_Explode
     Clip: {fileID: 7400000, guid: 98f2617bfbbffed4aa5379b3dfd0bc8e, type: 2}
     Speed: 1
@@ -121,7 +120,15 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.15757558
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection:
+      Locked: 1
     Modules:
     - rid: 6745857324881018912
     - rid: 6745857324881018913
@@ -199,7 +206,7 @@ MonoBehaviour:
       Condition:
         rid: 7723411238959710254
       Timing: 0
-      WindowStart: 0.17322835
+      WindowStart: 0.47244096
       WindowEnd: 1
     - TargetConfig: {fileID: 11400000, guid: 0698a6c15ecbc5848b95d4f5cecdacd8, type: 2}
       TargetSection: Evade_Left
@@ -244,10 +251,10 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 1
+      NextSection:
       Locked: 0
     Modules:
     - rid: 6745857324881018915
-    - rid: 6745857324881018916
   - SectionName: Attack_Normal_Enhance_02_Explode
     Clip: {fileID: 7400000, guid: 289de9c102222674e9e525d57c0827d6, type: 2}
     Speed: 1
@@ -271,7 +278,15 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.15996811
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection:
+      Locked: 1
     Modules:
     - rid: 6745857324881018917
     - rid: 6745857324881018918
@@ -392,7 +407,8 @@ MonoBehaviour:
       EventName: Effect
       Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
       EndNormalizedTime: 0
-      TransitionMode: 1
+      TransitionMode: 2
+      NextSection: Attack_Normal_Enhance_03
       Locked: 1
     Modules:
     - rid: 6745857324881018919
@@ -419,7 +435,15 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.10144709
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection:
+      Locked: 1
     Modules:
     - rid: 6745857324881018920
   - SectionName: Attack_Normal_Enhance_03_End
@@ -488,7 +512,15 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0.76168835
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.88
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 2
+      NextSection: Attack_Normal_Enhance_02
+      Locked: 1
     Modules: []
   - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_RushToEnhance
     Clip: {fileID: 7400000, guid: d5732be1498cb084abc299ffbf60e78b, type: 2}
@@ -513,7 +545,15 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - Type: 0
+      NormalizedTime: 0.8918919
+      EventName: Effect
+      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+      EndNormalizedTime: 0
+      TransitionMode: 2
+      NextSection: Attack_Normal_Enhance_02
+      Locked: 1
     Modules: []
   GlobalLinks: []
   references:
@@ -528,15 +568,6 @@ MonoBehaviour:
       type: {class: BackMotionScaleModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Scale: 1.2
-    - rid: 6745857324881018910
-      type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
-    - rid: 6745857324881018911
-      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
-      data:
-        Start: 0
-        End: 0.6
-        TurnSpeed: 720
     - rid: 6745857324881018912
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -555,12 +586,6 @@ MonoBehaviour:
       data:
         Start: 0
         End: 1
-    - rid: 6745857324881018916
-      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
-      data:
-        Start: 0
-        End: 0.5496185
-        TurnSpeed: 720
     - rid: 6745857324881018917
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

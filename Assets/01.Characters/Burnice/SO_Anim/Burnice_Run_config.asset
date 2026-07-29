@@ -202,6 +202,8 @@ MonoBehaviour:
       data:
         Start: 0
         End: 0.42211825
+        _rotationScale: 1
+        _targetAngle: 180
     - rid: 7723411238959710282
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:

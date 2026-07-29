@@ -485,12 +485,22 @@ Effect Notify는 `TransitionMode`로 상태·구간 전환 시 수명을 결정�
 | 모드 | 동작 |
 |---|---|
 | `Keep` | Notify 시점에 즉시 재생하고 ConfigState의 소유권을 버린다. 프리팹의 자연 종료나 Duration까지 유지된다. |
-| `Stop` | Notify 시점에 즉시 재생하고 현재 상태를 나갈 때 `EffectHandle.Stop()`으로 정지한다. |
+| `Stop` | Notify 시점에 즉시 재생한다. `NextSection`이 비면 현재 섹션 이탈 시 정지하고, 지정하면 그 목적지 섹션까지 소유권을 전달해 목적지 이탈 시 정지한다. |
 | `Next` | Notify 시점에는 생성하지 않고 예약한다. 실제 Link 목적지가 `NextSection`과 일치할 때만 생성하며, 목적지 상태가 소유권을 넘겨받아 그 상태를 나갈 때 정지한다. |
 
 `Next`는 현재 섹션의 Link 목적지 중 하나를 Animation Tool의 `Next Section` 드롭다운에서 고른다.
 다른 분기가 선택되면 예약을 폐기하므로 잘못된 분기에서 한 프레임 생성됐다가 사라지는 현상이 없다.
 목적지에서 생성할 때도 `PlayAfterAnimation`을 사용해 중간 프레임 진입 후 최신 소켓 포즈를 읽는다.
+
+현재 섹션부터 보여야 하고 다음 홀드 루프까지 이어져야 하는 Effect는 `Stop`의 `Carry Section`에
+그 루프 섹션을 지정한다. 실제 목적지가 일치할 때 기존 핸들을 전달하며, 다른 분기로 나가면 현재
+섹션 이탈 시 정지한다. 전달받은 루프 섹션의 self-link에서는 핸들을 유지하고 루프를 벗어날 때 정지한다.
+
+같은 섹션을 대상으로 하는 self-link는 애니메이션 타임라인만 재진입하며 전환 관리 Effect의
+논리적 수명은 이어진다. 활성 `Stop` 핸들과 `Next` 발동 상태, 아직 목적지가 확정되지 않은 `Next`
+예약을 보존하므로 홀드 루프 중에는 중복 생성하거나 정지하지 않는다. 자연 종료하는 `Keep`, 이미
+종료 구간에 도달한 interval `Stop`, 일반 이벤트 Notify는 재진입마다 다시 발동할 수 있다. 다른
+섹션으로 전환할 때는 기존 수명 정책을 적용한다.
 
 구간 Effect는 전환 정책과 별개로 같은 구간 안에서 `EndNormalizedTime`에 도달하면 정지한다.
 `Next`로 전달된 Effect와 `Stop` Effect는 종료 요청에서 `BakeToWorldEffectModule`을 먼저 실행한 뒤

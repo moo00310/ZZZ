@@ -10,11 +10,15 @@ namespace ZZZ
     // 몬스터는 워프/Face/StartBoost를 빈 구현(no-op)으로 두고 루트모션·회전만 실제 구현해도 된다.
     public interface IConfigMover
     {
+        Vector3 ViewForward { get; }
         bool  UseCodeMovement    { get; set; }   // 루트모션 안 쓰고 코드 이동(중력만)인지
         bool  AllowRotation      { get; set; }   // false면 회전 잠금(피격/경직)
         bool  SmoothLoopSpeed    { get; set; }   // 루프 전진 평속화(틱 제거)
         bool  ExtractRootRotation{ get; set; }   // Root yaw를 transform에 추출(턴 섹션)
         bool  RootRotationWindowActive { get; set; } // Root yaw를 실제 추출하는 구간
+        float RootRotationScale { get; set; }
+        float RootRotationTargetAngle { get; set; }
+        bool KillRootRotation { get; set; }
         float BackMotionScale    { get; set; }   // 후진(-Z) 루트모션 증폭 배율
         bool  WarpWindowActive   { get; set; }   // 이동 워프 윈도우 안인지(매 프레임 갱신)
         bool  FaceWindowActive   { get; set; }   // 타겟 조준 윈도우 안인지(매 프레임 갱신)

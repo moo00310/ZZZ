@@ -139,7 +139,8 @@ namespace ZZZ.Player.StateMachine
             // 가로채 일반 강화로 새버린다(예: Rush 윈도우 전 E → RushToEnhance 대신 일반 강화). E 링크가 없는
             // idle/walk 등에서만 이 트리거가 받는다.
             if (HasBufferedInput && BufferedInput == ComboInput.Enhance
-                && !_state.ActiveSectionHandles(ComboInput.Enhance))
+                && !_state.ActiveSectionHandles(ComboInput.Enhance)
+                && !_state.ActiveSectionBlocks(ComboInput.Enhance))
                 _attackNormalEnhance.Trigger();
         }
 

@@ -47,6 +47,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: bbb06596c21927e47913234aab021369, type: 2}
       EndNormalizedTime: 1
       TransitionMode: 1
+      NextSection:
       Locked: 1
     Modules:
     - rid: 6745857324881018943
@@ -72,6 +73,7 @@ MonoBehaviour:
     - rid: 6745857324881018947
     - rid: 6745857324881018948
     - rid: 6745857324881018949
+    - rid: 6745857443882336320
   - SectionName: Attack_ExSpecial_01_Explode_End
     Clip: {fileID: 7400000, guid: 9847bd064f18b0c44a80022fb6a1b77e, type: 2}
     Speed: 1
@@ -246,7 +248,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018951
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018952
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -274,6 +277,12 @@ MonoBehaviour:
         Start: 0.011235955
         End: 0.011235955
         TurnSpeed: 720
+    - rid: 6745857443882336320
+      type: {class: InputBlockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+        Input: 4
     - rid: 7723411238959710208
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:

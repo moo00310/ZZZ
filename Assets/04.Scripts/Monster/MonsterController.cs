@@ -8,12 +8,16 @@ namespace ZZZ.Monster
     // 루트모션 이동/넉백·워프·추격은 후속(필요 시 PlayerController의 루트 추출 로직을 공유/이식).
     public class MonsterController : MonoBehaviour, IConfigMover
     {
+        public Vector3 ViewForward => transform.forward;
         // ── ConfigState가 섹션마다 세팅 — v1에선 보관만 ──
         public bool  UseCodeMovement     { get; set; } = true;
         public bool  AllowRotation       { get; set; } = true;
         public bool  SmoothLoopSpeed     { get; set; }
         public bool  ExtractRootRotation { get; set; }
         public bool  RootRotationWindowActive { get; set; } = true;
+        public float RootRotationScale { get; set; } = 1f;
+        public float RootRotationTargetAngle { get; set; }
+        public bool KillRootRotation { get; set; }
         public float BackMotionScale     { get; set; } = 1f;
         public bool  WarpWindowActive    { get; set; }
         public bool  FaceWindowActive    { get; set; }
