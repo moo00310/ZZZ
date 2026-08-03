@@ -40,6 +40,12 @@ namespace ZZZ.Player
                 _currentFollowPos = _target.position;
         }
 
+        public void SetTarget(Transform target, bool snap = false)
+        {
+            _target = target;
+            if (snap && _target != null) _currentFollowPos = _target.position;
+        }
+
         private void LateUpdate()
         {
             if (_target == null) return;

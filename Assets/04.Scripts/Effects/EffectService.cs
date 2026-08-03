@@ -3,6 +3,21 @@ using UnityEngine;
 
 namespace ZZZ.Effects
 {
+    public readonly struct EffectPlayContext
+    {
+        public Transform Spawner       { get; }
+        public Transform CharacterRoot { get; }
+
+        public EffectPlayContext(Transform spawner, Transform characterRoot)
+        {
+            Spawner       = spawner;
+            CharacterRoot = characterRoot;
+        }
+
+        public static EffectPlayContext ForCharacter(Transform characterRoot) =>
+            new EffectPlayContext(characterRoot, characterRoot);
+    }
+
     // 런타임 진입점 — AnimConfig(Notify)가 아는 유일한 이펙트 API.
     // Notify ─(CompositeEffect 참조)─▶ EffectService ─▶ 프리팹별 EffectPool ─▶ 실제 이펙트.
     // 풀링은 프리팹 단위, 실행(Play)은 조합(CompositeEffect) 단위 —
@@ -12,7 +27,6 @@ namespace ZZZ.Effects
         private static Dictionary<GameObject, EffectPool> s_pools;
         private static Transform            s_poolRoot;
         private static EffectServiceRunner  s_runner;
-        private static Transform            s_characterRoot;
 
         // 도메인 리로드 없는 Enter Play Mode 설정에서도 이전 플레이의 정적 상태가 새지 않도록 리셋.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -21,46 +35,40 @@ namespace ZZZ.Effects
             s_pools    = new Dictionary<GameObject, EffectPool>();
             s_poolRoot = null;
             s_runner   = null;
-            s_characterRoot = null;
-        }
-
-        // 현재는 플레이어 전용 이펙트만 Custom Simulation Space를 사용한다.
-        // 몬스터나 다중 캐릭터로 확장할 때는 전역 참조 대신 재생 주체별 루트를 전달해야 한다.
-        public static void SetCharacterRoot(Transform characterRoot)
-        {
-            s_characterRoot = characterRoot;
-            GetRunner();
         }
 
         // 조합 안의 각 Entry를 자기 StartDelay만큼 지연시켜 재생한다. 지연 중 spawner가 파괴되면 스킵.
         // trackForStop=true(구간 이펙트)일 때만 정지용 EffectHandle을 할당해 반환한다 —
         // 단발(point) 재생은 핸들 없이(무할당) 스폰만 하고 null을 반환한다(전투 스폰 GC 회피).
-        public static EffectHandle Play(CompositeEffect composite, Transform spawner, bool trackForStop = false)
+        public static EffectHandle Play(
+            CompositeEffect composite, EffectPlayContext context, bool trackForStop = false)
         {
-            if (composite == null || spawner == null) return null;
+            if (composite == null || context.Spawner == null || context.CharacterRoot == null) return null;
 
             var handle = trackForStop ? new EffectHandle() : null;
-            PlayEntries(composite, spawner, handle, false);
+            PlayEntries(composite, context, handle, false);
             return handle;
         }
 
         // Notify 판정은 Update에서 유지하되 실제 생성은 Animator와 캐릭터 루트 이동이 반영된 뒤 처리한다.
         public static EffectHandle PlayAfterAnimation(
-            CompositeEffect composite, Transform spawner, bool trackForStop = false)
+            CompositeEffect composite, EffectPlayContext context, bool trackForStop = false)
         {
-            if (composite == null || spawner == null) return null;
+            if (composite == null || context.Spawner == null || context.CharacterRoot == null) return null;
 
             var handle = trackForStop ? new EffectHandle() : null;
             GetRunner().EnqueueLateUpdate(() =>
             {
-                if (spawner == null || (handle != null && handle.IsStopped)) return;
-                PlayEntries(composite, spawner, handle, true);
+                if (context.Spawner == null || context.CharacterRoot == null
+                    || (handle != null && handle.IsStopped)) return;
+                PlayEntries(composite, context, handle, true);
             });
             return handle;
         }
 
         private static void PlayEntries(
-            CompositeEffect composite, Transform spawner, EffectHandle handle, bool afterAnimation)
+            CompositeEffect composite, EffectPlayContext context, EffectHandle handle,
+            bool afterAnimation)
         {
             foreach (CompositeEffectEntry entry in composite.Entries)
             {
@@ -70,7 +78,7 @@ namespace ZZZ.Effects
                 {
                     // PlayEntry는 항상 호출(스폰). handle?.Add(PlayEntry(...))로 쓰면 handle이 null(단발)일 때
                     // null-조건 연산자가 인자까지 통째로 건너뛰어 스폰 자체가 안 되므로, 반드시 먼저 호출한다.
-                    var spawned = PlayEntry(entry, spawner);
+                    var spawned = PlayEntry(entry, context);
                     handle?.Add(spawned);
                 }
                 else
@@ -79,34 +87,36 @@ namespace ZZZ.Effects
                     var h = handle;
                     GetRunner().Delay(entry.StartDelay, () =>
                     {
-                        if (spawner == null) return;   // 지연 중 스포너가 파괴된 경우
+                        if (context.Spawner == null || context.CharacterRoot == null) return;
                         if (afterAnimation)
                         {
                             GetRunner().EnqueueLateUpdate(() =>
                             {
-                                if (spawner == null || (h != null && h.IsStopped)) return;
-                                var lateSpawned = PlayEntry(e, spawner);
+                                if (context.Spawner == null || context.CharacterRoot == null
+                                    || (h != null && h.IsStopped)) return;
+                                var lateSpawned = PlayEntry(e, context);
                                 h?.Add(lateSpawned);
                             });
                             return;
                         }
 
-                        var spawned = PlayEntry(e, spawner);
+                        var spawned = PlayEntry(e, context);
                         h?.Add(spawned);   // 이미 Stop됐으면 핸들이 즉시 정지 처리
                     });
                 }
             }
         }
 
-        private static PooledEffectHandle PlayEntry(CompositeEffectEntry entry, Transform spawner)
+        private static PooledEffectHandle PlayEntry(
+            CompositeEffectEntry entry, EffectPlayContext context)
         {
             EffectPool pool     = GetOrCreatePool(entry.Prefab);
             GameObject instance = pool.Get();
 
-            Transform anchor = FindSocket(spawner, entry.Socket);
-            PlaceInstance(instance, entry, anchor, spawner);
-            BindCustomSimulationSpace(instance);
-            BindEffectModules(instance, entry, spawner);
+            Transform anchor = FindSocket(context.Spawner, entry.Socket);
+            PlaceInstance(instance, entry, anchor, context.CharacterRoot);
+            BindCustomSimulationSpace(instance, context.CharacterRoot);
+            BindEffectModules(instance, entry, context.CharacterRoot);
 
             var handle = instance.GetComponent<PooledEffectHandle>();
             if (handle == null) handle = instance.AddComponent<PooledEffectHandle>();
@@ -117,17 +127,16 @@ namespace ZZZ.Effects
             return handle;
         }
 
-        private static void BindCustomSimulationSpace(GameObject instance)
+        private static void BindCustomSimulationSpace(
+            GameObject instance, Transform characterRoot)
         {
-            if (s_characterRoot == null) return;
-
             var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
             for (int i = 0; i < systems.Length; i++)
             {
                 ParticleSystem.MainModule main = systems[i].main;
                 if (main.simulationSpace == ParticleSystemSimulationSpace.Custom
-                    && main.customSimulationSpace != s_characterRoot)
-                    main.customSimulationSpace = s_characterRoot;
+                    && main.customSimulationSpace != characterRoot)
+                    main.customSimulationSpace = characterRoot;
             }
         }
 

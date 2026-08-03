@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Interactions;
 using ZZZ;
 using ZZZ.Effects;
 using ZZZ.Player.StateMachine.States;
@@ -14,7 +12,8 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(AnimatorBridge))]
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerResources))]
-    public class PlayerStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor, IInputMonitor
+    public class PlayerStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor,
+        IInputMonitor, IPlayerInputTarget
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
@@ -41,7 +40,8 @@ namespace ZZZ.Player.StateMachine
         private ConfigState        _state;   // 단일 config 러너 — 전이는 config가 관리
         private PlayerStateContext _ctx;
         private InputBuffer        _input;
-        private PlayerInput        _playerInput;   // 좌클릭 Tap/Hold 직접 구독용 (나머지 입력은 SendMessages)
+        private PlayerController   _controller;
+        private bool               _isRunning;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
         public bool       HasBufferedInput => _input.HasInput;
@@ -73,22 +73,20 @@ namespace ZZZ.Player.StateMachine
 
         private void Awake()
         {
-            EffectService.SetCharacterRoot(transform);
-
-            var controller = GetComponent<PlayerController>();
+            _controller    = GetComponent<PlayerController>();
             var animator   = GetComponent<AnimatorBridge>();
             var cc         = GetComponent<CharacterController>();
             var resources  = GetComponent<PlayerResources>();
             var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();   // 거리 분기용 (PlayerController.Awake 순서와 무관하게 직접 획득)
 
-            _ctx   = new PlayerStateContext(controller, animator, cc, transform);
+            _ctx   = new PlayerStateContext(_controller, animator, cc, transform);
             var condCtx = new PlayerConditionContext(_ctx, this);
             var cfgCtx  = new ConfigContext
             {
-                Mover      = controller,
+                Mover      = _controller,
                 Animator   = animator,
                 Transform  = transform,
-                GameObject = controller.gameObject,
+                GameObject = _controller.gameObject,
             };
             _state = new ConfigState(cfgCtx, this, condCtx, _startConfig);
 
@@ -103,17 +101,14 @@ namespace ZZZ.Player.StateMachine
             _parry.Init(this, _state, registry, _input);
             _attackNormalEnhance.Init(this, _state, registry, _input, sensor);
             _hit.Init(this, _state, registry, _parry.Prefix);   // 쳐냄 섹션 접두어는 ParryTrigger에서 단일 정의
-
-            _playerInput = GetComponent<PlayerInput>();
         }
 
-        // 좌클릭은 탭/홀드를 갈라야 해서 SendMessages(OnAttack) 대신 액션을 직접 구독한다 —
-        // CallbackContext.interaction으로 Tap/Hold를 구분(InputValue엔 이 정보가 없음). 나머지 입력은 SendMessages 유지.
-        private void OnEnable()  { if (_playerInput != null) _playerInput.actions["Attack"].performed += OnAttackPerformed; }
-        private void OnDisable() { if (_playerInput != null) _playerInput.actions["Attack"].performed -= OnAttackPerformed; }
-
         // 이펙트 소유권 해제 — 이 프리팹들의 마지막 소유자였다면 전역 풀이 회수된다(모바일 상주 방지).
-        private void OnDestroy() => EffectOwnership.Unregister(this, OwnedConfigs());
+        private void OnDestroy()
+        {
+            DeactivateCharacter();
+            EffectOwnership.Unregister(this, OwnedConfigs());
+        }
 
         // 이 캐릭터가 쓰는 config 전체(시작 + 이벤트 진입용) — 이펙트 소유권 유도에 사용.
         private IEnumerable<AnimationConfig> OwnedConfigs()
@@ -124,10 +119,12 @@ namespace ZZZ.Player.StateMachine
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → AnimatorBridge._animator 초기화 보장
-        private void Start() => _state.Enter();
+        private void Start() => ActivateCharacter();
 
         private void Update()
         {
+            if (!_isRunning) return;
+
             // 회피/패링은 링크 평가 전에 — 콤보보다 우선(공격 중 캔슬)
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
@@ -158,25 +155,40 @@ namespace ZZZ.Player.StateMachine
         public float           CurrentNormalizedTime => _state?.CurrentNormalizedTime ?? 0f;
         public MoveDir         CurrentMoveDir         => _state?.CurrentMoveDir ?? MoveDir.Any;
 
-        // ── 입력 콜백 ──────────────────────────────────────────────
-        // 입력만 버퍼링 — 실제 콤보 진입은 config의 Input 링크(TargetConfig=콤보)가 처리.
-
-        // 좌클릭(Attack 액션, Tap+Hold 인터랙션) 직접 구독 — 탭=일반공격(Normal), 홀드=강공격(Strong).
-        // Idle/Run의 GlobalLink가 Strong를 받아 ExSpecial로 분기한다. 홀드 시 Tap은 발동 안 하므로
-        // 일반 윈드업 없이 곧장 강공으로 진입한다. (InputValue엔 interaction 정보가 없어 CallbackContext로 받음)
-        private void OnAttackPerformed(InputAction.CallbackContext ctx)
+        public void SetMoveInput(Vector2 input)
         {
-            _input.Buffer(ctx.interaction is HoldInteraction ? ComboInput.Strong : ComboInput.Normal);
+            if (_controller != null) _controller.SetMoveInput(input);
         }
 
-        // ── 나머지 입력은 SendMessages 유지 ──
-        private void OnDodge(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Dodge); }
-        private void OnParry(InputValue value)   { if (value.isPressed) _input.Buffer(ComboInput.Parry); }
-        // 누름 = 버퍼링(콤보 진입) + 홀드 ON, 뗌 = 홀드 OFF(OnRelease 링크가 이 전환을 보고 발사)
-        private void OnAttack_Normal_Enhance(InputValue value)
+        public void BufferInput(ComboInput input)
         {
-            _input.SetHeld(ComboInput.Enhance, value.isPressed);
-            if (value.isPressed) _input.Buffer(ComboInput.Enhance);
+            _input?.Buffer(input);
+        }
+
+        public void SetInputHeld(ComboInput input, bool held)
+        {
+            _input?.SetHeld(input, held);
+        }
+
+        public void ClearInput()
+        {
+            _input?.Clear();
+            if (_controller != null) _controller.SetMoveInput(Vector2.zero);
+        }
+
+        public void ActivateCharacter()
+        {
+            if (_isRunning) return;
+            _isRunning = true;
+            _state.Enter();
+        }
+
+        public void DeactivateCharacter()
+        {
+            if (!_isRunning) return;
+            ClearInput();
+            _state.Exit();
+            _isRunning = false;
         }
     }
 }

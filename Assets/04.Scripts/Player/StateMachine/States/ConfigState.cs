@@ -390,7 +390,9 @@ namespace ZZZ.Player.StateMachine.States
                 case NotifyType.Effect:
                     if (notify.Effect != null)
                         return EffectService.PlayAfterAnimation(
-                            notify.Effect, Ctx.Transform, true);
+                            notify.Effect,
+                            EffectPlayContext.ForCharacter(Ctx.Transform),
+                            true);
                     return null;
                 default:
                     if (!string.IsNullOrEmpty(notify.EventName))
@@ -422,7 +424,9 @@ namespace ZZZ.Player.StateMachine.States
                     continue;
 
                 EffectHandle handle = EffectService.PlayAfterAnimation(
-                    pending.Effect, Ctx.Transform, true);
+                    pending.Effect,
+                    EffectPlayContext.ForCharacter(Ctx.Transform),
+                    true);
                 if (handle != null) _carriedEffects.Add(handle);
                 _pendingNextEffects.RemoveAt(i);
             }

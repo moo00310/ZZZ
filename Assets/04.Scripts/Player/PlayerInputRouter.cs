@@ -1,0 +1,156 @@
+using System;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Interactions;
+using ZZZ.Player.StateMachine;
+
+namespace ZZZ.Player
+{
+    public interface IPlayerInputTarget
+    {
+        void SetMoveInput(Vector2 input);
+        void BufferInput(ComboInput input);
+        void SetInputHeld(ComboInput input, bool held);
+        void ClearInput();
+    }
+
+    [RequireComponent(typeof(PlayerInput))]
+    public sealed class PlayerInputRouter : MonoBehaviour
+    {
+        [SerializeField] private PlayerStateMachine _initialTarget;
+
+        private PlayerInput        _playerInput;
+        private MonoBehaviour      _targetBehaviour;
+        private IPlayerInputTarget _target;
+        private InputAction        _move;
+        private InputAction        _attack;
+        private InputAction        _dodge;
+        private InputAction        _parry;
+        private InputAction        _enhance;
+        private InputAction        _previous;
+        private InputAction        _next;
+
+        public event Action OnPreviousRequested;
+        public event Action OnNextRequested;
+
+        private void Awake()
+        {
+            _playerInput = GetComponent<PlayerInput>();
+            InputActionMap actions = _playerInput.actions.FindActionMap("Player", true);
+            _move     = actions.FindAction("Move", true);
+            _attack   = actions.FindAction("Attack", true);
+            _dodge    = actions.FindAction("Dodge", true);
+            _parry    = actions.FindAction("Parry", true);
+            _enhance  = actions.FindAction("Attack_Normal_Enhance", true);
+            _previous = actions.FindAction("Previous", true);
+            _next     = actions.FindAction("Next", true);
+        }
+
+        private void Start()
+        {
+            if (_target == null) SetTarget(_initialTarget);
+        }
+
+        private void OnEnable()
+        {
+            _move.performed     += OnMove;
+            _move.canceled      += OnMove;
+            _attack.performed   += OnAttack;
+            _dodge.performed    += OnDodge;
+            _parry.performed    += OnParry;
+            _enhance.performed  += OnEnhance;
+            _enhance.canceled   += OnEnhance;
+            _previous.performed += OnPrevious;
+            _next.performed     += OnNext;
+        }
+
+        private void OnDisable()
+        {
+            _move.performed     -= OnMove;
+            _move.canceled      -= OnMove;
+            _attack.performed   -= OnAttack;
+            _dodge.performed    -= OnDodge;
+            _parry.performed    -= OnParry;
+            _enhance.performed  -= OnEnhance;
+            _enhance.canceled   -= OnEnhance;
+            _previous.performed -= OnPrevious;
+            _next.performed     -= OnNext;
+            ResetTargetInput();
+        }
+
+        public bool SetTarget(MonoBehaviour targetBehaviour)
+        {
+            if (targetBehaviour == null)
+            {
+                ClearTarget();
+                return true;
+            }
+
+            if (!(targetBehaviour is IPlayerInputTarget target))
+            {
+                Debug.LogError(
+                    $"{targetBehaviour.name} does not implement {nameof(IPlayerInputTarget)}.",
+                    targetBehaviour);
+                return false;
+            }
+
+            ResetTargetInput();
+            _targetBehaviour = targetBehaviour;
+            _target          = target;
+            _target.ClearInput();
+            return true;
+        }
+
+        public void ClearTarget()
+        {
+            ResetTargetInput();
+            _targetBehaviour = null;
+            _target          = null;
+        }
+
+        private bool HasTarget => _targetBehaviour != null && _target != null;
+
+        private void ResetTargetInput()
+        {
+            if (HasTarget) _target.ClearInput();
+        }
+
+        private void OnMove(InputAction.CallbackContext context)
+        {
+            if (HasTarget) _target.SetMoveInput(context.ReadValue<Vector2>());
+        }
+
+        private void OnAttack(InputAction.CallbackContext context)
+        {
+            if (!HasTarget) return;
+            ComboInput input = context.interaction is HoldInteraction
+                ? ComboInput.Strong
+                : ComboInput.Normal;
+            _target.BufferInput(input);
+        }
+
+        private void OnDodge(InputAction.CallbackContext context)
+        {
+            if (HasTarget) _target.BufferInput(ComboInput.Dodge);
+        }
+
+        private void OnParry(InputAction.CallbackContext context)
+        {
+            if (HasTarget) _target.BufferInput(ComboInput.Parry);
+        }
+
+        private void OnEnhance(InputAction.CallbackContext context)
+        {
+            if (!HasTarget) return;
+            bool held = context.ReadValueAsButton();
+            _target.SetInputHeld(ComboInput.Enhance, held);
+            if (held) _target.BufferInput(ComboInput.Enhance);
+        }
+
+        private void OnPrevious(InputAction.CallbackContext context) =>
+            OnPreviousRequested?.Invoke();
+
+        private void OnNext(InputAction.CallbackContext context) =>
+            OnNextRequested?.Invoke();
+    }
+}

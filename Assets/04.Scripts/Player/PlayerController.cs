@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace ZZZ.Player
 {
@@ -261,7 +260,7 @@ namespace ZZZ.Player
             _cc.Move(dir * step);
         }
 
-        private void OnMove(InputValue value)   => _moveInput   = value.Get<Vector2>();
+        public void SetMoveInput(Vector2 input) => _moveInput = input;
 
         private void Move()
         {
