@@ -13,7 +13,7 @@
 
 ```
 [ Input ]
-    │  (PlayerInput SendMessages → 입력 버퍼링)
+    │  (공용 PlayerInput → PlayerInputRouter → 활성 캐릭터)
     ▼
 [ PlayerStateMachine ]        ← MonoBehaviour, 얇은 코디네이터(조립 + facade)
     │   · 협력 객체 조립: InputBuffer / HitTrigger / DodgeTrigger / ParryTrigger /
@@ -461,9 +461,9 @@ ConfigState.InterruptWith(hitConfig, "Hit_{L|H}_{Front|Back}", _hitEntryBlend)
 ## 입력 버퍼 & 콤보
 
 ```
-PlayerStateMachine
-    ├── OnAttack → BufferInput(ComboInput.Normal)
-    └── OnDodge  → BufferInput(ComboInput.Dodge)
+PlayerInputRouter
+    ├── Attack → 활성 캐릭터.BufferInput(ComboInput.Normal/Strong)
+    └── Dodge  → 활성 캐릭터.BufferInput(ComboInput.Dodge)
             │  버퍼에만 저장 (_inputBufferWindow = 0.25s)
             ▼
         Update()
@@ -567,6 +567,9 @@ Assets/04.Scripts/
 │
 └── Player/
     ├── PlayerController.cs           이동/루트모션(위치=Bip001 / 회전=Root yaw 추출)·워프·섹션턴
+    ├── PlayerInputRouter.cs          공용 PlayerInput 콜백 → 활성 캐릭터 입력 인터페이스
+    ├── SquadController.cs            캐릭터 생성·교체 및 입력/카메라 타깃 전환
+    ├── PlayableCharacter.cs          캐릭터 프리팹의 상태 머신·CameraPoint 파사드
     ├── PlayerResources.cs            플레이어 자원(스태미나 등)
     ├── PlayerStateHUD.cs             현재 config/섹션/입력 디버그 HUD
     ├── TPSCameraController.cs        커스텀 TPS 카메라
@@ -604,6 +607,19 @@ Assets/04.Scripts/
             ├── IFrameModule.cs           무적 구간(i-frame)
             └── ParryModule.cs            패링 활성 구간
 ```
+
+### 플레이어 런타임과 캐릭터 교체
+
+`PlayerRuntime`은 `PlayerInput`, `PlayerInputRouter`, `SquadController`를 한 번만 소유한다.
+`SquadController`는 등록된 `PlayableCharacter` 프리팹을 미리 생성하고, 활성 캐릭터 하나에만
+입력을 전달한다. 교체 시 이전 캐릭터의 월드 위치만 다음 캐릭터에 넘긴 뒤
+`PlayerStateMachine`과 `TPSCameraController`의 타깃을 함께 변경한다.
+
+비활성 캐릭터는 `ConfigState.Exit()`로 실행 중인 이펙트와 상태 플래그를 정리한 다음 꺼진다.
+일반 교체는 한 캐릭터만 활성화하며, 두 캐릭터가 겹쳐 재생되는 Assist 연출은 별도 교체 모드로
+확장한다.
+
+구성 방법과 교체 생명주기는 [PlayerRuntimeArchitecture.md](PlayerRuntimeArchitecture.md)를 참고한다.
 
 
 ---

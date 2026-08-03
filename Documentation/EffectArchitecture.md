@@ -14,7 +14,7 @@
 [ AnimationConfig — TrackNotify(Type=Effect) ]     ← "무엇을 언제 터뜨릴지"만 안다
     │   Notify는 CompositeEffect(SO) 하나만 참조 — 프리팹/풀/배치를 모른다
     │   시점(point) Notify = 스폰만 / 구간(interval, End>Start) Notify = [Start,End] 유지
-    ▼   ConfigState.DispatchNotify → EffectService.Play(composite, spawner, trackForStop)
+    ▼   ConfigState.DispatchNotify → EffectService.Play(composite, context, trackForStop)
 [ EffectService ]             ← static 런타임 진입점 (AnimConfig가 아는 유일한 이펙트 API)
     │   · 조합의 Entry들을 순회 — StartDelay > 0 이면 EffectServiceRunner(코루틴 호스트)로 지연 재생
     │   · 소켓 본 검색(FindSocket) → 배치(FollowSpawner / 스폰 위치 분리) → 파티클 재시작
@@ -101,11 +101,11 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 
 ## 런타임 진입점 (EffectService)
 
-[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, spawner, trackForStop=false)`가 공개 API다.
+[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, context, trackForStop=false)`가 공개 API다.
 `trackForStop=true`(구간 이펙트)면 스폰된 인스턴스를 모은 `EffectHandle`을 반환하고, 단발(point)은 무할당으로 `null`을 반환한다.
 
 ```
-Play(composite, spawner, trackForStop)
+Play(composite, context, trackForStop)
     │  trackForStop이면 EffectHandle 1개 할당(아니면 null)
     │  Entry 순회
     ├── StartDelay ≤ 0  → 즉시 PlayEntry → handle?.Add(인스턴스)
@@ -175,7 +175,7 @@ PlayEntry(entry, spawner)
 
 ```
 FireNotifies (ConfigState, 매 프레임)
-    ├── p ≥ NormalizedTime 도달   → DispatchNotify → EffectService.Play(effect, tr, trackForStop: IsInterval)
+    ├── p ≥ NormalizedTime 도달   → DispatchNotify → EffectService.Play(effect, context, trackForStop: IsInterval)
     │                               구간이면 반환된 EffectHandle을 _notifyActive[i]에 보관
     └── p ≥ EndNormalizedTime 도달 → _notifyActive[i].Stop()   방출만 멈춤(잔여 파티클 자연 소멸)
 섹션 이탈·인터럽트·Exit → StopActiveIntervals()  진행 중인 구간 이펙트 전부 Stop (누수 방지)
@@ -469,9 +469,9 @@ Effect Tool은 구체 기능을 직접 알지 않고 `EffectModule` 파생 타�
 - Effect Notify는 상태 갱신 중 판정하지만 `PlayAfterAnimation`으로 예약해 같은 프레임의
   `LateUpdate`에서 최신 Animator 소켓 포즈를 읽고 생성한다. Start Delay가 있는 Entry도
   지연 시간이 끝난 프레임의 LateUpdate에서 생성한다.
-- 현재 플레이어 전용 단계에서는 `PlayerStateMachine`이 캐릭터 루트를 한 번 등록하고,
-  `EffectService`가 Custom Simulation Space를 그 루트에 연결한다. 다중 캐릭터 지원 시에는
-  전역 루트 대신 재생 주체별 루트를 전달하도록 확장한다.
+- `EffectPlayContext`가 재생 요청별 `Spawner`와 `CharacterRoot`를 전달한다.
+  `EffectService`는 해당 캐릭터의 루트를 Custom Simulation Space와 EffectModule에 연결하므로,
+  플레이어와 다수 몬스터가 전역 풀을 공유해도 좌표계는 서로 간섭하지 않는다.
 - `ArcMotionEffectModule`은 앞을 0도로 하는 캐릭터 기준 원호를 계산한다. 진행 중 파티클은
   Custom 공간에서 캐릭터를 따라가고, `BakeToWorldEffectModule`이 스윙 종료 후 위치·속도·축을
   World 공간으로 변환해 후속 동작에는 끌려가지 않게 한다.
