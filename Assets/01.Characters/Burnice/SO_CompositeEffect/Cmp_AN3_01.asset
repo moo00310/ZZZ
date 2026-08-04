@@ -16,7 +16,7 @@ MonoBehaviour:
   - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
     StartDelay: 0.0175
     MaterialOverride: {fileID: 0}
-    Duration: 0.1
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_L_Weapon
@@ -28,6 +28,7 @@ MonoBehaviour:
     IgnoreSocketRotation: 1
     Modules:
     - rid: 914700000000000101
+    - rid: 986220242839535678
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -45,7 +46,7 @@ MonoBehaviour:
   - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
     StartDelay: 0.0275
     MaterialOverride: {fileID: 0}
-    Duration: 0.1
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_R_Weapon
@@ -57,6 +58,7 @@ MonoBehaviour:
     IgnoreSocketRotation: 1
     Modules:
     - rid: 914700000000000102
+    - rid: 986220242839535679
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -82,3 +84,15 @@ MonoBehaviour:
       type: {class: FaceOutwardEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
         _rotationOffset: {x: 0, y: 0, z: 0}
+    - rid: 986220242839535678
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.1
+        _playbackSpeed: 1
+        _startLifetime: 0
+    - rid: 986220242839535679
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.1
+        _playbackSpeed: 1
+        _startLifetime: 0
