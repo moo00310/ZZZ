@@ -41,6 +41,8 @@ namespace ZZZ.Editor.AnimationTool
         private readonly List<FxPreviewAtom> _fxAtoms = new List<FxPreviewAtom>();
         private MaterialPropertyBlock _fxMpb;   // 지연 생성 — 역직렬화 중 UnityObject 생성 금지라 필드 이니셜라이저 불가
         private bool _fxDirty = true;
+        private int _fxPreviewClipIdx = -1;
+        private int _fxPreviewNotifyIdx = -1;
 
         // 인스펙터 편집용
         private CompositeEffect  _fxComposite;
@@ -129,20 +131,18 @@ namespace ZZZ.Editor.AnimationTool
             _fxDirty = false;
             if (_target == null || _config == null) return;
 
-            for (int i = 0; i < _config.Clips.Count; i++)
-            {
-                var tc = _config.Clips[i];
-                if (tc.Clip == null) continue;
+            if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return;
 
-                foreach (var notify in tc.Notifies)
-                {
-                    if (notify.Type != NotifyType.Effect || notify.Effect == null) continue;
-                    foreach (var entry in notify.Effect.Entries)
-                    {
-                        if (entry == null || entry.Prefab == null) continue;
-                        SpawnFxAtom(i, notify, entry);
-                    }
-                }
+            TrackClip clip = _config.Clips[_notifyClipIdx];
+            if (clip.Clip == null || _selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
+
+            TrackNotify notify = clip.Notifies[_selectedNotify];
+            if (notify.Type != NotifyType.Effect || notify.Effect == null) return;
+
+            foreach (CompositeEffectEntry entry in notify.Effect.Entries)
+            {
+                if (entry == null || entry.Prefab == null) continue;
+                SpawnFxAtom(_notifyClipIdx, notify, entry);
             }
         }
 

@@ -250,14 +250,24 @@ namespace ZZZ.Editor.AnimationTool
         private void SyncEffectPreviewState()
         {
             bool want = EffectPreviewActive;
-            if (want == _fxPreviewOn) return;
+            bool selectionChanged = want &&
+                (_fxPreviewClipIdx != _notifyClipIdx || _fxPreviewNotifyIdx != _selectedNotify);
+            if (want == _fxPreviewOn && !selectionChanged) return;
+
             _fxPreviewOn = want;
             if (want)
             {
+                _fxPreviewClipIdx = _notifyClipIdx;
+                _fxPreviewNotifyIdx = _selectedNotify;
                 _fxDirty = true;
                 if (!EditorApplication.isPlaying) SampleAtTime(_trackTime, false);   // 즉시 한 번 스폰/샘플
             }
-            else ClearFxPreview();
+            else
+            {
+                _fxPreviewClipIdx = -1;
+                _fxPreviewNotifyIdx = -1;
+                ClearFxPreview();
+            }
         }
     }
 }
