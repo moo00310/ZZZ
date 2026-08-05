@@ -156,12 +156,12 @@ Layer 1 (Additive)
 
 | 이유 | 설명 |
 |------|------|
-| **루트모션(본 델타 추출)과 상극** | 루트모션을 `Bip001` 본의 프레임 델타로 뽑는데, Blend Tree는 두 클립 포즈를 **상시 블렌딩**해 본 위치를 "가짜 평균값"으로 만든다 → 이동 추출이 오염된다. 이미 *블렌드 구간(전환)의 수평 이동은 통째로 버리는데*([루트모션](#루트모션-직접-구현) 참조), Blend Tree는 그 오염을 항상 켜는 셈 |
+| **루트 이동량이 암묵적으로 섞임** | Animator는 Blend Tree의 루트 델타도 블렌딩하지만, 어떤 클립의 이동량이 최종값에 얼마나 반영되는지가 파라미터 가중치에 숨어 전투 거리 튜닝과 워프 결과를 예측하기 어려워진다 |
 | **핵심 철학과 충돌** | 블렌딩 로직 + 파라미터(speed/direction)를 다시 AnimatorController로 밀어넣는다 → "분기/타이밍은 코드·데이터, Animator는 클립 재생만"이라는 전제를 깬다 |
 | **섹션 단위 제어 불가** | MoveMode·SectionModule·Link·Notify는 전부 "특정 클립=섹션"에 붙는다. Blend Tree는 "어느 클립인지"를 추상화해 이 per-section 데이터를 붙일 곳이 없어진다 |
 
-> 정리: 이 프로젝트의 이동은 **블렌딩이 아니라 개별 클립의 루트모션**으로 성립하므로, Blend Tree의
-> "포즈 보간"은 득보다 실(루트모션 오염·제어 상실)이 크다. 부드러운 전이는 클립 간 짧은 `CrossFade`로 충분히 얻는다.
+> 정리: 이 프로젝트의 이동은 **개별 섹션 클립의 루트모션**으로 성립하므로, Blend Tree의
+> 암묵적 가중치보다 데이터에서 명시한 짧은 `CrossFade`를 사용한다.
 
 ---
 
@@ -217,46 +217,30 @@ Layer 1 (Additive)
 | MoveMode | 설명 |
 |----------|------|
 | `None` | 제자리 (루트모션 안 씀, 중력만 코드 적용) — Idle, 경직 |
-| `RootMotion` | `Bip001` 본의 수평 이동량을 추출해 적용 — 걷기/달리기/공격/대시/회피 |
+| `RootMotion` | `Animator.deltaPosition/deltaRotation`을 적용 — 걷기/달리기/공격/대시/회피 |
 
 > 걷기·달리기도 코드 이동이 아니라 **RootMotion**으로 처리한다.
 > `ConfigState`는 섹션 진입 시 `Controller.UseCodeMovement = (MoveMode != RootMotion)`을 토글한다.
-> 추가 이동, 회전 잠금, 타깃 워프·조준, 시작 부스트, 루트 회전 추출과 루트모션 보정은
+> 추가 이동, 회전 잠금, 타깃 워프·조준, 시작 부스트, 루트 회전 제어와 루트모션 보정은
 > 모두 `SectionModule`이 소유한다.
 
-### 루트모션 (직접 구현)
+### 루트모션 (`OnAnimatorMove`)
 
-Unity 기본 "Apply Root Motion" 체크박스는 제어 폭이 좁아 쓰지 않고,
-[PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`에서 직접 이동을 추출해 적용한다.
+프리팹의 `Apply Root Motion`을 켜고, [PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs)의
+`OnAnimatorMove`가 `Animator.deltaPosition/deltaRotation`을 받아 직접 적용한다. 콜백이 존재하므로
+Animator가 Transform을 자동 이동하지 않고, 컨트롤러가 최종 적용을 소유한다.
 
-**구현 방식 — `Bip001` 본에서 수평 이동 추출**
+| 단계 | 처리 |
+|------|------|
+| 위치 입력 | `deltaPosition`의 수평 X·Z만 사용하고 Y는 버린다 |
+| 위치 보정 | 후진 배율 → 타깃 워프 → 추가 이동/시작 부스트를 합친다 |
+| 실제 이동 | 중력을 더한 뒤 `CharacterController.Move`를 프레임당 한 번 호출한다 |
+| 골반 중복 이동 제거 | 이동 델타를 읽은 뒤 `Bip001` 로컬 X·Z를 0으로 덮고 Y·회전은 유지한다 |
+| 회전 입력 | 일반 루트 회전은 `deltaRotation`, 섹션 턴은 `Root` 또는 `Bip001`의 프레임 회전 변화량을 사용한다 |
+| 회전 소유권 | 루트 회전 제거 → 섹션 턴 → 타깃 조준 → 일반 루트 회전/입력 회전 순으로 결정한다 |
 
-이 캐릭터의 클립은 전진·좌우 스웨이·상하 바운스가 전부 `Bip001` 본에 구워져 있다
-(`Root` 노드엔 위치 커브가 없어 이동 추출에 쓰지 않는다).
-
-| 축 | 처리 |
-|----|------|
-| X·Z (수평) | 프레임 간 델타를 뽑아 `CharacterController.Move`로 실제 이동에 사용 |
-| Y (수직 바운스) | 메시에 그대로 남겨 달리기 상하 리듬 유지 (캐릭터 본체 Y는 중력이 담당) |
-
-1. **추출** — `Bip001`의 로컬 위치 프레임 델타에서 수평(X·Z)만 뽑아 월드로 변환(`transform.TransformDirection`) 후 `_rootMotionScale` 적용.
-2. **상쇄** — 같은 프레임에 `Bip001`의 X·Z를 로컬 0으로 리셋(메시 드리프트/발 미끄러짐 방지). Y는 유지.
-3. **적용** — 순수 수평 이동량만 `CharacterController.Move`로 먹이고, 수직은 중력(`_verticalVelocity`)으로 따로 적용.
-
-**문제와 해결** — 본에서 직접 이동을 뽑다 보니 여러 "튐"이 생겼다. 각각 어떻게 막았는지.
-
-> 용어: **되감기**=루프가 끝나 처음으로 돌아가는 순간 · **기준점**=이동량을 재는 직전 프레임 위치 · **블렌드(전환)**=동작이 바뀔 때 두 클립이 잠깐 섞이는 구간.
-
-| 증상 | 왜 생기나 | 해결 |
-|------|-----------|------|
-| 가만히 있어도 캐릭터가 스르륵 밀림 / 몸(메시)만 따로 떠서 실제 위치와 어긋남 | 애니에 담긴 이동값이 매 프레임 쌓임 | 매 프레임 `Bip001`의 수평(X·Z)을 0으로 되돌려 누적을 끊음. 높이(Y)는 남겨 상하 바운스 유지 |
-| 루프가 처음으로 돌아가는 순간 순간이동 | 되감기 프레임엔 위치가 확 뒤로 점프함 | 그 한 프레임의 이동은 버림(0 처리) |
-| 루프마다 본체가 잠깐 멈칫("틱틱") | 전진 커브가 끝에서 1프레임 멈췄다 되감김 → 다리는 도는데 본체만 안 나감 (포즈·회전은 시작=끝이라 매끄러움) | 루프 클립은 한 바퀴 **평균 전진속도**(`_loopVelLocal`)를 재서 다음 바퀴부터 일정하게 전진. `SmoothLoopSpeedModule`이 있는 섹션에만 적용 |
-| 동작이 바뀔 때 캐릭터가 점프 | 새 동작에 들어가도 직전 기준점이 남아있음 | 진입 순간 기준점을 새로 잡음 (`FlushRootPos`) |
-| 동작 전환(블렌드) 중 앞/뒤로 튐 | 블렌드 구간엔 두 클립 포즈가 섞여 "가짜 이동"이 나옴 | 블렌드 구간(+직후 1프레임)의 수평 이동은 통째로 버림 (≤0.05s라 짧고, 끝나면 기준점 다시 잡아 재개) |
-| 동작 초반이 굼떠 보임 | 루트모션이 시작 순간엔 이동량이 약함 | `StartBoostModule`로 초반 가속 보강 |
-
-> 평균 전진속도 방식의 트레이드오프: 보폭 안의 미세한 가감속(디딜 때 느리고 찰 때 빠른 것)이 평탄해져 발이 살짝 미끄러질 수 있으나, 달리기 속도에선 대개 안 보인다.
+`MoveMode.None`에서는 Animator 루트 델타를 버리므로 제자리 클립이 실수로 이동하지 않는다.
+`SmoothLoopSpeedModule`과 Bip001 기반 이동 추출/회전 카운터는 제거했고, 루프와 CrossFade 델타는 Animator 평가값을 신뢰한다.
 
 ---
 
@@ -278,61 +262,36 @@ RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`
 - `TurnSpeed` 0 = 즉시, >0 = 각속도 제한 회전
 - `FaceInputModule`이 함께 있으면 입력 방향 조준이 진입 스냅보다 우선
 
-### 턴 회전 추출 (`SectionTurnModule`) — 턴 애니로 캐릭터를 실제 회전
+### 턴 회전 (`SectionTurnModule`) — 턴 애니로 캐릭터를 실제 회전
 
 턴 애니(예: 180° 뒤돌기, TurnBack)에서 캐릭터를 실제로 회전시킨다. 회전을 `transform`에 적용해야
 턴 이후 이동/다음 섹션(run_loop)이 새 방향으로 이어진다. 모듈이 있는 섹션에서만 작동한다.
 
-**리그 전제 (이 기능의 모든 난이도의 근원)**
-- **회전이 `Bip001`(골반)에 구워져** 있다. 별도 `Root` 본은 깨끗한 yaw 커브를 갖지만
-  자식이 없는 형제 leaf라 메시를 구동하지 않는다.
-- 그래서 **회전 측정은 `Root` 본, 메시 보정은 `Bip001`** 로 분리한다.
+회전은 Animator가 최종 본 포즈를 계산한 뒤 `Root`와 `Bip001`의
+`현재 로컬 회전 * inverse(이전 로컬 회전)`에서 선택 축 twist를 추출한다. 먼저 유효한 델타가
+나오는 본을 그 섹션의 회전 소스로 고정하므로, 클립에 따라 회전 곡선이 `Root` 또는 `Bip001`에
+들어 있어도 같은 경로로 처리한다.
 
 **메커니즘** ([PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`)
 
 | 단계 | 처리 |
 |------|------|
 | 트리거 | `MoveDir.Reverse`(진행 반대키, `dot(forward,입력)<-0.707`) → 턴 섹션 전이 (`ConfigState.IsReverseInput`) |
-| 회전 추출 | `Root` 본 yaw(up축 twist 분해로 측정) 델타를 `transform`에 누적 (`_rootYawComp`) |
-| 메시 카운터 | `_rootYawComp`만큼 `Bip001`을 월드에서 되돌림 → 메시 이중 회전(≈360) 방지 (메시는 애니 원본) |
-| 위치 보정 | 이동 변환에서 `-_rootYawComp` → 애니 위치곡선 회전 + transform 회전 이중 적용 방지(거꾸로/사선) |
-| 전이 가드 | 진입/CrossFade 프레임은 baseline만 갱신(블렌드 오염 방지), 재진입은 `FlushRootRotation`으로 누적 리셋 |
+| 회전 입력 | 첫 유효 델타가 검출된 `Root` 또는 `Bip001`의 선택 축 프레임 델타 |
+| 원본 축 | 상대 회전의 X/Y/Z 회전량을 월드 yaw로 매핑하며 `Auto`는 프레임별 주축을 자동 선택한다 |
+| 구간 | `Start~End` 안에서만 적용하고 밖에서는 버린다 |
+| 배율 | `RotationScale`을 yaw 델타에 적용한다 |
+| 상한/종료 | 적용 중에는 `TargetAngle`로 누적량을 제한하고, 윈도우 종료 시 검출된 방향의 정확한 목표 각도로 마무리한다 |
+| 월드 회전 | 섹션 진입 때 저장한 최상위 캐릭터 회전을 기준으로 누적 yaw를 적용한다 |
+| 외형 역보정 | 최상위에 넘긴 누적 yaw만큼 `Bip001`을 월드 축에서 반대로 돌려 모델의 이중 회전을 막는다 |
+| 재진입 | `FlushRootRotation`으로 기준 회전, 이전 본 회전, 소스 선택과 누적 각도를 초기화한다 |
 
-> 측정에 `Root`를 쓰는 이유: `Bip001`(골반)은 기울고 sway가 심해 forward 투영·twist 둘 다 노이즈가
-> 커서 transform이 흔들리고 각도도 안 맞는다. `Root`는 깨끗해 정확·무흔들림.
-
-**겪은 문제와 해결 (디버깅 순서)**
-
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| 메시 ≈360° 과회전 | transform·Bip001 둘 다 돌아 이중 | `_rootYawComp`만큼 Bip001 카운터 |
-| 턴 후 거꾸로/사선 | 위치곡선에 회전 들었는데 transform도 돌아 이중 | 위치 변환에 `-_rootYawComp` |
-| 회전 wobble | 골반(Bip001) yaw 측정 노이즈 | 측정원을 깨끗한 Root로 |
-| 재진입 이동 틀어짐 | 진입 블렌드 동안 Root 값 오염 누적 | 전이 프레임 추출 스킵, baseline만 |
-| 턴→턴 재진입 어긋남 | `_rootYawComp` 리셋 안 됨 | 진입마다 `FlushRootRotation` |
-| **턴→run 전이 휘청** | 턴 힙(+180)·run 힙(+0)이 ~180 달라 CrossFade가 slerp로 비선형 휘청 | **하드컷 + 카운터 즉시 해제** (아래) |
-
-**현재 구현 (결론) — 턴→run은 하드컷**
-
-> 회전은 **Root에서 추출 → transform**, 메시 이중회전은 **Bip001 카운터**로 지우고, 턴→run 전이는
-> **하드컷(턴→run 링크 `BlendDuration = 0`) + 카운터 즉시 해제**로 처리한다.
-> **결과: facing이 전 구간 연속**, 캐릭터는 의도대로 180 돌아 새 방향으로 달린다.
-
-**왜 블렌드가 아니라 하드컷인가** — 턴 클립의 힙은 +180 돌아간 포즈, run 클립의 힙은 정면(+0)으로
-~180° 다르다. 둘을 CrossFade로 섞으면 골반 yaw가 **slerp로 비선형 휘청**인다(로그 실측: bipWorldY
-187→319→113). 이걸 코드로 펴려면 골반 yaw를 매 프레임 정확히 빼야 하는데, 기울어진 골반은 측정
-노이즈가 커서 불가능(transform·메시 흔들림). **→ 블렌드를 버리는 것(하드컷)이 코드로 낼 수 있는
-가장 깨끗한 결과**라 이걸 택했다. 블렌드가 없으니 골반이 1프레임에 +180→+0으로 전환되고, 양쪽
-프레임 모두 `mesh = transform facing`이라 연속이 된다.
-
-**감수한 비용** — 전이 1프레임에 **사지 stride 로컬 포즈만** 컷된다. facing·이동은 멀쩡하고, 턴이
-달리는 포즈로 끝나면 이 컷은 거의 안 보인다. (`RotationLockModule`의 구간 잠금, 잠금 해제 후
-`_rotationEaseTime` 이즈인도 함께 동작.)
-
-**더 매끄럽게 하려면 (선택 — 애니/리그)** — 근본 원인이 "턴이 골반에 구워진 것"이라, 아래 중 하나면
-**일반 블렌드가 그냥 부드러워지고 위 카운터/하드컷 우회 자체가 거의 불필요**해진다:
-- ① 턴 회전을 `Root` 노드(루트모션)에 굽기 → 골반 항상 정면 → 턴끝 골반 = run 골반 → 블렌드 무휘청 (정석)
-- ② 턴 클립 끝 포즈 = Run_Loop 시작 포즈로 맞추기 → slerp 폭 축소 → 블렌드 가능
+Burnice TurnBack은 `SourceAxis=Y`, `RotationScale=1`, `TargetAngle=180`을 사용한다. 이 클립은
+`Animator.deltaRotation`이나 `Root`에서 유효한 회전이 나오지 않을 수 있어 런타임이 `Bip001`을
+회전 소스로 선택한다. TurnBack에서 `Run_Loop`으로 갈 때는 추가 CrossFade 회전이 섞이지 않도록
+링크의 `BlendDuration`을 0으로 둔다.
+`RotationLockModule`은 입력 회전만 막으므로 섹션 턴과 함께
+사용해도 섹션 턴 회전은 정상 적용된다.
 
 ---
 
@@ -347,7 +306,7 @@ RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`
 
 ```
 SectionModule (추상)           OnEnter(1회) / Tick(매 프레임)
-├── FaceInputModule / StartBoostModule / SmoothLoopSpeedModule / BackMotionScaleModule
+├── FaceInputModule / StartBoostModule / BackMotionScaleModule
 └── WindowModule (추상)        [Start, End] normalizedTime 구간 판정(InWindow) 공유 — 루프 wrap 처리 포함
     ├── AdditionalMovementModule / RotationLockModule
     ├── TargetWarpModule / FaceTargetModule / SectionTurnModule
@@ -558,7 +517,7 @@ Assets/04.Scripts/
 │   └── EffectHitVolume.cs           공격 이펙트 프리팹에 부착 → 스폰 시 자기 범위(SphereCollider) 타격 (이펙트 범위 기반)
 │
 ├── Movement/
-│   └── RootMotionTracker.cs         본 위치 프레임 델타 추출 헬퍼
+│   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
 │
 ├── Monster/                         몬스터 — 같은 ConfigState 사용 (Idle+Hit)
 │   ├── MonsterStateMachine.cs       입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
@@ -566,7 +525,7 @@ Assets/04.Scripts/
 │   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
 │
 └── Player/
-    ├── PlayerController.cs           이동/루트모션(위치=Bip001 / 회전=Root yaw 추출)·워프·섹션턴
+    ├── PlayerController.cs           OnAnimatorMove 루트모션·워프·회전 소유권·CharacterController 이동
     ├── PlayerInputRouter.cs          공용 PlayerInput 콜백 → 활성 캐릭터 입력 인터페이스
     ├── SquadController.cs            캐릭터 생성·교체 및 입력/카메라 타깃 전환
     ├── PlayableCharacter.cs          캐릭터 프리팹의 상태 머신·CameraPoint 파사드
@@ -602,8 +561,8 @@ Assets/04.Scripts/
             ├── FaceTargetModule.cs       타깃 조준
             ├── TargetWarpModule.cs       타깃 방향 이동 워프
             ├── StartBoostModule.cs       섹션 시작 이동 보강
-            ├── SectionTurnModule.cs      Root yaw 추출
-            ├── RootMotionTuningModules.cs 루프 평속화/후진 배율
+            ├── SectionTurnModule.cs      Root/Bip001 회전 구간·배율·목표 각도
+            ├── RootMotionTuningModules.cs 후진 루트모션 배율
             ├── IFrameModule.cs           무적 구간(i-frame)
             └── ParryModule.cs            패링 활성 구간
 ```
@@ -620,6 +579,17 @@ Assets/04.Scripts/
 확장한다.
 
 구성 방법과 교체 생명주기는 [PlayerRuntimeArchitecture.md](PlayerRuntimeArchitecture.md)를 참고한다.
+
+### Burnice 애니메이션 리소스 교체
+
+Burnice의 루트모션 보정 클립은 기존 경로와 파일명을 유지한 채 교체했다. 현재 기준 리소스는
+`Assets/01.Characters/Burnice/Animations/Anim`의 146개 `.anim`, 같은 폴더 상위의 Animator
+Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자체가 바뀌어 `.meta` GUID도
+함께 바뀌었으므로 `AnimationConfig`, Animator Controller와 `SampleScene` 참조를 한 변경 단위로
+관리해야 한다.
+
+교체 범위, GUID 확인 항목과 재검증 절차는
+[BurniceAnimationResourceMigration.md](BurniceAnimationResourceMigration.md)에 기록한다.
 
 
 ---

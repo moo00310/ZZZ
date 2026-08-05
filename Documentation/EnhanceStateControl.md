@@ -18,8 +18,8 @@
 | 모듈 | 역할 |
 |---|---|
 | `RotationLockModule` | WASD 등 일반 이동 입력에 의한 캐릭터 회전을 막는다. 루트 모션 회전에는 관여하지 않는다. |
-| `RootRotationKillModule` | 섹션 진입 시 월드 회전을 저장하고 루트 모션 처리 뒤 해당 회전으로 복원한다. 위치 루트 모션과 애니메이션 본 연출은 유지한다. |
-| `SectionTurnModule` | Root 본의 yaw를 캐릭터 transform으로 추출한다. `Rotation Scale`로 추출량을 조절하고 `Target Angle`로 최대 누적 각도를 제한할 수 있다. |
+| `RootRotationKillModule` | `OnAnimatorMove`에서 `deltaRotation`을 버린다. 위치 루트 모션은 유지한다. |
+| `SectionTurnModule` | `Root`와 `Bip001` 중 실제 회전 델타가 나오는 본을 선택해 지정 `Source Axis` twist를 최상위 캐릭터의 월드 yaw로 적용한다. 넘긴 누적 yaw만큼 `Bip001`을 역보정해 모델의 이중 회전을 막는다. `Rotation Scale`과 `Target Angle`로 적용량을 제어한다. |
 | `FaceInputModule` | 진입 시 입력 방향을 바라본다. `Follow Input`이 켜지면 매 프레임 입력 방향을 따른다. |
 | `FaceViewModule` | 진입 순간 카메라 정면을 저장하고 해당 방향을 유지한다. 카메라를 계속 추적하지 않는다. |
 
@@ -31,9 +31,10 @@
 `AdditionalMovementModule`의 후방 이동은 유지한다. 섹션 이탈 시 `ConfigState`가
 `KillRootRotation`을 초기화하므로 다음 상태로 회전 잠금이 누수되지 않는다.
 
-`Run`의 TurnBack은 `SectionTurnModule`의 목표 각도를 180도로 제한한다. 목표 각도는 부족한
-회전을 새로 생성하는 값이 아니라 누적 회전의 상한이다. 원본 회전량 보강이 필요하면
-`Rotation Scale`을 함께 사용한다.
+`Run`의 TurnBack은 `SectionTurnModule`의 목표 각도를 180도로 설정한다. 적용 중에는 누적 회전의
+상한으로 사용하고, 윈도우가 끝나면 검출된 회전 방향의 정확한 180도로 마무리한다. 원본 회전량의
+비율 조절은 `Rotation Scale`을 사용한다. `Run_Loop` 링크는 회전 포즈가 다시 블렌딩되지 않도록
+`BlendDuration=0`을 사용한다.
 
 ## 이펙트 상태 전환
 
