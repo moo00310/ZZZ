@@ -21,9 +21,14 @@ namespace ZZZ.Editor.AnimationTool
             _target = (GameObject)EditorGUILayout.ObjectField(_target, typeof(GameObject), true, GUILayout.Width(160));
             if (_target != pt)
             {
-                ExitPreview(); _trackTime = 0f; AutoDetectRootBones();
+                ExitPreview(); _trackTime = 0f;
                 _poseBones = null;   // 본 캐시 무효화
-                if (_target != null) _targetOriginPos = _target.transform.position;
+                if (_target != null)
+                {
+                    _targetOriginPos = _target.transform.position;
+                    _targetOriginRotation = _target.transform.rotation;
+                    CachePreviewRig();
+                }
             }
 
             GUILayout.Label("Config", GUILayout.Width(44));

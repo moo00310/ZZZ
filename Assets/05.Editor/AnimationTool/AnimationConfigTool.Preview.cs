@@ -19,8 +19,8 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     // 처음으로 되돌리고 위치를 원점(시작 위치)으로 복귀
                     _trackTime     = 0f;
-                    _rmTracker.Reset();
-                    if (_target != null) _target.transform.position = _targetOriginPos;
+                    ResetRootMotionPreview();
+                    RestorePreviewOrigin();
                 }
                 else { _trackTime = total; _isPlaying = false; }
             }
@@ -30,12 +30,14 @@ namespace ZZZ.Editor.AnimationTool
         private void StartPreview()
         {
             if (_target == null || _config == null || _config.Clips.Count == 0) return;
+            CachePreviewRig();
             if (!AnimationMode.InAnimationMode()) AnimationMode.StartAnimationMode();
             _isPlaying       = true;
             _lastEditorTime  = EditorApplication.timeSinceStartup;
-            _rmTracker.Reset();
+            ResetRootMotionPreview();
             _blending        = false;
             _targetOriginPos = _target.transform.position;
+            _targetOriginRotation = _target.transform.rotation;
 
             if (_comboMode)
             {
@@ -108,51 +110,305 @@ namespace ZZZ.Editor.AnimationTool
             if (!AnimationMode.InAnimationMode()) AnimationMode.StartAnimationMode();
             AnimationMode.SampleAnimationClip(_target, tc.Clip, clipTime);
             ApplyRootMotion(tc, clipIdx, clipTime, advancePlayback);
+            ApplyPreviewSectionTurnFromBones(tc, clipIdx, clipTime, advancePlayback);
+            SuppressPreviewBip001HorizontalMotion();
             SceneView.RepaintAll();
         }
 
-        // PlayerController.LateUpdate와 동일: 루트본 localPosition 델타를 월드 이동으로 변환
+        // AnimationClip의 RootT/RootQ를 런타임 OnAnimatorMove와 같은 방식으로 적용한다.
         private void ApplyRootMotion(TrackClip tc, int clipIdx, float clipTime, bool advancePlayback)
         {
-            if (!tc.UseRootMotion || _bip001Bone == null) return;
+            if (!tc.UseRootMotion || !advancePlayback) return;
 
-            if (advancePlayback)
+            if (TryEvaluateRootPosition(tc.Clip, clipTime, out Vector3 rootPosition))
             {
-                // 순수 델타 판정은 트래커에 위임 (클립 전환/루프 wrap 시 0 반환).
-                // 월드 변환 + 스케일만 여기서 — Transform을 아는 쪽 책임.
                 Vector3 deltaLocal = _rmTracker.NextDelta(
-                    clipIdx, clipTime, _bip001Bone.localPosition, tc.IsLooping);
-                deltaLocal.y = 0f;   // 수평만 이동 — Y(수직 바운스)는 메시에 남긴다 (런타임과 동일)
+                    clipIdx, clipTime, rootPosition, tc.IsLooping);
+                deltaLocal.y = 0f;
+                ApplyPreviewBackMotionScale(tc, ref deltaLocal);
                 _target.transform.position +=
-                    _target.transform.TransformDirection(deltaLocal) * _rootMotionScale;
+                    _target.transform.TransformDirection(deltaLocal);
             }
 
-            ResetRootBoneVisual();
+            if (!TryEvaluateRootRotation(tc.Clip, clipTime,
+                    out Quaternion rootRotation)) return;
+
+            bool boundary = _rootRotationClip != clipIdx
+                || clipTime + 0.0001f < _rootRotationTime;
+            Quaternion deltaRotation = boundary
+                ? Quaternion.identity
+                : rootRotation * Quaternion.Inverse(_previousRootRotation);
+
+            _rootRotationClip = clipIdx;
+            _rootRotationTime = clipTime;
+            _previousRootRotation = rootRotation;
+            if (boundary) _rootRotationApplied = 0f;
+
+            ApplyPreviewRootRotation(tc, deltaRotation);
         }
 
-        // 비주얼: Bip001 X·Z 리셋(Y 유지) → 베이크된 수평 이동량이 메시에 남는 것 방지 (런타임과 동일)
-        private void ResetRootBoneVisual()
+        private void ApplyPreviewBackMotionScale(TrackClip tc, ref Vector3 deltaLocal)
         {
-            if (_bip001Bone == null) return;
-            Vector3 lp = _bip001Bone.localPosition;
-            lp.x = 0f; lp.z = 0f;
-            _bip001Bone.localPosition = lp;
+            var module = FindModule<BackMotionScaleModule>(tc);
+            if (module == null || deltaLocal.z >= 0f) return;
+            deltaLocal.z *= module.Scale;
         }
 
-        // target에 PlayerController가 있으면 _bip001Bone/_rootMotionScale 자동 추출
-        private void AutoDetectRootBones()
+        private void ApplyPreviewRootRotation(TrackClip tc, Quaternion deltaRotation)
         {
-            _bip001Bone = null; _rootMotionScale = 1f;
+            if (FindModule<RootRotationKillModule>(tc) != null
+                || FindModule<FaceViewModule>(tc) != null)
+                return;
+
+            if (FindModule<SectionTurnModule>(tc) != null) return;
+
+            float deltaYaw = RootTurnAngle(
+                deltaRotation, RootMotionRotationAxis.Auto);
+
+            if (Mathf.Abs(deltaYaw) > 1e-5f)
+                _target.transform.rotation = Quaternion.AngleAxis(deltaYaw, Vector3.up)
+                    * _target.transform.rotation;
+        }
+
+        private void ApplyPreviewSectionTurnFromBones(TrackClip tc, int clipIdx,
+            float clipTime, bool advancePlayback)
+        {
+            var turn = FindModule<SectionTurnModule>(tc);
+            if (!advancePlayback || turn == null
+                || FindModule<RootRotationKillModule>(tc) != null
+                || FindModule<FaceViewModule>(tc) != null
+                || _previewBip001Bone == null || _previewRootBone == null)
+            {
+                _hasPreviewSectionTurnAngle = false;
+                return;
+            }
+
+            Quaternion bip001Rotation = _previewBip001Bone.localRotation;
+            Quaternion rootRotation = _previewRootBone.localRotation;
+            bool boundary = !_hasPreviewSectionTurnAngle
+                || _previewSectionTurnClip != clipIdx
+                || clipTime + 0.0001f < _previewSectionTurnTime;
+
+            _previewSectionTurnClip = clipIdx;
+            _previewSectionTurnTime = clipTime;
+            if (boundary)
+            {
+                _previousPreviewSectionTurnBip001Rotation = bip001Rotation;
+                _previousPreviewSectionTurnRootRotation = rootRotation;
+                _previewSectionTurnBip001BaselineRotation = bip001Rotation;
+                _hasPreviewSectionTurnAngle = true;
+                _rootRotationApplied = 0f;
+                CounterRotatePreviewSectionTurnBone(
+                    turn.SourceAxis, bip001Rotation);
+                return;
+            }
+
+            Quaternion bip001FrameDelta = bip001Rotation
+                * Quaternion.Inverse(_previousPreviewSectionTurnBip001Rotation);
+            Quaternion rootFrameDelta = rootRotation
+                * Quaternion.Inverse(_previousPreviewSectionTurnRootRotation);
+            float bip001Delta = RootTurnAngle(bip001FrameDelta, turn.SourceAxis);
+            float rootDelta = RootTurnAngle(rootFrameDelta, turn.SourceAxis);
+            _previousPreviewSectionTurnBip001Rotation = bip001Rotation;
+            _previousPreviewSectionTurnRootRotation = rootRotation;
+
+            float normalizedTime = tc.Clip.length > 0f
+                ? clipTime / tc.Clip.length
+                : 0f;
+            if (normalizedTime >= turn.Start && normalizedTime <= turn.End)
+            {
+                float deltaYaw = (bip001Delta - rootDelta)
+                    * Mathf.Max(0f, turn.RotationScale);
+                if (turn.TargetAngle > 0f)
+                {
+                    float remaining = Mathf.Max(0f,
+                        turn.TargetAngle - Mathf.Abs(_rootRotationApplied));
+                    deltaYaw = Mathf.Clamp(deltaYaw, -remaining, remaining);
+                }
+
+                _rootRotationApplied += deltaYaw;
+                if (Mathf.Abs(deltaYaw) > 1e-5f)
+                    _target.transform.rotation = Quaternion.AngleAxis(deltaYaw, Vector3.up)
+                        * _target.transform.rotation;
+            }
+
+            CounterRotatePreviewSectionTurnBone(
+                turn.SourceAxis, bip001Rotation);
+        }
+
+        private void CounterRotatePreviewSectionTurnBone(
+            RootMotionRotationAxis sourceAxis,
+            Quaternion currentBip001Rotation)
+        {
+            Quaternion rotationFromBaseline = currentBip001Rotation
+                * Quaternion.Inverse(_previewSectionTurnBip001BaselineRotation);
+            float turnAngle = RootTurnAngle(rotationFromBaseline, sourceAxis);
+            if (Mathf.Abs(turnAngle) <= 1e-5f) return;
+
+            _previewBip001Bone.localRotation = Quaternion.AngleAxis(
+                -turnAngle, RootTurnAxis(sourceAxis))
+                * currentBip001Rotation;
+        }
+
+        private static T FindModule<T>(TrackClip tc) where T : SectionModule
+        {
+            if (tc.Modules == null) return null;
+            for (int i = 0; i < tc.Modules.Count; i++)
+                if (tc.Modules[i] is T module) return module;
+            return null;
+        }
+
+        private static bool TryEvaluateRootPosition(AnimationClip clip, float time,
+            out Vector3 position)
+        {
+            AnimationCurve x = RootCurve(clip, "RootT.x");
+            AnimationCurve y = RootCurve(clip, "RootT.y");
+            AnimationCurve z = RootCurve(clip, "RootT.z");
+            bool found = x != null || y != null || z != null;
+            position = new Vector3(
+                x != null ? x.Evaluate(time) : 0f,
+                y != null ? y.Evaluate(time) : 0f,
+                z != null ? z.Evaluate(time) : 0f);
+            return found;
+        }
+
+        private static bool TryEvaluateRootRotation(AnimationClip clip, float time,
+            out Quaternion rotation)
+        {
+            AnimationCurve x = RootCurve(clip, "RootQ.x");
+            AnimationCurve y = RootCurve(clip, "RootQ.y");
+            AnimationCurve z = RootCurve(clip, "RootQ.z");
+            AnimationCurve w = RootCurve(clip, "RootQ.w");
+            bool found = x != null || y != null || z != null || w != null;
+            rotation = new Quaternion(
+                x != null ? x.Evaluate(time) : 0f,
+                y != null ? y.Evaluate(time) : 0f,
+                z != null ? z.Evaluate(time) : 0f,
+                w != null ? w.Evaluate(time) : 1f);
+
+            float magnitude = Mathf.Sqrt(rotation.x * rotation.x
+                + rotation.y * rotation.y
+                + rotation.z * rotation.z
+                + rotation.w * rotation.w);
+            if (magnitude > 1e-6f)
+            {
+                float inverse = 1f / magnitude;
+                rotation = new Quaternion(rotation.x * inverse, rotation.y * inverse,
+                    rotation.z * inverse, rotation.w * inverse);
+            }
+            else
+            {
+                rotation = Quaternion.identity;
+            }
+            return found;
+        }
+
+        private static AnimationCurve RootCurve(AnimationClip clip, string propertyName)
+            => AnimationUtility.GetEditorCurve(clip,
+                EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), propertyName));
+
+        private static float RootTurnAngle(Quaternion rotation,
+            RootMotionRotationAxis sourceAxis)
+        {
+            float x = rotation.x;
+            float y = rotation.y;
+            float z = rotation.z;
+            float w = rotation.w;
+            if (w < 0f)
+            {
+                x = -x;
+                y = -y;
+                z = -z;
+                w = -w;
+            }
+
+            float component;
+            switch (sourceAxis)
+            {
+                case RootMotionRotationAxis.X:
+                    component = x;
+                    break;
+                case RootMotionRotationAxis.Y:
+                    component = y;
+                    break;
+                case RootMotionRotationAxis.Z:
+                    component = z;
+                    break;
+                default:
+                    float absX = Mathf.Abs(x);
+                    float absY = Mathf.Abs(y);
+                    float absZ = Mathf.Abs(z);
+                    component = absX >= absY && absX >= absZ
+                        ? x
+                        : absY >= absZ ? y : z;
+                    break;
+            }
+
+            if (component * component + w * w < 1e-12f) return 0f;
+            return 2f * Mathf.Atan2(component, w) * Mathf.Rad2Deg;
+        }
+
+        private static Vector3 RootTurnAxis(RootMotionRotationAxis sourceAxis)
+        {
+            switch (sourceAxis)
+            {
+                case RootMotionRotationAxis.X:
+                    return Vector3.right;
+                case RootMotionRotationAxis.Z:
+                    return Vector3.forward;
+                default:
+                    return Vector3.up;
+            }
+        }
+
+        private void ResetRootMotionPreview()
+        {
+            _rmTracker.Reset();
+            _rootRotationClip = -1;
+            _rootRotationTime = 0f;
+            _rootRotationApplied = 0f;
+            _previousRootRotation = Quaternion.identity;
+            _previewSectionTurnClip = -1;
+            _previewSectionTurnTime = 0f;
+            _previousPreviewSectionTurnBip001Rotation = Quaternion.identity;
+            _previousPreviewSectionTurnRootRotation = Quaternion.identity;
+            _previewSectionTurnBip001BaselineRotation = Quaternion.identity;
+            _hasPreviewSectionTurnAngle = false;
+        }
+
+        private void RestorePreviewOrigin()
+        {
+            if (_target == null) return;
+            _target.transform.SetPositionAndRotation(
+                _targetOriginPos, _targetOriginRotation);
+        }
+
+        private void CachePreviewRig()
+        {
+            _previewBip001Bone = null;
+            _previewRootBone = null;
             if (_target == null) return;
 
-            var pc = _target.GetComponentInChildren<ZZZ.Player.PlayerController>();
-            if (pc == null) return;
+            Transform[] bones = _target.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i].name == "Bip001")
+                    _previewBip001Bone = bones[i];
+                else if (bones[i].name == "Root")
+                    _previewRootBone = bones[i];
 
-            var so = new SerializedObject(pc);
-            var bb = so.FindProperty("_bip001Bone");
-            var sc = so.FindProperty("_rootMotionScale");
-            if (bb != null) _bip001Bone      = bb.objectReferenceValue as Transform;
-            if (sc != null) _rootMotionScale = sc.floatValue;
+                if (_previewBip001Bone != null && _previewRootBone != null) break;
+            }
+        }
+
+        private void SuppressPreviewBip001HorizontalMotion()
+        {
+            if (_previewBip001Bone == null) return;
+
+            Vector3 localPosition = _previewBip001Bone.localPosition;
+            localPosition.x = 0f;
+            localPosition.z = 0f;
+            _previewBip001Bone.localPosition = localPosition;
         }
 
         // ── 시간 헬퍼 ────────────────────────────────────────────
@@ -180,12 +436,12 @@ namespace ZZZ.Editor.AnimationTool
         {
             StopPreview();
             _trackTime       = 0f;
-            _rmTracker.Reset();
+            ResetRootMotionPreview();
             _blending        = false;
             _comboLog        = "";
             if (_target != null && _config != null)
             {
-                _target.transform.position = _targetOriginPos;
+                RestorePreviewOrigin();
                 if (_comboMode) { /* 포즈는 StartPreview에서 */ }
                 else SampleAtTime(0f, false);
             }

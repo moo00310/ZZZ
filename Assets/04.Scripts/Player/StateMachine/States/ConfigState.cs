@@ -281,17 +281,15 @@ namespace ZZZ.Player.StateMachine.States
             // 이동 방식 적용
             Ctx.Mover.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
             Ctx.Mover.AllowRotation = true;
-            Ctx.Mover.SmoothLoopSpeed = false;
             Ctx.Mover.BackMotionScale = 1f;
             Ctx.Mover.ExtractRootRotation = false;
+            Ctx.Mover.RootRotationSourceAxis = RootMotionRotationAxis.Auto;
             Ctx.Mover.RootRotationScale = 1f;
             Ctx.Mover.RootRotationTargetAngle = 0f;
             Ctx.Mover.KillRootRotation = false;
             Ctx.Mover.RootRotationWindowActive = false;
             Ctx.Mover.ClearWarpTarget();
             Ctx.Mover.AddStartBoost(0f, 0f);
-            if (tc.MoveMode == MoveMode.RootMotion) Ctx.Mover.FlushRootPos();
-
             // 섹션 기능은 모듈만 소유한다. 위 기본값 초기화 후 OnEnter 순서대로 필요한 기능을 켠다.
             _sc.FacedInputThisEnter = false;
             _sc.PreviousNormalizedTime = SectionNormalizedTime(tc);

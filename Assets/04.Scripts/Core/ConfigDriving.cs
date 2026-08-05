@@ -13,9 +13,9 @@ namespace ZZZ
         Vector3 ViewForward { get; }
         bool  UseCodeMovement    { get; set; }   // 루트모션 안 쓰고 코드 이동(중력만)인지
         bool  AllowRotation      { get; set; }   // false면 회전 잠금(피격/경직)
-        bool  SmoothLoopSpeed    { get; set; }   // 루프 전진 평속화(틱 제거)
-        bool  ExtractRootRotation{ get; set; }   // Root yaw를 transform에 추출(턴 섹션)
-        bool  RootRotationWindowActive { get; set; } // Root yaw를 실제 추출하는 구간
+        bool  ExtractRootRotation{ get; set; }   // Bip001-Root 상대 회전을 적용하는 턴 섹션인지
+        bool  RootRotationWindowActive { get; set; } // 상대 회전 yaw를 적용하는 구간
+        RootMotionRotationAxis RootRotationSourceAxis { get; set; }
         float RootRotationScale { get; set; }
         float RootRotationTargetAngle { get; set; }
         bool KillRootRotation { get; set; }
@@ -27,8 +27,7 @@ namespace ZZZ
         MoveDir CurrentMoveDir { get; }   // 현재 이동 방향(절대 enum)
         ZZZ.Combat.EnemySensor EnemySensor { get; }   // 워프/조준 타겟 탐색기(없으면 null)
 
-        void FlushRootPos();        // 루트모션 위치 추출 baseline 리셋(섹션 진입)
-        void FlushRootRotation();   // 루트 회전 추출 baseline/누적 리셋(섹션 진입)
+        void FlushRootRotation();   // 섹션 턴의 누적 회전량 리셋
         void FaceToward(Vector3 worldDir);   // 즉시/즉회전으로 worldDir을 향함
         void MoveBy(Vector3 worldDelta);     // 모듈이 요청한 추가 수평 이동
         void ClearWarpTarget();

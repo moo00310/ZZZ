@@ -63,12 +63,12 @@ namespace ZZZ
     }
 
     // 클립 재생 중 캐릭터 이동 방식.
-    // None = 루트모션 안 씀(중력만 코드 적용). RootMotion = Bip001 본 이동량을 적용.
+    // None = Animator 루트 델타를 버림(중력만 적용). RootMotion = Animator.deltaPosition/deltaRotation을 적용.
     // 값 1은 과거 Planar(코드 이동) 자리 — 폐기했지만 RootMotion=2 직렬화 호환 위해 비워 둔다.
     public enum MoveMode
     {
         None       = 0,   // 제자리 (이동 없음, 중력만)
-        RootMotion = 2    // 본(Bip001) 이동량 적용 — 걷기/달리기/공격/대시
+        RootMotion = 2    // Animator 루트 모션 적용 — 걷기/달리기/공격/대시
     }
 
     // 섹션 간 전이 정의.

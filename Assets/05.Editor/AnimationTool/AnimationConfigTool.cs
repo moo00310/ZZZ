@@ -41,7 +41,6 @@ namespace ZZZ.Editor.AnimationTool
         // ── Transition 블렌딩 (CrossFade 시뮬레이션) ──────────────
         private bool          _blending;
         private AnimationClip _blendFromClip;
-        private bool          _blendFromUsesRM; // 이전 클립이 루트모션 사용 여부
         private float         _blendFromTime;   // 이전 클립 로컬 시간(초)
         private float         _blendElapsed;
         private float         _blendDuration;
@@ -96,12 +95,22 @@ namespace ZZZ.Editor.AnimationTool
         private int  _reorderingClip   = -1;
         private int  _reorderTargetIdx = -1;
 
-        // ── 루트 모션 (PlayerController와 동일한 본 기반 방식) ─────
-        private Transform _bip001Bone;          // 이동량 추출 본 — 수평(X·Z) 델타 추출, 메시는 X·Z 0 리셋 / Y 유지
-        private float     _rootMotionScale = 1f;
-
-        private RootMotionTracker _rmTracker;   // 루트본 로컬 델타 누적기 (순수 계산 — 단위 테스트 대상)
-        private Vector3 _targetOriginPos;       // 재생 시작 시 target 위치 (리셋용)
+        // ── 루트 모션 프리뷰 (AnimationClip RootT/RootQ) ──────────
+        private RootMotionTracker _rmTracker;
+        private int _rootRotationClip = -1;
+        private float _rootRotationTime;
+        private float _rootRotationApplied;
+        private Quaternion _previousRootRotation = Quaternion.identity;
+        private Vector3 _targetOriginPos;
+        private Quaternion _targetOriginRotation;
+        private Transform _previewBip001Bone;
+        private Transform _previewRootBone;
+        private int _previewSectionTurnClip = -1;
+        private float _previewSectionTurnTime;
+        private Quaternion _previousPreviewSectionTurnBip001Rotation = Quaternion.identity;
+        private Quaternion _previousPreviewSectionTurnRootRotation = Quaternion.identity;
+        private Quaternion _previewSectionTurnBip001BaselineRotation = Quaternion.identity;
+        private bool _hasPreviewSectionTurnAngle;
 
         private Vector2 _inspScroll;
 

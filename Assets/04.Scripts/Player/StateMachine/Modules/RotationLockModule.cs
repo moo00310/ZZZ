@@ -30,7 +30,7 @@ namespace ZZZ
         public override void Tick(TrackClip tc, float nt, SectionContext c)
             => c.Ctx.Mover.KillRootRotation = true;
 
-        public override string MenuName => "루트 회전 제거";
-        public override string DisplayName => "루트 회전 제거 · 진입 방향 유지";
+        public override string MenuName => "루트 모션 회전 제거";
+        public override string DisplayName => "루트 모션 회전 제거 · 진입 방향 유지";
     }
 }

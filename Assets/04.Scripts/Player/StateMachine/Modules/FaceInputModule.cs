@@ -9,11 +9,15 @@ namespace ZZZ
         [SerializeField] private bool _followInput;
 
         public override void OnEnter(TrackClip tc, SectionContext c)
-            => FaceInput(c, true);
+        {
+            if (_followInput) c.Ctx.Mover.KillRootRotation = true;
+            FaceInput(c, true);
+        }
 
         public override void Tick(TrackClip tc, float nt, SectionContext c)
         {
             if (!_followInput) return;
+            c.Ctx.Mover.KillRootRotation = true;
             FaceInput(c, false);
         }
 
@@ -45,6 +49,7 @@ namespace ZZZ
         private static void FaceView(SectionContext c)
         {
             c.Ctx.Mover.AllowRotation = false;
+            c.Ctx.Mover.KillRootRotation = true;
             c.Ctx.Mover.FaceToward(c.EntryViewForward);
         }
 

@@ -3,11 +3,26 @@ using ZZZ.Player.StateMachine;
 
 namespace ZZZ
 {
+    public enum RootMotionRotationAxis
+    {
+        Auto,
+        X,
+        Y,
+        Z
+    }
+
     [System.Serializable]
     public class SectionTurnModule : WindowModule
     {
+        [SerializeField] private RootMotionRotationAxis _sourceAxis;
         [SerializeField] private float _rotationScale = 1f;
         [SerializeField] private float _targetAngle;
+
+        public RootMotionRotationAxis SourceAxis
+        {
+            get => _sourceAxis;
+            set => _sourceAxis = value;
+        }
 
         public float RotationScale
         {
@@ -30,6 +45,7 @@ namespace ZZZ
         public override void OnEnter(TrackClip tc, SectionContext c)
         {
             c.Ctx.Mover.ExtractRootRotation = true;
+            c.Ctx.Mover.RootRotationSourceAxis = _sourceAxis;
             c.Ctx.Mover.RootRotationScale = Mathf.Max(0f, _rotationScale);
             c.Ctx.Mover.RootRotationTargetAngle = Mathf.Max(0f, _targetAngle);
             c.Ctx.Mover.RootRotationWindowActive = true;
@@ -39,14 +55,15 @@ namespace ZZZ
         public override void Tick(TrackClip tc, float nt, SectionContext c)
         {
             c.Ctx.Mover.ExtractRootRotation = true;
+            c.Ctx.Mover.RootRotationSourceAxis = _sourceAxis;
             c.Ctx.Mover.RootRotationScale = Mathf.Max(0f, _rotationScale);
             c.Ctx.Mover.RootRotationTargetAngle = Mathf.Max(0f, _targetAngle);
             c.Ctx.Mover.RootRotationWindowActive = InWindow(tc, nt);
         }
 
-        public override string MenuName => "섹션 턴 (Root)";
+        public override string MenuName => "섹션 턴 (Bip001 - Root)";
         public override string DisplayName => _targetAngle > 0f
-            ? $"섹션 턴  {Start:F2}~{End:F2} · {_targetAngle:F0}°"
-            : $"섹션 턴  {Start:F2}~{End:F2} · x{_rotationScale:F3}";
+            ? $"섹션 턴 Bip001-Root  {Start:F2}~{End:F2} · {_sourceAxis} · {_targetAngle:F0}°"
+            : $"섹션 턴 Bip001-Root  {Start:F2}~{End:F2} · {_sourceAxis} · x{_rotationScale:F3}";
     }
 }

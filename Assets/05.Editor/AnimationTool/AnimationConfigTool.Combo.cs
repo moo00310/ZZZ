@@ -56,8 +56,7 @@ namespace ZZZ.Editor.AnimationTool
             {
                 float w = Mathf.Clamp01(_blendElapsed / _blendDuration);
                 SampleBlended(_blendFromClip, _blendFromTime, tc.Clip, ct, w);
-                // 루트모션 클립이면 블렌드 중에도 루트본을 0으로 → 베이크 이동량 튐 방지
-                if (tc.UseRootMotion || _blendFromUsesRM) ResetRootBoneVisual();
+                SuppressPreviewBip001HorizontalMotion();
             }
             else
             {
@@ -108,10 +107,10 @@ namespace ZZZ.Editor.AnimationTool
             int entry = _config.IndexOfSection(_config.EntrySection);
             _comboActiveClip = entry >= 0 ? entry : 0;
             _comboClipTime   = 0f;
-            _rmTracker.Reset();
+            ResetRootMotionPreview();
             _previewLatched.Clear();
             _blending        = false;
-            if (_target != null) _target.transform.position = _targetOriginPos;
+            RestorePreviewOrigin();
             _comboLog += $" → {SectionLabel(_comboActiveClip)}";
         }
 
@@ -264,7 +263,6 @@ namespace ZZZ.Editor.AnimationTool
             {
                 _blending        = true;
                 _blendFromClip   = fromTc.Clip;
-                _blendFromUsesRM = fromTc.UseRootMotion;
                 _blendFromTime   = Mathf.Clamp(_comboClipTime, 0f, fromTc.Clip.length);
                 _blendElapsed    = 0f;
                 _blendDuration   = blendDur;
@@ -275,7 +273,7 @@ namespace ZZZ.Editor.AnimationTool
             var toClip = _config.Clips[toIdx].Clip;
             _comboClipTime = (entryOffset > 0f && toClip != null)
                 ? Mathf.Clamp01(entryOffset) * toClip.length : 0f;
-            _rmTracker.Reset();
+            ResetRootMotionPreview();
         }
 
         private string SectionLabel(int idx)

@@ -3,16 +3,6 @@ using ZZZ.Player.StateMachine;
 namespace ZZZ
 {
     [System.Serializable]
-    public class SmoothLoopSpeedModule : SectionModule
-    {
-        public override void OnEnter(TrackClip tc, SectionContext c)
-            => c.Ctx.Mover.SmoothLoopSpeed = true;
-
-        public override string MenuName => "루프 이동 평속화";
-        public override string DisplayName => "루프 이동 평속화";
-    }
-
-    [System.Serializable]
     public class BackMotionScaleModule : SectionModule
     {
         public float Scale = 2f;

@@ -571,7 +571,7 @@ namespace ZZZ.Editor.AnimationTool
         private static Color ModuleColor(SectionModule module)
         {
             if (module is AdditionalMovementModule || module is StartBoostModule
-                || module is SmoothLoopSpeedModule || module is BackMotionScaleModule)
+                || module is BackMotionScaleModule)
                 return new Color(0.3f, 0.65f, 1f);
             if (module is TargetWarpModule)
                 return new Color(0.2f, 0.85f, 0.8f);

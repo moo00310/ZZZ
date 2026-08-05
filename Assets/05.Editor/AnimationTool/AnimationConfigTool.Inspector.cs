@@ -116,27 +116,10 @@ namespace ZZZ.Editor.AnimationTool
 
             DrawSeparator();
             EditorGUILayout.LabelField("Root Motion (프리뷰 전용)", EditorStyles.boldLabel);
-
-            // PlayerController가 있으면 _bip001Bone/_rootMotionScale은 거기서 자동 추출된다(AutoDetectRootBones).
-            // 그 경우 수동 입력칸은 무의미(덮어써짐)하므로 읽기전용 표시만, 없을 때만 수동 오버라이드 노출.
-            bool autoDetected = _target != null
-                && _target.GetComponentInChildren<ZZZ.Player.PlayerController>() != null;
-            if (autoDetected)
-            {
-                string boneLabel = _bip001Bone != null ? _bip001Bone.name : "미설정";
-                EditorGUILayout.LabelField("자동 감지",
-                    $"Bip001: {boneLabel}  ·  RM×{_rootMotionScale:0.##}  (PlayerController)",
-                    EditorStyles.miniLabel);
-            }
-            else
-            {
-                // PlayerController 없는 타겟 → 수동 오버라이드(폴백)
-                _bip001Bone = (Transform)EditorGUILayout.ObjectField("Bip001 Bone", _bip001Bone, typeof(Transform), true);
-                _rootMotionScale = EditorGUILayout.FloatField("RM Scale", _rootMotionScale);
-            }
-
             EditorGUILayout.HelpBox(
-                "클립 Move Mode = RootMotion이면\nBip001 이동량이 프리뷰 캐릭터에 적용됩니다 (런타임/빌드엔 무관).",
+                "Move Mode = RootMotion이면 AnimationClip의 RootT/RootQ를 읽어 " +
+                "런타임 OnAnimatorMove와 같은 방식으로 프리뷰합니다. " +
+                "Section Turn은 샘플링된 Bip001-Root 상대 회전을 사용합니다.",
                 MessageType.None);
 
             DrawSeparator();
@@ -184,6 +167,8 @@ namespace ZZZ.Editor.AnimationTool
                 float boostSpeed = m is StartBoostModule boost ? boost.Speed : 0f;
                 float boostDuration = m is StartBoostModule boostTime ? boostTime.Duration : 0f;
                 float backScale = m is BackMotionScaleModule back ? back.Scale : 0f;
+                RootMotionRotationAxis sourceAxis = m is SectionTurnModule turnAxis
+                    ? turnAxis.SourceAxis : RootMotionRotationAxis.Auto;
                 float rotationScale = m is SectionTurnModule turn ? turn.RotationScale : 1f;
                 float targetAngle = m is SectionTurnModule turnTarget ? turnTarget.TargetAngle : 0f;
 
@@ -208,6 +193,10 @@ namespace ZZZ.Editor.AnimationTool
                     backScale = EditorGUILayout.FloatField("   Scale", backScale);
                 else if (m is SectionTurnModule)
                 {
+                    sourceAxis = (RootMotionRotationAxis)EditorGUILayout.EnumPopup(
+                        new GUIContent("   Source Axis",
+                            "Bip001 프레임 델타 - Root 프레임 델타에서 턴 각도로 사용할 축. Auto는 프레임별 주축을 선택합니다."),
+                        sourceAxis);
                     rotationScale = EditorGUILayout.FloatField("   Rotation Scale", rotationScale);
                     targetAngle = EditorGUILayout.FloatField("   Target Angle", targetAngle);
                 }
@@ -238,6 +227,7 @@ namespace ZZZ.Editor.AnimationTool
                         backMotion.Scale = Mathf.Max(0f, backScale);
                     else if (m is SectionTurnModule sectionTurn)
                     {
+                        sectionTurn.SourceAxis = sourceAxis;
                         sectionTurn.RotationScale = Mathf.Max(0f, rotationScale);
                         sectionTurn.TargetAngle = Mathf.Max(0f, targetAngle);
                     }
