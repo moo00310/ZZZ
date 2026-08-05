@@ -18,28 +18,9 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Idle1
-    Clip: {fileID: 7400000, guid: 72fe7b7efae86e5448f3e7e4ae29a481, type: 2}
+    Clip: {fileID: 7400000, guid: dc377e15267af6b45ade0ad11101c22f, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Idle_akf
@@ -53,28 +34,9 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Idle_akf
-    Clip: {fileID: 7400000, guid: 0086db5c593760f4c97699d093514f5a, type: 2}
+    Clip: {fileID: 7400000, guid: ccaf42785399e0448a0cee8d98971ad7, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 0.4
     Links:
     - TargetConfig: {fileID: 11400000}
       TargetSection: Idle1

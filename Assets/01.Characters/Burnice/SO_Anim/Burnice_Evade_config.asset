@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Evade_Front
-    Clip: {fileID: 7400000, guid: 8fc302b0720d0a642ba8038689310ef3, type: 2}
+    Clip: {fileID: 7400000, guid: a3798a3735fd79a4dbc08ebbb79dc7bd, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -82,7 +82,7 @@ MonoBehaviour:
     - rid: 6745857324881018921
     - rid: 6745857324881018922
   - SectionName: Evade_Back
-    Clip: {fileID: 7400000, guid: d59ae790c9cb36641a6fbbac5b841be8, type: 2}
+    Clip: {fileID: 7400000, guid: 7335a20bb938a6c4a9a38f179051a812, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -127,7 +127,7 @@ MonoBehaviour:
     - rid: 7723410972547481665
     - rid: 6745857324881018923
   - SectionName: Evade_Back_02
-    Clip: {fileID: 7400000, guid: 76db4ce169bf92c4f92c8a8d3f66619d, type: 2}
+    Clip: {fileID: 7400000, guid: 4a65c0b9a76b61c4da837ca996f9a603, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -171,7 +171,7 @@ MonoBehaviour:
     Modules:
     - rid: 6745857324881018924
   - SectionName: Evade_Left
-    Clip: {fileID: 7400000, guid: 4a5c3bb2420242b438e9b127ec31ac14, type: 2}
+    Clip: {fileID: 7400000, guid: 079ef89690fe5c448a159d0afa8cd708, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -205,7 +205,7 @@ MonoBehaviour:
     Modules:
     - rid: 6745857324881018926
   - SectionName: Evade_Right
-    Clip: {fileID: 7400000, guid: c45363acce05a0a4cb023da528db78fc, type: 2}
+    Clip: {fileID: 7400000, guid: 82fb651cc5b1ecc45a76e95545fc2e20, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -239,7 +239,7 @@ MonoBehaviour:
     Modules:
     - rid: 6745857324881018928
   - SectionName: Attack_Normal_Enhance_Front_02
-    Clip: {fileID: 7400000, guid: ff7e97c106e93ff458a53f847d6eb0f0, type: 2}
+    Clip: {fileID: 7400000, guid: 29677e01caca6134fb900a07069ff9a8, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -274,7 +274,7 @@ MonoBehaviour:
     - rid: 7723411149892091968
     - rid: 6745857324881018929
   - SectionName: Attack_Normal_Enhance_Back
-    Clip: {fileID: 7400000, guid: 5e84d3d8cf7fc4844b59bc5189670139, type: 2}
+    Clip: {fileID: 7400000, guid: 6d8f2b41a246bf845b41b5b5501fbb56, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -354,7 +354,7 @@ MonoBehaviour:
         End: 1
     - rid: 6745857446944964671
       type: {class: RootRotationKillModule, ns: ZZZ, asm: Assembly-CSharp}
-      data:
+      data: 
     - rid: 6745857446944964672
       type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

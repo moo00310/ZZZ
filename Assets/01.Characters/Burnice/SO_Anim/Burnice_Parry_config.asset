@@ -18,28 +18,9 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Attack_ParryAid_Start
-    Clip: {fileID: 7400000, guid: 2ee7f3b132436fb45bf8c77f8887dce3, type: 2}
+    Clip: {fileID: 7400000, guid: c082be62825c1f34d8f456d4a29fe05a, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
@@ -47,9 +28,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710221
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
@@ -57,28 +35,9 @@ MonoBehaviour:
     Modules:
     - rid: 7723410972547481680
   - SectionName: Attack_ParryAid_L
-    Clip: {fileID: 7400000, guid: 2f43dd6ab390deb4ba9cb9c6b06a6ae0, type: 2}
+    Clip: {fileID: 7400000, guid: 06c637925454d3a4684ea660285a69ac, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Counter_01
@@ -86,9 +45,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710222
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 3
       WindowStart: 0
       WindowEnd: 1
@@ -98,37 +54,15 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710223
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Attack_ParryAid_L_End
-    Clip: {fileID: 7400000, guid: d79fedee8d3f95b4d84d60777f97bb89, type: 2}
+    Clip: {fileID: 7400000, guid: 8a68486a0e87fd549ade2c66e4e74452, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
       TargetSection: 
@@ -136,9 +70,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710224
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.56805265
       WindowEnd: 1
@@ -148,9 +79,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710225
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.56613755
       WindowEnd: 1
@@ -160,9 +88,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710226
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.56613755
       WindowEnd: 1
@@ -172,37 +97,15 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710227
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Attack_ParryAid_H
-    Clip: {fileID: 7400000, guid: 9c91526c01663ff42872b41ad97f447b, type: 2}
+    Clip: {fileID: 7400000, guid: da80f20d44ce900459ab16336b520f6e, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Counter_01
@@ -210,9 +113,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710228
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 3
       WindowStart: 0
       WindowEnd: 1
@@ -222,37 +122,15 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710229
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Attack_ParryAid_H_End
-    Clip: {fileID: 7400000, guid: 5607ca16f521c604d8e16c22a605ded5, type: 2}
+    Clip: {fileID: 7400000, guid: bba1aaff6f09ce3459e18e0ff4873952, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -260,9 +138,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710230
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.26698476
       WindowEnd: 1
@@ -272,9 +147,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710231
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.26819924
       WindowEnd: 1
@@ -284,9 +156,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710232
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0.26819924
       WindowEnd: 1
@@ -296,37 +165,15 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710233
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Attack_Counter_01
-    Clip: {fileID: 7400000, guid: e275d233ecabe6f4d9c56313b50f353f, type: 2}
+    Clip: {fileID: 7400000, guid: 8c5bd34cce5352344937d68cf10d562a, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 0}
       TargetSection: Attack_Counter_01_End
@@ -334,37 +181,15 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710234
-      Attack: 0
-      Direction: 0
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
     Notifies: []
     Modules: []
   - SectionName: Attack_Counter_01_End
-    Clip: {fileID: 7400000, guid: be59293728ffa314abff6df1dc1b5f90, type: 2}
+    Clip: {fileID: 7400000, guid: ceb7ad88e8e2c2d42b86fab084d101d2, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -372,9 +197,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710235
-      Attack: 0
-      Direction: 2
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -384,9 +206,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710236
-      Attack: 3
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -396,9 +215,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710237
-      Attack: 2
-      Direction: 0
-      RequireHeld: 0
       Timing: 0
       WindowStart: 0
       WindowEnd: 1
@@ -408,9 +224,6 @@ MonoBehaviour:
       EntryOffset: 0
       Condition:
         rid: 7723411238959710238
-      Attack: 0
-      Direction: 1
-      RequireHeld: 0
       Timing: 2
       WindowStart: 0
       WindowEnd: 1

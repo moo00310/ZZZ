@@ -18,28 +18,9 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Hit_H_Front
-    Clip: {fileID: 7400000, guid: 6c14d662b6b803042a3178858cc108fb, type: 2}
+    Clip: {fileID: 7400000, guid: d1085a74ce81a16409126c05a2b0dd55, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
       TargetSection: Idle1
@@ -65,32 +46,15 @@ MonoBehaviour:
       EventName: OnHitShake
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018931
   - SectionName: Hit_H_Back
-    Clip: {fileID: 7400000, guid: ba999ce2a680cf8409ee1d1f3368892d, type: 2}
+    Clip: {fileID: 7400000, guid: 01490c950be8ab940a37902532d3b3a5, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -116,32 +80,15 @@ MonoBehaviour:
       EventName: OnHitShake
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018932
   - SectionName: Hit_L_Front
-    Clip: {fileID: 7400000, guid: f2e8bdfb092a2fd4391f3f38bc466341, type: 2}
+    Clip: {fileID: 7400000, guid: da98eb283c20cb744b6088d5638aee38, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: 
@@ -167,32 +114,15 @@ MonoBehaviour:
       EventName: OnHitShake
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018933
   - SectionName: Hit_L_Back
-    Clip: {fileID: 7400000, guid: 8dac3ab9aaa0f7a4398cf960d665a514, type: 2}
+    Clip: {fileID: 7400000, guid: 32d32bea20dd35945bc6a5940ad9ddd9, type: 2}
     Speed: 1
     MoveMode: 2
-    LockRotation: 0
-    LockWindowStart: 0
-    LockWindowEnd: 1
-    SmoothLoopSpeed: 0
-    BackMotionScale: 1
-    FaceInputOnEnter: 0
-    StartBoostSpeed: 0
-    StartBoostTime: 0.15
-    EnableTracking: 0
-    TrackWindowStart: 0
-    TrackWindowEnd: 0.4
-    StopDistance: 1.2
-    FaceTarget: 0
-    FaceWindowStart: 0
-    FaceWindowEnd: 0
-    FaceTurnSpeed: 720
-    SectionTurn: 0
-    TurnWindowStart: 0
-    TurnWindowEnd: 1
     Links:
     - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
       TargetSection: Walk_Start
@@ -218,6 +148,8 @@ MonoBehaviour:
       EventName: OnHitShake
       Effect: {fileID: 0}
       EndNormalizedTime: 0
+      TransitionMode: 0
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018934

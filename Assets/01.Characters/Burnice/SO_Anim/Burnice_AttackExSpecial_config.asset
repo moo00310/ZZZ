@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Attack_ExSpecial_01
-    Clip: {fileID: 7400000, guid: 3f72772d9b02e9d48b174dc5da3550de, type: 2}
+    Clip: {fileID: 7400000, guid: 1ccdddf26516d304299f13bbf097ea49, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -54,7 +54,7 @@ MonoBehaviour:
     - rid: 6745857324881018944
     - rid: 6745857324881018945
   - SectionName: Attack_ExSpecial_01_Explode
-    Clip: {fileID: 7400000, guid: 09d24af5a5de9b54d99ccd5e45aed27c, type: 2}
+    Clip: {fileID: 7400000, guid: f4e674d8eea68384b8c90ad646493891, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -83,7 +83,7 @@ MonoBehaviour:
     - rid: 6745857324881018949
     - rid: 6745857443882336320
   - SectionName: Attack_ExSpecial_01_Explode_End
-    Clip: {fileID: 7400000, guid: 9847bd064f18b0c44a80022fb6a1b77e, type: 2}
+    Clip: {fileID: 7400000, guid: fed5a99860fc41046879fa1e69e5149d, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -126,7 +126,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_ExSpecial_02
-    Clip: {fileID: 7400000, guid: 474fd60e0443bfe4385d6f35cab7f1b3, type: 2}
+    Clip: {fileID: 7400000, guid: d3a8ffb84b1ef684a82da3dff1521de3, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -145,7 +145,7 @@ MonoBehaviour:
     - rid: 6745857324881018951
     - rid: 6745857324881018952
   - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_Explode
-    Clip: {fileID: 7400000, guid: cfe5c4f2e7de0ba4099a5e90c385bd4c, type: 2}
+    Clip: {fileID: 7400000, guid: a7705312ce65fea4da66138d2f151bc3, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -165,7 +165,7 @@ MonoBehaviour:
     - rid: 6745857324881018955
     - rid: 6745857324881018956
   - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_ExSpecial_02_End
-    Clip: {fileID: 7400000, guid: 116e073819a730647aaabd7bee114196, type: 2}
+    Clip: {fileID: 7400000, guid: 269286551256d4d47933137822274939, type: 2}
     Speed: 1
     MoveMode: 2
     Links:

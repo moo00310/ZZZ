@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: Attack_Normal_Enhance_01
   Clips:
   - SectionName: Attack_Normal_Enhance_01
-    Clip: {fileID: 7400000, guid: dff109409aeb9fb4f98035705972717b, type: 2}
+    Clip: {fileID: 7400000, guid: c37c84e74cee43e44af16441a1e11aa2, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -98,7 +98,7 @@ MonoBehaviour:
     - rid: 6745857324881018908
     - rid: 6745857324881018909
   - SectionName: Attack_Normal_Enhance_01_Explode
-    Clip: {fileID: 7400000, guid: 98f2617bfbbffed4aa5379b3dfd0bc8e, type: 2}
+    Clip: {fileID: 7400000, guid: 529f515b7b0c03346bbcaddc204aaad6, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -127,13 +127,13 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
-      NextSection:
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018912
     - rid: 6745857324881018913
   - SectionName: Attack_Normal_Enhance_01_End
-    Clip: {fileID: 7400000, guid: e93b51402abfa13489cea2bfeb4eaf0f, type: 2}
+    Clip: {fileID: 7400000, guid: c0db0a9ed44e7794e8ebeac2ed4701bd, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -177,7 +177,7 @@ MonoBehaviour:
     Modules:
     - rid: 6745857324881018914
   - SectionName: Attack_Normal_Enhance_02
-    Clip: {fileID: 7400000, guid: 42febeb94a4171140aa2f9acd710ede1, type: 2}
+    Clip: {fileID: 7400000, guid: a8ee5ecef39b07a4d9f8be9fdbca1226, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -251,12 +251,12 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 1
-      NextSection:
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018915
   - SectionName: Attack_Normal_Enhance_02_Explode
-    Clip: {fileID: 7400000, guid: 289de9c102222674e9e525d57c0827d6, type: 2}
+    Clip: {fileID: 7400000, guid: 240cf5b590fc96d44918b803fcdacc8a, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -285,13 +285,13 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
-      NextSection:
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018917
     - rid: 6745857324881018918
   - SectionName: Attack_Normal_Enhance_02_End
-    Clip: {fileID: 7400000, guid: 0bf688248b83b4147a5157a684b2751e, type: 2}
+    Clip: {fileID: 7400000, guid: e0fd7cb9e6f07b24db53c03a23edc90f, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -334,7 +334,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_Enhance_03
-    Clip: {fileID: 7400000, guid: e8104ed283ecf1e44bb0e024dff5344d, type: 2}
+    Clip: {fileID: 7400000, guid: 1598e02d748c3a643b6bb67451c0597f, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -413,7 +413,7 @@ MonoBehaviour:
     Modules:
     - rid: 6745857324881018919
   - SectionName: Attack_Normal_Enhance_03_Explode
-    Clip: {fileID: 7400000, guid: 29cd09fedc26d514690cccc01f86ddeb, type: 2}
+    Clip: {fileID: 7400000, guid: ae6f12e470a843e41ab3176f4a506e4f, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -442,12 +442,12 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
-      NextSection:
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018920
   - SectionName: Attack_Normal_Enhance_03_End
-    Clip: {fileID: 7400000, guid: b44eeb1387f3dce4581f07d64fd1106f, type: 2}
+    Clip: {fileID: 7400000, guid: 72b20972e6e9f34499c3305bc839c11b, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -490,7 +490,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_Enhance_Front
-    Clip: {fileID: 7400000, guid: 865b08a48497845429e8359306b00683, type: 2}
+    Clip: {fileID: 7400000, guid: 2660c87713435d84d92fdf743d9f7242, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -523,7 +523,7 @@ MonoBehaviour:
       Locked: 1
     Modules: []
   - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_RushToEnhance
-    Clip: {fileID: 7400000, guid: d5732be1498cb084abc299ffbf60e78b, type: 2}
+    Clip: {fileID: 7400000, guid: 2dfc59ef919d6a24995786e9cae41fd3, type: 2}
     Speed: 1.8
     MoveMode: 2
     Links:

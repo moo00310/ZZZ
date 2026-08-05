@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Attack_Normal_01
-    Clip: {fileID: 7400000, guid: c07363b305b3d9743aef60dc9639886f, type: 2}
+    Clip: {fileID: 7400000, guid: df161e3212588af4fb09444be123fc86, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -56,6 +56,7 @@ MonoBehaviour:
       Effect: {fileID: 0}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 0
     - Type: 0
       NormalizedTime: 0.047407407
@@ -63,6 +64,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: f7c5c63a618545e4cb550421960871d2, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     - Type: 0
       NormalizedTime: 0.20444444
@@ -70,6 +72,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     - Type: 3
       NormalizedTime: 0.19753087
@@ -77,6 +80,7 @@ MonoBehaviour:
       Effect: {fileID: 0}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018880
@@ -85,7 +89,7 @@ MonoBehaviour:
     - rid: 6745857324881018883
     - rid: 6745857324881018884
   - SectionName: Attack_Normal_01_End
-    Clip: {fileID: 7400000, guid: 30ce5d6072d6caa47ad1e7e72f7e8d53, type: 2}
+    Clip: {fileID: 7400000, guid: 6d99e9f7b57670849b4911cd1940d777, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -128,7 +132,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_02
-    Clip: {fileID: 7400000, guid: cb5cedefa8cf214438fd2eb8038d6a21, type: 2}
+    Clip: {fileID: 7400000, guid: 0f24cfd71f783af4b88027af0f2f60d5, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -166,6 +170,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: a4dd9f49872cc794ea851d439ca870b1, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     - Type: 0
       NormalizedTime: 0.28105316
@@ -173,6 +178,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: ad699fa013387ee46b1d91ccb23e1f44, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018885
@@ -180,7 +186,7 @@ MonoBehaviour:
     - rid: 6745857324881018887
     - rid: 6745857324881018888
   - SectionName: Attack_Normal_02_End
-    Clip: {fileID: 7400000, guid: 56facf6d56528a74eb4f3a156c7dcb7d, type: 2}
+    Clip: {fileID: 7400000, guid: 7001eaf8d3cdc2642ac3e354a1c34ca7, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -223,7 +229,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_03
-    Clip: {fileID: 7400000, guid: 1ee8f405f9351404bb4974fbe09e0670, type: 2}
+    Clip: {fileID: 7400000, guid: 34de84ab4b8a08f42927cc6944e6cfa0, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -261,6 +267,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: deac0faed403ccb48990634589bdbfd2, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018890
@@ -268,7 +275,7 @@ MonoBehaviour:
     - rid: 6745857324881018892
     - rid: 6745857324881018893
   - SectionName: Attack_Normal_03_End
-    Clip: {fileID: 7400000, guid: c6e3c5e98431d4e4bb6b30d3dcbe4781, type: 2}
+    Clip: {fileID: 7400000, guid: 16c8e73424c30e54fab6df0a1adffd66, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -311,7 +318,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_04
-    Clip: {fileID: 7400000, guid: d58d50c638d09094d80e7fb9f0dfaf2c, type: 2}
+    Clip: {fileID: 7400000, guid: ae5b33420252bd4458835c9c76d09fa7, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -349,6 +356,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 2926b2c5c9984014cb004ef9253f880f, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018895
@@ -357,7 +365,7 @@ MonoBehaviour:
     - rid: 6745857324881018898
     - rid: 6745857324881018899
   - SectionName: Attack_Normal_04_End
-    Clip: {fileID: 7400000, guid: 039c3b2f9f67ddf459f4b55bc0cf9fd3, type: 2}
+    Clip: {fileID: 7400000, guid: 3d4b84e6103dfb24998317fd534a69f2, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -400,7 +408,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Normal_05
-    Clip: {fileID: 7400000, guid: e9a9ac8310f8d7449879e44b215cc9c4, type: 2}
+    Clip: {fileID: 7400000, guid: 48850b7f34917e14e96b6b5fc18ceb08, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -438,6 +446,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: 64547889d77e6344fa198847250c1ec9, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857304624365634
@@ -446,7 +455,7 @@ MonoBehaviour:
     - rid: 6745857324881018902
     - rid: 6745857324881018903
   - SectionName: Attack_Normal_05_End
-    Clip: {fileID: 7400000, guid: 16d10f6abbe44f24499cf65f60d6b50a, type: 2}
+    Clip: {fileID: 7400000, guid: 5e687fa378d4ae74ab3da70779bf396a, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -489,7 +498,7 @@ MonoBehaviour:
     Notifies: []
     Modules: []
   - SectionName: Attack_Rush
-    Clip: {fileID: 7400000, guid: fd0313b0bf3726c428884c3dab1ac9e4, type: 2}
+    Clip: {fileID: 7400000, guid: 5c237369ae6f11a46a6c24f55d11274a, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -527,6 +536,7 @@ MonoBehaviour:
       Effect: {fileID: 11400000, guid: d46e3362105eeec45a32a847258bad67, type: 2}
       EndNormalizedTime: 0
       TransitionMode: 0
+      NextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018904
@@ -535,7 +545,7 @@ MonoBehaviour:
     - rid: 6745857324881018907
     - rid: 6745857393258135614
   - SectionName: Attack_Rush_End
-    Clip: {fileID: 7400000, guid: b1f9b2b8f9953fe48a6713e34603a047, type: 2}
+    Clip: {fileID: 7400000, guid: 121e07db451fb9349b344c7398aac6ba, type: 2}
     Speed: 1
     MoveMode: 2
     Links:
@@ -599,7 +609,8 @@ MonoBehaviour:
         Scale: 2
     - rid: 6745857324881018882
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018883
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -619,7 +630,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018886
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018887
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -639,7 +651,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018891
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018892
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -663,7 +676,8 @@ MonoBehaviour:
         Scale: 1.5
     - rid: 6745857324881018897
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018898
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -683,7 +697,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018901
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018902
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -703,7 +718,8 @@ MonoBehaviour:
         End: 1
     - rid: 6745857324881018905
       type: {class: FaceInputModule, ns: ZZZ, asm: Assembly-CSharp}
-      data: 
+      data:
+        _followInput: 0
     - rid: 6745857324881018906
       type: {class: TargetWarpModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
