@@ -244,6 +244,8 @@ namespace ZZZ.Effects
         private static void PlaceInstance(GameObject instance, CompositeEffectEntry entry, Transform anchor, Transform spawnerRoot)
         {
             Transform t = instance.transform;
+            var socketFollower = instance.GetComponent<EffectSocketFollower>();
+            if (socketFollower != null) socketFollower.Unbind();
 
             // 스폰 월드 포즈.
             // 회전 기준 프레임: 기본은 소켓(본) 회전. IgnoreSocketRotation이면 본에 구워진 회전 대신
@@ -271,10 +273,27 @@ namespace ZZZ.Effects
 
             if (entry.FollowSpawner)
             {
-                t.SetParent(anchor, false);
-                t.localPosition    = entry.PositionOffset;
-                t.localEulerAngles = entry.EulerOffset;
-                // (IgnoreSocketRotation은 소켓에 부모로 붙는 이 모드엔 무효 — 소켓 회전을 계속 따라감)
+                if (HasModule<ArcMotionEffectModule>(entry))
+                {
+                    // ArcMotion이 활성화되면 시작 시 캐릭터 루트로 재부모화하고 위치를 직접 구동한다.
+                    t.SetParent(anchor, false);
+                    t.localPosition = entry.PositionOffset;
+                    t.localEulerAngles = entry.EulerOffset;
+                }
+                else
+                {
+                    // 소켓의 직접 자식이면 Animator 평가 중 Bip001에 남아 있는 원본 루트 이동까지
+                    // 파티클 방출 위치에 반영된다. 계층에서 분리하고 보정된 프레임의 소켓 포즈만 복사한다.
+                    t.SetParent(null, true);
+                    bool followRotation = !HasModule<FaceOutwardEffectModule>(entry);
+                    if (socketFollower == null)
+                        socketFollower = instance.AddComponent<EffectSocketFollower>();
+                    socketFollower.Bind(
+                        anchor, entry.PositionOffset, entry.EulerOffset,
+                        entry.Scale, followRotation);
+                    return;
+                }
+                // (IgnoreSocketRotation은 소켓 추종 모드에선 무효 — 소켓 회전을 계속 따라감)
             }
             else
             {
@@ -283,6 +302,15 @@ namespace ZZZ.Effects
                 t.rotation = spawnRot;
             }
             t.localScale = entry.Scale;
+        }
+
+        private static bool HasModule<T>(CompositeEffectEntry entry)
+            where T : EffectModule
+        {
+            if (entry.Modules == null) return false;
+            for (int i = 0; i < entry.Modules.Count; i++)
+                if (entry.Modules[i] is T) return true;
+            return false;
         }
 
         // 풀 재사용 인스턴스는 비활성화되며 정지된 상태 — 루트 파티클(있으면)만 재생해 자식은
@@ -294,6 +322,55 @@ namespace ZZZ.Effects
 
             var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
             for (int i = 0; i < systems.Length; i++) systems[i].Play(false);
+        }
+    }
+
+    // Animator가 소켓 계층에 원본 루트 이동을 임시로 쓰는 동안에는 계층에서 분리된 직전 보정 포즈를
+    // 유지하고, PlayerController가 LateUpdate에서 Bip001을 보정한 뒤 현재 소켓 포즈를 다시 복사한다.
+    [DefaultExecutionOrder(90)]
+    internal sealed class EffectSocketFollower : MonoBehaviour
+    {
+        private Transform _anchor;
+        private Vector3 _positionOffset;
+        private Quaternion _rotationOffset;
+        private Vector3 _scale;
+        private bool _followRotation;
+
+        internal void Bind(
+            Transform anchor, Vector3 positionOffset, Vector3 eulerOffset,
+            Vector3 scale, bool followRotation)
+        {
+            _anchor = anchor;
+            _positionOffset = positionOffset;
+            _rotationOffset = Quaternion.Euler(eulerOffset);
+            _scale = scale;
+            _followRotation = followRotation;
+            enabled = true;
+            ApplyPose();
+        }
+
+        internal void Unbind()
+        {
+            _anchor = null;
+            enabled = false;
+        }
+
+        private void Update() => ApplyPose();
+        private void LateUpdate() => ApplyPose();
+
+        private void OnDisable()
+        {
+            _anchor = null;
+        }
+
+        private void ApplyPose()
+        {
+            if (_anchor == null) return;
+
+            transform.position = _anchor.TransformPoint(_positionOffset);
+            if (_followRotation)
+                transform.rotation = _anchor.rotation * _rotationOffset;
+            transform.localScale = _scale;
         }
     }
 }

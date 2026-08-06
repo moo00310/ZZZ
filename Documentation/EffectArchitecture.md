@@ -86,7 +86,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `MaterialOverride` | 렌더러 `sharedMaterial`을 조합마다 통째 스왑(텍스처+색+파라미터+블렌드). **null = 프리팹 기본**. 참조 스왑이라 인스턴스화/GC 없음 — [조합별 오버라이드](#조합별-오버라이드--노브-3층) 참조 |
 | `Socket` | 붙일 본/소켓 이름 (빈값 = 스포너 원점). 스포너 계층에서 이름으로 재귀 검색 |
 | `PositionOffset` / `EulerOffset` / `Scale` | 소켓 기준 로컬 배치 |
-| `FollowSpawner` | true = 소켓에 부모로 붙어 따라감 / false = 스폰 순간 위치에 분리(투사체 잔상 등) |
+| `FollowSpawner` | true = 소켓의 보정된 포즈를 매 프레임 따라감 / false = 스폰 순간 위치에 분리(투사체 잔상 등). 런타임은 Animator 평가 중 `Bip001`에 남는 원본 루트 이동이 파티클 방출 위치로 새지 않도록 소켓의 직접 자식 대신 `EffectSocketFollower`를 사용한다 |
 | `ParentToSpawnerRoot` | 소켓(손/무기 본) 위치·방향에서 스폰하되 **부모는 스포너 루트(캐릭터)** — 손 스윙(빠른 회전)은 무시하고 캐릭터 이동/방향만 따라감(발사/빔용). `FollowSpawner`보다 우선 |
 | `IgnoreSocketRotation` | 소켓의 **위치만** 쓰고 회전은 무시 — 본에 구운 회전 대신 캐릭터 facing 기준으로 조준(`EulerOffset`이 그 프레임 기준으로 먹음). `FollowSpawner`(소켓 부모) 모드에선 무효 |
 | `Despawn` | `ParticleStopped`(파티클 전부 정지 시 자동 반납, 권장) / `Fixed`(Lifetime 초 뒤 강제 반납) |
@@ -96,6 +96,27 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 
 > 풀 프리웜/상한(과거 `PrewarmCount`/`MaxSize`)은 Entry가 아니라 프리팹의
 > [EffectPoolConfig](#풀-용량과-소유권-effectpoolconfig--effectownership) 컴포넌트에서 프리팹 단위로 설정한다.
+
+### 소켓 추종과 루트모션 평가 순서
+
+Burnice 클립은 `Animator.deltaPosition`으로 최상위 캐릭터를 이동시키면서, 같은 프레임의
+`Bip001` 포즈에도 원본 수평 이동이 남는다. `PlayerController.LateUpdate`가 `Bip001`의 X·Z를
+제거하므로 최종 모델은 정상 위치에 보이지만, 이펙트를 소켓의 직접 자식으로 두면 Animator 평가
+중간의 보정 전 좌표가 파티클 방출 위치로 들어갈 수 있다.
+
+`FollowSpawner`는 이를 피하기 위해 인스턴스를 소켓 계층에서 분리하고
+`EffectSocketFollower`로 포즈를 복사한다.
+
+```text
+Update              직전 프레임의 보정된 소켓 포즈 복사
+Animator 평가       Bip001 원본 이동은 소켓 계층에만 적용 — 이펙트에는 전파되지 않음
+Player LateUpdate   Bip001 수평 이동 제거
+Follower LateUpdate 현재 프레임의 보정된 소켓 포즈 복사
+```
+
+- `FaceOutwardEffectModule`이 있으면 팔로워는 위치만 갱신하고 회전은 모듈에 맡긴다.
+- `ArcMotionEffectModule`이 있으면 모듈이 위치와 부모를 직접 구동하므로 기존 모듈 경로를 유지한다.
+- 풀 재사용 시 이전 소켓 참조는 `Unbind`하고 현재 Entry의 소켓과 오프셋을 다시 바인딩한다.
 
 ---
 
@@ -512,7 +533,7 @@ Effect Notify는 `TransitionMode`로 상태·구간 전환 시 수명을 결정�
 `BakeToWorldEffectModule.Follow Root`는 World 베이크 전 시뮬레이션 기준을 선택한다.
 
 - 켬: 캐릭터 루트 기준 Custom 공간을 사용한다.
-- 끔: Effect의 Local 공간을 사용해 `FollowSpawner` 소켓을 그대로 따라간다.
+- 끔: Effect의 Local 공간을 사용해 `FollowSpawner`가 복사한 소켓 포즈를 그대로 따라간다.
 - 종료 요청: 모든 하위 `ParticleSystem`의 위치·속도·회전축을 World 공간으로 변환하고 방출을 멈춘다.
 
 소켓 빔처럼 재생 중 무기를 따라야 하는 Effect는 `FollowSpawner`를 켜고 `Follow Root`를 끈다.
