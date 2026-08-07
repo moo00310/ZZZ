@@ -84,7 +84,7 @@ MonoBehaviour:
       WindowEnd: 1
     - TargetConfig: {fileID: 0}
       TargetSection: Run_Loop
-      BlendDuration: 0.01
+      BlendDuration: 0
       EntryOffset: 0
       Condition:
         rid: 7723411238959710287

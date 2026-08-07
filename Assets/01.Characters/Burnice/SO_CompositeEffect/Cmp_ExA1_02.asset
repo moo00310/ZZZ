@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
-    StartDelay: 0.025
+    StartDelay: 0.0525
     MaterialOverride: {fileID: 0}
     Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_L_Weapon
-    PositionOffset: {x: 0, y: 0, z: 0}
+    PositionOffset: {x: 0, y: -0.3, z: 0}
     EulerOffset: {x: 90, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 1
@@ -44,13 +44,13 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
-    StartDelay: 0.0275
+    StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_R_Weapon
-    PositionOffset: {x: 0, y: 0, z: 0}
+    PositionOffset: {x: 0, y: -0.3, z: 0}
     EulerOffset: {x: 90, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 1
@@ -59,7 +59,6 @@ MonoBehaviour:
     Modules:
     - rid: 914700000000000102
     - rid: 986220242839535679
-    - rid: 986220290894725182
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -88,16 +87,12 @@ MonoBehaviour:
     - rid: 986220242839535678
       type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
-        _duration: 0.3179251
+        _duration: 0.6976391
         _playbackSpeed: 1
         _startLifetime: 0
     - rid: 986220242839535679
       type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:
-        _duration: 0.1
+        _duration: 0.75275123
         _playbackSpeed: 1
         _startLifetime: 0
-    - rid: 986220290894725182
-      type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
-      data:
-        _followRoot: 1
