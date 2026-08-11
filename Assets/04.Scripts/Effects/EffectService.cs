@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ZZZ.Combat;
 
 namespace ZZZ.Effects
 {
@@ -7,15 +8,100 @@ namespace ZZZ.Effects
     {
         public Transform Spawner       { get; }
         public Transform CharacterRoot { get; }
+        public HitData Hit             { get; }
+        public EffectBindingScope Bindings { get; }
 
-        public EffectPlayContext(Transform spawner, Transform characterRoot)
+        public EffectPlayContext(
+            Transform spawner, Transform characterRoot, HitData hit = null,
+            EffectBindingScope bindings = null)
         {
             Spawner       = spawner;
             CharacterRoot = characterRoot;
+            Hit           = hit;
+            Bindings      = bindings;
         }
 
-        public static EffectPlayContext ForCharacter(Transform characterRoot) =>
-            new EffectPlayContext(characterRoot, characterRoot);
+        public static EffectPlayContext ForCharacter(
+            Transform characterRoot, HitData hit = null,
+            EffectBindingScope bindings = null) =>
+            new EffectPlayContext(characterRoot, characterRoot, hit, bindings);
+    }
+
+    public sealed class EffectBindingScope : IHitOriginResolver
+    {
+        private sealed class Binding
+        {
+            public int Id;
+            public Transform Origin;
+        }
+
+        private readonly Dictionary<string, List<Binding>> _bindings =
+            new Dictionary<string, List<Binding>>(System.StringComparer.Ordinal);
+        private int _nextId;
+
+        internal int Register(string key, Transform origin)
+        {
+            key = Normalize(key);
+            if (string.IsNullOrEmpty(key) || origin == null) return 0;
+            if (!_bindings.TryGetValue(key, out List<Binding> list))
+            {
+                list = new List<Binding>();
+                _bindings.Add(key, list);
+            }
+
+            int id = ++_nextId;
+            if (id == 0) id = ++_nextId;
+            list.Add(new Binding { Id = id, Origin = origin });
+            return id;
+        }
+
+        internal void Unregister(string key, int id)
+        {
+            key = Normalize(key);
+            if (id == 0 || string.IsNullOrEmpty(key)
+                || !_bindings.TryGetValue(key, out List<Binding> list)) return;
+
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                if (list[i].Id != id) continue;
+                list.RemoveAt(i);
+                break;
+            }
+            if (list.Count == 0) _bindings.Remove(key);
+        }
+
+        public bool TryResolve(string key, out Transform origin)
+        {
+            key = Normalize(key);
+            if (!string.IsNullOrEmpty(key)
+                && _bindings.TryGetValue(key, out List<Binding> list))
+            {
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    Transform candidate = list[i].Origin;
+                    if (candidate != null && candidate.gameObject.activeInHierarchy)
+                    {
+                        origin = candidate;
+                        return true;
+                    }
+                    list.RemoveAt(i);
+                }
+                _bindings.Remove(key);
+            }
+
+            origin = null;
+            return false;
+        }
+
+        public void Clear() => _bindings.Clear();
+
+        private static string Normalize(string key) => key?.Trim() ?? "";
+    }
+
+    public interface IEffectPlaybackListener
+    {
+        void OnEffectPlay(EffectPlayContext context);
+        void OnEffectStop();
     }
 
     // 런타임 진입점 — AnimConfig(Notify)가 아는 유일한 이펙트 API.
@@ -123,6 +209,7 @@ namespace ZZZ.Effects
             handle.Bind(pool, entry);
 
             instance.SetActive(true);
+            handle.NotifyPlaybackStarted(context, entry.BindingKey);
             RestartParticles(instance);
             return handle;
         }

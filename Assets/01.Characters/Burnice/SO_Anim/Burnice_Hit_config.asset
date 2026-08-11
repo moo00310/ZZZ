@@ -41,13 +41,16 @@ MonoBehaviour:
       WindowStart: 0.4625
       WindowEnd: 1
     Notifies:
-    - Type: 3
-      NormalizedTime: 0
-      EventName: OnHitShake
-      Effect: {fileID: 0}
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220386215526474
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018931
@@ -75,13 +78,16 @@ MonoBehaviour:
       WindowStart: 0.4
       WindowEnd: 0.85
     Notifies:
-    - Type: 3
-      NormalizedTime: 0
-      EventName: OnHitShake
-      Effect: {fileID: 0}
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220386215526475
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018932
@@ -109,13 +115,16 @@ MonoBehaviour:
       WindowStart: 0.4
       WindowEnd: 0.85
     Notifies:
-    - Type: 3
-      NormalizedTime: 0
-      EventName: OnHitShake
-      Effect: {fileID: 0}
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220386215526476
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018933
@@ -143,13 +152,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 3
-      NormalizedTime: 0.016628027
-      EventName: OnHitShake
-      Effect: {fileID: 0}
+    - NormalizedTime: 0.016628027
+      _payload:
+        rid: 986220386215526477
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018934
@@ -157,6 +169,22 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 986220386215526474
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
+    - rid: 986220386215526475
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
+    - rid: 986220386215526476
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
+    - rid: 986220386215526477
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
     - rid: 6745857324881018931
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

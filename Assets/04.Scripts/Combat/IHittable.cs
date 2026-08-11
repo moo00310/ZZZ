@@ -1,9 +1,9 @@
-using UnityEngine;
-
 namespace ZZZ.Combat
 {
     public interface IHittable
     {
-        void TakeDamage(float damage, Vector3 hitPoint);
+        CombatTeam Team { get; }
+        UnityEngine.Transform HitTransform { get; }
+        HitResult ReceiveHit(in HitContext context);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using ZZZ.Effects;
 
 namespace ZZZ
@@ -151,11 +152,19 @@ namespace ZZZ
     [Serializable]
     public class TrackNotify
     {
-        public NotifyType Type;
         [Range(0f, 1f)]
         public float      NormalizedTime;
-        public string     EventName = "";
-        public CompositeEffect Effect;   // 재생할 이펙트 조합(원자 1개짜리도 포함) — 스폰/풀링은 EffectService가 담당
+
+        [SerializeReference] private NotifyPayload _payload;
+
+        [SerializeField, HideInInspector, FormerlySerializedAs("Type")]
+        private NotifyType _legacyType;
+        [SerializeField, HideInInspector, FormerlySerializedAs("EventName")]
+        private string _legacyEventName = "";
+        [SerializeField, HideInInspector, FormerlySerializedAs("Effect")]
+        private CompositeEffect _legacyEffect;
+        [SerializeField, HideInInspector, FormerlySerializedAs("Hit")]
+        private HitDefinition _legacyHit;
 
         // 구간(Interval) 이펙트 — End > NormalizedTime이면 [NormalizedTime, End] 동안 '유지'되는 지속 연출.
         // 시작 시점에 스폰해 계속 방출하다가 End에서(또는 섹션 이탈/캔슬 시) 방출을 멈춘다 —
@@ -164,14 +173,162 @@ namespace ZZZ
         [Range(0f, 1f)]
         public float EndNormalizedTime = 0f;
 
-        public EffectTransitionMode TransitionMode = EffectTransitionMode.Keep;
-        public string NextSection = "";
+        [SerializeField, HideInInspector, FormerlySerializedAs("TransitionMode")]
+        private EffectTransitionMode _legacyTransitionMode = EffectTransitionMode.Keep;
+        [SerializeField, HideInInspector, FormerlySerializedAs("NextSection")]
+        private string _legacyNextSection = "";
 
         // 고정(Lock): 켜지면 타임라인에서 드래그로 시점이 밀리지 않는다 — 값이 확정된 Notify를
         // 실수로 옮기는 사고 방지용. 선택/편집(인스펙터)·삭제는 그대로 가능, 이동만 막는다.
         public bool Locked = false;
 
+        public NotifyPayload Payload
+        {
+            get
+            {
+                EnsurePayload();
+                return _payload;
+            }
+        }
+
+        public NotifyType Type
+        {
+            get
+            {
+                EnsurePayload();
+                return _payload.Type;
+            }
+            set => ChangePayloadType(value);
+        }
+
+        public string EventName
+        {
+            get => Payload is EventNotifyPayload payload ? payload.EventName : "";
+            set
+            {
+                if (Payload is EventNotifyPayload payload) payload.EventName = value;
+            }
+        }
+
+        public CompositeEffect Effect
+        {
+            get => Payload is EffectNotifyPayload payload ? payload.Effect : null;
+            set
+            {
+                if (Payload is EffectNotifyPayload payload) payload.Effect = value;
+            }
+        }
+
+        public HitData Hit
+        {
+            get => Payload switch
+            {
+                HitNotifyPayload hitPayload => hitPayload.Hit,
+                EffectNotifyPayload effectPayload => effectPayload.Hit,
+                _ => null,
+            };
+            set
+            {
+                switch (Payload)
+                {
+                    case HitNotifyPayload hitPayload:
+                        hitPayload.Hit = value;
+                        break;
+                    case EffectNotifyPayload effectPayload:
+                        effectPayload.Hit = value;
+                        break;
+                }
+            }
+        }
+
+        public EffectTransitionMode TransitionMode
+        {
+            get => Payload is EffectNotifyPayload payload
+                ? payload.TransitionMode
+                : EffectTransitionMode.Keep;
+            set
+            {
+                if (Payload is EffectNotifyPayload payload) payload.TransitionMode = value;
+            }
+        }
+
+        public string NextSection
+        {
+            get => Payload is EffectNotifyPayload payload ? payload.NextSection : "";
+            set
+            {
+                if (Payload is EffectNotifyPayload payload) payload.NextSection = value;
+            }
+        }
+
         public bool IsInterval => EndNormalizedTime > NormalizedTime;
+
+        public bool EnsurePayload()
+        {
+            if (_payload != null) return false;
+
+            HitData legacyHit = _legacyHit != null ? _legacyHit.CreateDataCopy() : null;
+            _payload = CreatePayload(
+                _legacyType, _legacyEventName, _legacyEffect, legacyHit,
+                _legacyTransitionMode, _legacyNextSection);
+            return true;
+        }
+
+        public bool MigratePayload()
+        {
+            bool changed = EnsurePayload();
+            bool hasLegacyData = _legacyType != default
+                || !string.IsNullOrEmpty(_legacyEventName)
+                || _legacyEffect != null
+                || _legacyHit != null
+                || _legacyTransitionMode != EffectTransitionMode.Keep
+                || !string.IsNullOrEmpty(_legacyNextSection);
+            if (!hasLegacyData) return changed;
+
+            _legacyType = default;
+            _legacyEventName = "";
+            _legacyEffect = null;
+            _legacyHit = null;
+            _legacyTransitionMode = EffectTransitionMode.Keep;
+            _legacyNextSection = "";
+            return true;
+        }
+
+        private void ChangePayloadType(NotifyType type)
+        {
+            EnsurePayload();
+            if (_payload.Type == type) return;
+
+            string eventName = EventName;
+            CompositeEffect effect = Effect;
+            HitData hit = Hit;
+            EffectTransitionMode transitionMode = TransitionMode;
+            string nextSection = NextSection;
+            _payload = CreatePayload(
+                type, eventName, effect, hit, transitionMode, nextSection);
+        }
+
+        private static NotifyPayload CreatePayload(
+            NotifyType type, string eventName, CompositeEffect effect, HitData hit,
+            EffectTransitionMode transitionMode, string nextSection)
+        {
+            switch (type)
+            {
+                case NotifyType.Effect:
+                    return new EffectNotifyPayload(
+                        effect, null, transitionMode, nextSection);
+                case NotifyType.Camera:
+                    return new CameraNotifyPayload(eventName);
+                case NotifyType.Sound:
+                    return new SoundNotifyPayload(eventName);
+                case NotifyType.Custom:
+                    return new CustomNotifyPayload(eventName);
+                case NotifyType.Hit:
+                    return new HitNotifyPayload(hit);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+        }
     }
 
     public enum EffectTransitionMode
@@ -186,6 +343,7 @@ namespace ZZZ
         Effect,
         Camera,
         Sound,
-        Custom
+        Custom,
+        Hit
     }
 }

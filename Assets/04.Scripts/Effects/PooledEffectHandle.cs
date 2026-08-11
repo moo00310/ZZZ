@@ -27,9 +27,37 @@ namespace ZZZ.Effects
         private float            _appliedSpeed = 1f;
         private WeaponTrailController[] _trailControllers;
         private EffectModuleRunner _moduleRunner;
+        private IEffectPlaybackListener[] _playbackListeners;
+        private bool _playbackActive;
         private int _bindingVersion;
+        private EffectBindingScope _effectBindings;
+        private string _effectBindingKey;
+        private int _effectBindingId;
 
         internal int BindingVersion => _bindingVersion;
+
+        internal void NotifyPlaybackStarted(
+            EffectPlayContext context, string bindingKey)
+        {
+            if (_playbackListeners == null)
+            {
+                MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(true);
+                var listeners = new List<IEffectPlaybackListener>();
+                for (int i = 0; i < behaviours.Length; i++)
+                    if (behaviours[i] is IEffectPlaybackListener listener)
+                        listeners.Add(listener);
+                _playbackListeners = listeners.ToArray();
+            }
+
+            _playbackActive = true;
+            ReleaseEffectBinding();
+            _effectBindings = context.Bindings;
+            _effectBindingKey = bindingKey?.Trim() ?? "";
+            if (_effectBindings != null && !string.IsNullOrEmpty(_effectBindingKey))
+                _effectBindingId = _effectBindings.Register(_effectBindingKey, transform);
+            for (int i = 0; i < _playbackListeners.Length; i++)
+                _playbackListeners[i].OnEffectPlay(context);
+        }
 
         // 셰이더 노브 오버라이드(MPB)용 캐시 — 프리팹의 선언(EffectParameterSet)과 대상 렌더러.
         // 인스턴스 구조는 재사용 내내 안 바뀌므로 최초 1회만 수집한다.
@@ -150,6 +178,7 @@ namespace ZZZ.Effects
         internal void StopWindowed(int bindingVersion)
         {
             if (bindingVersion != _bindingVersion) return;
+            NotifyPlaybackStopped();
             if (_moduleRunner != null) _moduleRunner.RequestStop();
 
             if (_mode == DespawnMode.Fixed)
@@ -214,7 +243,31 @@ namespace ZZZ.Effects
         private void ReleaseSelf()
         {
             CancelInvoke();
+            NotifyPlaybackStopped();
             _pool.Release(gameObject);
+        }
+
+        private void NotifyPlaybackStopped()
+        {
+            ReleaseEffectBinding();
+            if (!_playbackActive) return;
+            _playbackActive = false;
+            for (int i = 0; i < _playbackListeners.Length; i++)
+                _playbackListeners[i].OnEffectStop();
+        }
+
+        private void OnDisable()
+        {
+            ReleaseEffectBinding();
+        }
+
+        private void ReleaseEffectBinding()
+        {
+            if (_effectBindings != null)
+                _effectBindings.Unregister(_effectBindingKey, _effectBindingId);
+            _effectBindings = null;
+            _effectBindingKey = "";
+            _effectBindingId = 0;
         }
     }
 }

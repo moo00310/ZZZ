@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Combat;
 using ZZZ.Effects;
 using ZZZ.Player.StateMachine.States;
 
@@ -13,7 +14,7 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerResources))]
     public class PlayerStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor,
-        IInputMonitor, IPlayerInputTarget
+        IInputMonitor, IPlayerInputTarget, IHittable, IHitSource
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
@@ -37,6 +38,12 @@ namespace ZZZ.Player.StateMachine
         [Header("Input Buffer")]
         [SerializeField] private float _inputBufferWindow = 0.25f;  // 입력 버퍼 유효 시간
 
+        [Header("Hit Debug")]
+        [Tooltip("Play 중 실제 Hit 판정과 Sweep 이동 구간을 Scene/Game View에 표시합니다. Game View의 Gizmos 버튼도 켜야 합니다.")]
+        [SerializeField] private bool _showHitGizmos;
+        [Tooltip("단발 Hit 선이 화면에 유지되는 시간입니다.")]
+        [SerializeField, Min(0f)] private float _hitGizmoDuration = 0.1f;
+
         private ConfigState        _state;   // 단일 config 러너 — 전이는 config가 관리
         private PlayerStateContext _ctx;
         private InputBuffer        _input;
@@ -57,6 +64,9 @@ namespace ZZZ.Player.StateMachine
         // 패링 활성 — ParryAid_Start의 활성 구간 동안 ParryModule이 매 프레임 세팅.
         // HitTrigger가 이 값을 보고 피격 대신 쳐냄(ParryAid_L/H)으로 분기한다.
         public bool ParryActive { get; set; }
+
+        public CombatTeam Team => CombatTeam.Player;
+        public Transform HitTransform => transform;
 
         // ── 퍼펙트 회피 / 패링 윈도우 ──────────────────────────────
         // 적이 "공격 적중 직전" 이 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 회피 모션).
@@ -88,7 +98,9 @@ namespace ZZZ.Player.StateMachine
                 Transform  = transform,
                 GameObject = _controller.gameObject,
             };
-            _state = new ConfigState(cfgCtx, this, condCtx, _startConfig);
+            _state = new ConfigState(
+                cfgCtx, this, condCtx, _startConfig,
+                _showHitGizmos, _hitGizmoDuration);
 
             // 협력 객체 조립 — 트리거는 인스펙터에서 만들어진 인스턴스에 런타임 의존만 주입(Init).
             var registry = new ConfigRegistry(_startConfig, _configs);
@@ -129,6 +141,7 @@ namespace ZZZ.Player.StateMachine
             if (HasBufferedInput && BufferedInput == ComboInput.Dodge) _dodge.Trigger();
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
 
+            _state.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
             _state.Update();   // 콤보/섹션 링크 평가 — Attack_Normal_Enhance 링크가 E를 먼저 소비할 기회
 
             // 강화 공격은 링크가 못 받은 경우의 전역 폴백(after) — E 링크를 가진 섹션(콤보·Rush 등)에선
@@ -144,6 +157,20 @@ namespace ZZZ.Player.StateMachine
         // ── 피격 facade (충돌 검출 / 적 공격 시스템 / 테스트 트리거가 호출) ──
         public void TriggerHitFrom(Vector3 attackerPos) => _hit.TriggerFrom(attackerPos, transform);
         public void TriggerHit(string direction = "Back") => _hit.Trigger(direction);
+
+        public HitResult ReceiveHit(in HitContext context)
+        {
+            if (Invulnerable) return HitResult.Ignored;
+
+            IncomingStrength = context.Definition != null
+                ? context.Definition.Strength
+                : AttackStrength.Light;
+            Vector3 sourcePosition = context.Source != null
+                ? context.Source.position
+                : context.HitPoint;
+            TriggerHitFrom(sourcePosition);
+            return HitResult.Accepted;
+        }
 
         // 패링 스탠스 강제 진입 facade (테스트 트리거가 호출 — 실제 플레이는 OnParry 입력으로 진입)
         public void TriggerParry() => _parry.Trigger();

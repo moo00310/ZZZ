@@ -79,6 +79,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | Entry 필드 | 의미 |
 |------------|------|
 | `Prefab` | 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 번들) |
+| `BindingKey` | 같은 캐릭터의 Hit Notify가 실제 실행 중인 Entry Transform을 찾는 선택적 키 |
 | `StartDelay` | 이 조합 안에서의 상대 시차(초) |
 | `Duration` | 방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 **방출만 멈추고** 잔여 파티클은 자연 소멸 → `ParticleStopped`면 이어서 자동 반납. **Looping 이펙트를 조합마다 다른 길이로** 쓸 수 있다 |
 | `PlaybackSpeed` | 재생 속도 배율 — 프리팹에 구운 `simulationSpeed`에 곱해진다(원본은 캐시로 보존, 풀 재사용 시 매 재생 재적용). 전체 길이도 1/배율로 축소 |
@@ -224,6 +225,13 @@ FireNotifies (ConfigState, 매 프레임)
 | `ParticleStopped` | 인스턴스 안의 **최상위 ParticleSystem 전부**(다른 파티클의 자식이 아닌 것)에 [ParticleStopRelay](../Assets/04.Scripts/Effects/ParticleStopRelay.cs)를 붙여 각자의 Stop 콜백을 받고, **전부 멈추면** 카운트다운이 끝나 반납 |
 | `Fixed` | `Lifetime`초 뒤 강제 반납 (Looping 등 자동 정지가 없는 이펙트용) |
 
+### 프리팹 반납 체크리스트
+
+- `Despawn = ParticleStopped`이면 핸들이 추적하는 **모든 최상위 ParticleSystem**의 `Stop Action`을 `Callback`으로 둔다. 하나라도 `None`이면 그 시스템의 정지 메시지가 오지 않아 인스턴스가 계속 늘어날 수 있다.
+- Looping 파티클은 구간 Notify의 End, Entry의 `Duration`, 또는 외부 `EffectHandle.Stop()` 중 하나로 방출을 끝내야 한다. 종료 시점을 보장할 수 없으면 `Despawn = Fixed`와 `Lifetime`을 사용한다.
+- `EffectPoolConfig.MaxSize`는 동시 생성 자체를 막는 하드 캡이 아니다. 피크 때 상한을 넘겨 생성할 수 있고, 초과 인스턴스를 **반납할 때 파괴**해 대기 풀의 크기를 정리한다.
+- 풀 재사용 확인은 Hierarchy의 Clone 개수뿐 아니라 `OnParticleSystemStopped → ParticleStopRelay → PooledEffectHandle → EffectPool.Release` 흐름이 끝나는지 함께 본다.
+
 핸들은 반납 외에 **Entry별 재생 제어**도 담당한다 — 풀 인스턴스가 Entry 간 공유되므로, Entry마다 달라지는
 값은 매 `Bind`에서 적용한다: `PlaybackSpeed`(프리팹 원본 `simulationSpeed` 캐시 × 배율),
 `Duration`(경과 시 `Stop(StopEmitting)` — 방출만 끊고 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결),
@@ -251,12 +259,26 @@ FireNotifies (ConfigState, 매 프레임)
 
 ---
 
-## 타격 판정 연동 — EffectHitVolume
+## Hit Notify 원점 바인딩
 
-공격 이펙트 프리팹에 [EffectHitVolume](../Assets/04.Scripts/Combat/EffectHitVolume.cs)을 붙이면
-스폰 순간 자기 범위(SphereCollider) 안의 `IHittable`을 때린다 — **이펙트 비주얼 범위 = 타격 범위**.
-이펙트가 Notify로 스폰되므로, 타격 타이밍도 자연히 애니 데이터(Notify 시점)를 따른다.
-(센서 기반 판정은 `MeleeHitter`가 별도로 담당 — 이펙트 없는 근접 공격용.)
+이펙트와 공격 데이터는 서로 소유하지 않는다. Effect Notify는 `CompositeEffect`만 재생하고,
+Hit Notify가 별도의 `HitData`와 판정 타이밍을 소유한다. 이동하는 파동·장판처럼 판정 원점만
+이펙트 인스턴스를 따라야 할 때 두 Notify를 Entry의 `BindingKey`로 연결한다.
+
+```text
+Effect Notify → CompositeEffect Entry.BindingKey = FlameWave
+               스폰 시 EffectBindingScope에 실제 Transform 등록
+
+Hit Notify    → Origin = Effect, EffectKey = FlameWave
+               등록된 Transform을 원점으로 HitService 실행
+```
+
+바인딩은 전역 문자열 테이블이 아니라 `ConfigState`가 가진 캐릭터별 스코프다. 같은 키를 여러 캐릭터가
+동시에 사용해도 섞이지 않는다. 풀 인스턴스가 정지·반납되면 `PooledEffectHandle`이 자신이 등록한 ID만
+해제한다. 같은 키의 인스턴스가 겹치면 가장 최근에 생성된 활성 인스턴스를 사용한다.
+
+Effect가 `PlayAfterAnimation`에서 생성되므로 같은 프레임에 Hit이 먼저 평가될 수 있다. 이때
+`HitHandle`은 루트로 폴백하지 않고 원점 등록을 기다렸다가 다음 Tick에서 판정을 시작한다.
 
 ## 셰이더 연출 훅 — EffectProgressDriver
 
@@ -439,7 +461,7 @@ Assets/04.Scripts/Core/
 └── EffectOwnership.cs        캐릭터 config에서 이펙트 프리팹을 유도해 풀에 소유권 등록/해제 (state machine이 호출)
 
 Assets/04.Scripts/Combat/                이펙트 연동
-├── EffectHitVolume.cs        스폰 시 자기 범위 타격 (이펙트 범위 = 타격 범위)
+├── EffectHitVolume.cs        이전 Effect Payload Hit 데이터 호환용 재생 리스너
 └── EffectProgressDriver.cs   파티클 시간 → 셰이더 _Progress 구동 (MPB 격리)
 
 Assets/05.Editor/
@@ -547,3 +569,8 @@ Animation Tool의 모듈 프리뷰는 Clear 후 첫 시뮬레이션 스텝에서
 - **구간형(지속) 노티파이** — ✅ 구현됨. `TrackNotify.EndNormalizedTime`로 `[Start, End]` 구간 유지 → [구간 이펙트](#구간interval-이펙트--시점이-아니라-start-end) 참조. 남은 건 플레이 모드 실전 검증(트레일)
 - **`SendMessage` → 이벤트 릴레이** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 캐릭터별 이벤트 릴레이(강타입 `event Action<string>`, 인스턴스 스코프)로 교체 예정 ([TODO.md](TODO.md))
 - **Addressables 전환** — 모바일 대비, 스킬 VFX를 사용 직전 로드/종료 후 Release ([TODO.md](TODO.md) 모바일 절)
+## Effect-linked hit compatibility
+
+`EffectHitVolume`과 `EffectNotifyPayload`의 기존 Hit 필드는 이전 직렬화 데이터 호환을 위해 남겨 두지만,
+Animation Tool과 `ConfigState`의 신규 실행 경로에서는 사용하지 않는다. 신규 공격은 항상 별도의
+Hit Notify가 데이터를 소유하고 `BindingKey`로 이펙트 원점만 참조한다.

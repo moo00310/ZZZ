@@ -228,6 +228,16 @@ namespace ZZZ.Editor.Effects
             // 구조 필드 — 변경 시 재생성
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
+            SerializedProperty bindingKey = e.FindPropertyRelative("BindingKey");
+            EditorGUILayout.PropertyField(bindingKey,
+                new GUIContent("Binding Key",
+                    "Hit Notify의 Effect Origin이 이 실행 인스턴스를 찾는 키. 같은 캐릭터 범위에서만 매칭됩니다."));
+            string normalizedKey = bindingKey.stringValue.Trim();
+            if (!string.IsNullOrEmpty(normalizedKey)
+                && CountBindingKey(e.serializedObject, normalizedKey) > 1)
+                EditorGUILayout.HelpBox(
+                    $"Binding Key '{normalizedKey}'가 이 CompositeEffect 안에서 중복됩니다.",
+                    MessageType.Warning);
             EditorGUILayout.PropertyField(e.FindPropertyRelative("Socket"), new GUIContent("Socket"));
             bool placementChanged = EditorGUI.EndChangeCheck();
             bool structural = migrated || placementChanged;
@@ -276,6 +286,24 @@ namespace ZZZ.Editor.Effects
             }
 
             return structural;
+        }
+
+        private static int CountBindingKey(
+            SerializedObject serializedObject, string targetKey)
+        {
+            SerializedProperty entries = serializedObject.FindProperty("Entries");
+            if (entries == null) return 0;
+
+            int count = 0;
+            for (int i = 0; i < entries.arraySize; i++)
+            {
+                SerializedProperty key = entries.GetArrayElementAtIndex(i)
+                    .FindPropertyRelative("BindingKey");
+                if (key != null && string.Equals(
+                        key.stringValue.Trim(), targetKey, StringComparison.Ordinal))
+                    count++;
+            }
+            return count;
         }
 
         private static bool MigrateLegacyParticleModules(SerializedProperty entry)

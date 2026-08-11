@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+    BindingKey: 
     StartDelay: 0.0625
     MaterialOverride: {fileID: 0}
-    Duration: 0.28732514
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_L_Weapon
@@ -26,6 +27,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 986220386215526498
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -41,9 +44,10 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
+    BindingKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
-    Duration: 0.19732514
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: Bip001 Prop2
@@ -53,6 +57,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 986220386215526499
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -68,9 +74,10 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 5055750446988487301, guid: d999b6831c1cf3d46a3674a042e57af3, type: 3}
+    BindingKey: 
     StartDelay: 0.055
     MaterialOverride: {fileID: 0}
-    Duration: 0.15732513
+    Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
     Socket: FX_L_Weapon
@@ -80,6 +87,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 986220386215526500
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -94,3 +103,24 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 986220386215526498
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.28732514
+        _playbackSpeed: 1
+        _startLifetime: 0
+    - rid: 986220386215526499
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.19732514
+        _playbackSpeed: 1
+        _startLifetime: 0
+    - rid: 986220386215526500
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.15732513
+        _playbackSpeed: 1
+        _startLifetime: 0

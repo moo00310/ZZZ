@@ -45,8 +45,10 @@ namespace ZZZ
                     if (clip == null) continue;
                     foreach (TrackNotify notify in clip.Notifies)
                     {
-                        if (notify == null || notify.Type != NotifyType.Effect || notify.Effect == null) continue;
-                        foreach (CompositeEffectEntry entry in notify.Effect.Entries)
+                        if (notify == null
+                            || !(notify.Payload is EffectNotifyPayload payload)
+                            || payload.Effect == null) continue;
+                        foreach (CompositeEffectEntry entry in payload.Effect.Entries)
                             if (entry != null && entry.Prefab != null)
                                 set.Add(entry.Prefab);
                     }

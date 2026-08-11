@@ -194,13 +194,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.88
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+    - NormalizedTime: 0.88
+      _payload:
+        rid: 986220386215526488
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_03
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018926
@@ -228,13 +231,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.88
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+    - NormalizedTime: 0.88
+      _payload:
+        rid: 986220386215526489
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_02
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018928
@@ -262,13 +268,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.88
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+    - NormalizedTime: 0.88
+      _payload:
+        rid: 986220386215526490
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_02
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 7723411149892091968
@@ -297,13 +306,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.92
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+    - NormalizedTime: 0.92
+      _payload:
+        rid: 986220386215526491
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_03
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018930
@@ -313,6 +325,40 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 986220386215526488
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_03
+    - rid: 986220386215526489
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_02
+    - rid: 986220386215526490
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_02
+    - rid: 986220386215526491
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_03
     - rid: 6745857324881018921
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

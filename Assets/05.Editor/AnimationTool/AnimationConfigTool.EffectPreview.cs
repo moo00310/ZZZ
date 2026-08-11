@@ -137,12 +137,38 @@ namespace ZZZ.Editor.AnimationTool
             if (clip.Clip == null || _selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
 
             TrackNotify notify = clip.Notifies[_selectedNotify];
-            if (notify.Type != NotifyType.Effect || notify.Effect == null) return;
-
-            foreach (CompositeEffectEntry entry in notify.Effect.Entries)
+            if (notify.Type == NotifyType.Effect && notify.Effect != null)
             {
-                if (entry == null || entry.Prefab == null) continue;
-                SpawnFxAtom(_notifyClipIdx, notify, entry);
+                foreach (CompositeEffectEntry entry in notify.Effect.Entries)
+                {
+                    if (entry == null || entry.Prefab == null) continue;
+                    SpawnFxAtom(_notifyClipIdx, notify, entry);
+                }
+                return;
+            }
+
+            if (notify.Payload is not HitNotifyPayload
+                || notify.Hit.Origin != HitOrigin.Effect
+                || string.IsNullOrEmpty(notify.Hit.EffectKey)) return;
+
+            string bindingKey = notify.Hit.EffectKey;
+            for (int clipIndex = 0; clipIndex < _config.Clips.Count; clipIndex++)
+            {
+                TrackClip effectClip = _config.Clips[clipIndex];
+                for (int notifyIndex = 0;
+                    notifyIndex < effectClip.Notifies.Count; notifyIndex++)
+                {
+                    TrackNotify effectNotify = effectClip.Notifies[notifyIndex];
+                    if (effectNotify.Type != NotifyType.Effect
+                        || effectNotify.Effect == null) continue;
+                    foreach (CompositeEffectEntry entry in effectNotify.Effect.Entries)
+                    {
+                        if (entry == null || entry.Prefab == null
+                            || !string.Equals(entry.BindingKey?.Trim(), bindingKey,
+                                System.StringComparison.Ordinal)) continue;
+                        SpawnFxAtom(clipIndex, effectNotify, entry);
+                    }
+                }
             }
         }
 
@@ -440,6 +466,7 @@ namespace ZZZ.Editor.AnimationTool
                 entries.InsertArrayElementAtIndex(n);
                 var e = entries.GetArrayElementAtIndex(n);
                 e.FindPropertyRelative("Prefab").objectReferenceValue = null;
+                e.FindPropertyRelative("BindingKey").stringValue = "";
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
                 e.FindPropertyRelative("Duration").floatValue = 0f;
                 e.FindPropertyRelative("PlaybackSpeed").floatValue = 1f;

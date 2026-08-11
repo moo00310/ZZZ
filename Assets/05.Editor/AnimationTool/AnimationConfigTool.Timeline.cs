@@ -699,6 +699,7 @@ namespace ZZZ.Editor.AnimationTool
             string icon = notify.Type switch
             {
                 NotifyType.Effect => "E",
+                NotifyType.Hit    => "H",
                 NotifyType.Camera => "C",
                 NotifyType.Sound  => "S",
                 _                 => "N",

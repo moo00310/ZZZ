@@ -148,6 +148,7 @@ namespace ZZZ.Editor.AnimationTool
         {
             EditorApplication.update += OnEditorUpdate;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            SceneView.duringSceneGui += OnSceneGUI;
             // 도메인 리로드(Play 진입 등) 후 _config는 [SerializeField]로 살아남지만
             // SerializedObject는 직렬화 안 되므로 다시 만든다
             if (_config != null) _serializedConfig = new SerializedObject(_config);
@@ -157,6 +158,7 @@ namespace ZZZ.Editor.AnimationTool
         {
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            SceneView.duringSceneGui -= OnSceneGUI;
             ExitPreview();
         }
 
@@ -242,7 +244,7 @@ namespace ZZZ.Editor.AnimationTool
                 _serializedConfig.ApplyModifiedProperties();
         }
 
-        // 선택된 Notify가 Effect 타입이면(비-Combo) 씬 이펙트 프리뷰가 켜진다.
+        // Effect Notify 또는 Effect Key에 바인딩된 Hit Notify를 선택하면 씬 이펙트 프리뷰가 켜진다.
         private bool EffectPreviewActive
         {
             get
@@ -251,7 +253,11 @@ namespace ZZZ.Editor.AnimationTool
                 if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return false;
                 var clip = _config.Clips[_notifyClipIdx];
                 if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return false;
-                return clip.Notifies[_selectedNotify].Type == NotifyType.Effect;
+                TrackNotify notify = clip.Notifies[_selectedNotify];
+                return notify.Type == NotifyType.Effect
+                    || notify.Payload is HitNotifyPayload
+                    && notify.Hit.Origin == HitOrigin.Effect
+                    && !string.IsNullOrEmpty(notify.Hit.EffectKey);
             }
         }
 

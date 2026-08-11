@@ -10,7 +10,7 @@ namespace ZZZ.Monster
     // 부품(Controller/AnimatorBridge/Context)만 몬스터 것이고 ConfigState 본체는 플레이어와 동일.
     [RequireComponent(typeof(MonsterController))]
     [RequireComponent(typeof(HitTarget))]
-    public class MonsterStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor
+    public class MonsterStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor, IHitSource
     {
         [Header("Configs")]
         [SerializeField] private AnimationConfig _idleConfig;   // 시작/복귀 기본 (home)
@@ -26,6 +26,12 @@ namespace ZZZ.Monster
         // 후속: C안(Hit config 구간별 슈퍼아머 윈도우)으로 확장 가능 — todo-monster-poise 참고.
         [SerializeField] private float _hitStunCooldown = 0.3f;
 
+        [Header("Hit Debug")]
+        [Tooltip("Play 중 실제 Hit 판정과 Sweep 이동 구간을 Scene/Game View에 표시합니다. Game View의 Gizmos 버튼도 켜야 합니다.")]
+        [SerializeField] private bool _showHitGizmos;
+        [Tooltip("단발 Hit 선이 화면에 유지되는 시간입니다.")]
+        [SerializeField, Min(0f)] private float _hitGizmoDuration = 0.1f;
+
         private ConfigState _state;
         private HitTarget   _hitTarget;
         private float       _nextHitStunTime;
@@ -33,6 +39,7 @@ namespace ZZZ.Monster
         // ── IConfigSignals ── 몬스터는 입력 버퍼/패링 개념이 (아직) 없다.
         public bool Invulnerable { get; set; }
         public bool ParryActive  { get; set; }
+        public CombatTeam Team => CombatTeam.Enemy;
         public void ConsumeInput() { }   // 입력 버퍼 없음 → no-op
 
         // ── ILiveMonitor ── 에디터 라이브 모니터용 읽기 전용 노출 (플레이어와 동일 패턴).
@@ -58,7 +65,9 @@ namespace ZZZ.Monster
                 GameObject = gameObject,
             };
             var condCtx = new MonsterConditionContext();
-            _state = new ConfigState(ctx, this, condCtx, _idleConfig);
+            _state = new ConfigState(
+                ctx, this, condCtx, _idleConfig,
+                _showHitGizmos, _hitGizmoDuration);
 
             _hitTarget = GetComponent<HitTarget>();
             _hitTarget.OnDamaged += OnDamaged;
@@ -75,7 +84,11 @@ namespace ZZZ.Monster
 
         // Start는 모든 Awake 이후 → AnimatorBridge 초기화 보장
         private void Start()  => _state.Enter();
-        private void Update() => _state.Update();
+        private void Update()
+        {
+            _state.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
+            _state.Update();
+        }
 
         // 피격 — 맞은 지점이 앞/뒤인지로 Hit 섹션 분기 후 Hit config로 인터럽트.
         // Hit config가 OnEnd Link로 Idle에 복귀하면 자연히 돌아온다.

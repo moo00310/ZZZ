@@ -1526,6 +1526,8 @@ MonoBehaviour:
     _reinterruptThreshold: 0.3
     _entryBlend: 0.03
   _inputBufferWindow: 0.25
+  _showHitGizmos: 1
+  _hitGizmoDuration: 1
 --- !u!114 &3724266460484320341
 MonoBehaviour:
   m_ObjectHideFlags: 0

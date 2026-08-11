@@ -90,6 +90,7 @@ namespace ZZZ.Editor.EffectTool
                 entries.InsertArrayElementAtIndex(n);
                 var e = entries.GetArrayElementAtIndex(n);
                 e.FindPropertyRelative("Prefab").objectReferenceValue = null;
+                e.FindPropertyRelative("BindingKey").stringValue = "";
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
                 e.FindPropertyRelative("Duration").floatValue = 0f;
                 e.FindPropertyRelative("PlaybackSpeed").floatValue = 1f;

@@ -50,38 +50,39 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 3
-      NormalizedTime: 0.047407407
-      EventName: OnAttackHit
-      Effect: {fileID: 0}
-      EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+    - NormalizedTime: 0.049382716
+      _payload:
+        rid: 986220386215526494
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0.09876543
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
-    - Type: 0
-      NormalizedTime: 0.047407407
-      EventName: Effect_Test
-      Effect: {fileID: 11400000, guid: f7c5c63a618545e4cb550421960871d2, type: 2}
+    - NormalizedTime: 0.047407407
+      _payload:
+        rid: 986220386215526479
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
-    - Type: 0
-      NormalizedTime: 0.20444444
-      EventName: Effect_2
-      Effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
+    - NormalizedTime: 0.20444444
+      _payload:
+        rid: 986220386215526480
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
-    - Type: 3
-      NormalizedTime: 0.19753087
-      EventName: OnAttackHit
-      Effect: {fileID: 0}
-      EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
-      Locked: 0
     Modules:
     - rid: 6745857324881018880
     - rid: 6745857324881018881
@@ -164,21 +165,27 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.15729956
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a4dd9f49872cc794ea851d439ca870b1, type: 2}
+    - NormalizedTime: 0.15729956
+      _payload:
+        rid: 986220386215526482
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
-    - Type: 0
-      NormalizedTime: 0.28105316
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: ad699fa013387ee46b1d91ccb23e1f44, type: 2}
+    - NormalizedTime: 0.28105316
+      _payload:
+        rid: 986220386215526483
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018885
@@ -261,13 +268,16 @@ MonoBehaviour:
       WindowStart: 0.4
       WindowEnd: 0.85
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.28395063
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: deac0faed403ccb48990634589bdbfd2, type: 2}
+    - NormalizedTime: 0.28395063
+      _payload:
+        rid: 986220386215526484
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018890
@@ -350,13 +360,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.087389834
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 2926b2c5c9984014cb004ef9253f880f, type: 2}
+    - NormalizedTime: 0.087389834
+      _payload:
+        rid: 986220386215526485
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018895
@@ -440,13 +453,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.058592666
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 64547889d77e6344fa198847250c1ec9, type: 2}
+    - NormalizedTime: 0.058592666
+      _payload:
+        rid: 986220386215526486
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857304624365634
@@ -530,13 +546,16 @@ MonoBehaviour:
       WindowStart: 0.33802816
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.02737669
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: d46e3362105eeec45a32a847258bad67, type: 2}
+    - NormalizedTime: 0.02737669
+      _payload:
+        rid: 986220386215526487
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018904
@@ -591,6 +610,123 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 986220386215526479
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: f7c5c63a618545e4cb550421960871d2, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526480
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 700707d347b190048b101e76a0bcf83b, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526482
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a4dd9f49872cc794ea851d439ca870b1, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526483
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: ad699fa013387ee46b1d91ccb23e1f44, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526484
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: deac0faed403ccb48990634589bdbfd2, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526485
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 2926b2c5c9984014cb004ef9253f880f, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526486
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 64547889d77e6344fa198847250c1ec9, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526487
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: d46e3362105eeec45a32a847258bad67, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526494
+      type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _hit:
+          _damage: 10
+          _strength: 0
+          _targetMask:
+            serializedVersion: 2
+            m_Bits: 4294967295
+          _friendlyFire: 0
+          _includeTriggers: 1
+          _origin: 0
+          _socket: 
+          _effectKey: Eff_Melee
+          _positionOffset: {x: 0, y: 0.5, z: 0}
+          _eulerOffset: {x: 0, y: 0, z: 0}
+          _shape: 1
+          _radius: 2
+          _angle: 60
+          _boxSize: {x: 2, y: 2, z: 2}
+          _length: 4
+          _startRadius: 0
+          _endRadius: 5
+          _duration: 1
+          _radiusCurve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          _queryMode: 0
+          _frequency: 0
+          _repeatInterval: 0.2
     - rid: 6745857304624365634
       type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

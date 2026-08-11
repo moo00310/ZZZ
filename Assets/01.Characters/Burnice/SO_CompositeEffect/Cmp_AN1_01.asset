@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+    BindingKey: 
     StartDelay: 0.0275
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -85,6 +86,7 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 1, g: 1, b: 1, a: 1}
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
+    BindingKey: Eff_Melee
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -141,6 +143,7 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 1, g: 1, b: 1, a: 1}
   - Prefab: {fileID: 5055750446988487301, guid: d999b6831c1cf3d46a3674a042e57af3, type: 3}
+    BindingKey: 
     StartDelay: 0.03
     MaterialOverride: {fileID: 0}
     Duration: 0

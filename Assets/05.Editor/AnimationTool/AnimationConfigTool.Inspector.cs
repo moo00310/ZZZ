@@ -744,6 +744,9 @@ namespace ZZZ.Editor.AnimationTool
         private void DrawNotifyInspector(TrackClip tc, int ni)
         {
             var notify = tc.Notifies[ni];
+            if (notify.MigratePayload()) EditorUtility.SetDirty(_config);
+            HitOrigin previousHitOrigin = notify.Hit?.Origin ?? HitOrigin.CharacterRoot;
+            string previousEffectKey = notify.Hit?.EffectKey ?? "";
             EditorGUILayout.LabelField($"Notify  —  {notify.Type}", EditorStyles.boldLabel);
 
             // 이 클립의 Notify 목록 — 타임라인에서 겹쳐 집기 어려울 때 여기서 확실히 선택.
@@ -758,10 +761,27 @@ namespace ZZZ.Editor.AnimationTool
                 notify.Locked);
             // Lock 중에도 Time 필드로는 값을 미세 조정할 수 있게 둔다 — 막는 건 '드래그 이동'뿐.
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
-            string eName = EditorGUILayout.TextField("Event Name",   notify.EventName);
+            string eName = notify.EventName;
+            if (type == NotifyType.Camera || type == NotifyType.Sound
+                || type == NotifyType.Custom)
+                eName = EditorGUILayout.TextField("Event Name", notify.EventName);
+
+            HitData hit = notify.Hit != null ? new HitData(notify.Hit) : null;
+            if (type == NotifyType.Hit)
+            {
+                hit ??= new HitData();
+                DrawHitData(hit);
+            }
+            else hit = null;
             float endT = notify.EndNormalizedTime;
             EffectTransitionMode transitionMode = notify.TransitionMode;
             string nextSection = notify.NextSection;
+            if (type == NotifyType.Hit)
+            {
+                endT = FrameField("Hit End (f)",
+                    "Time 이하이면 단발, Time보다 크면 동적 범위 또는 반복 판정 구간입니다.",
+                    tc, notify.EndNormalizedTime);
+            }
             if (type == NotifyType.Effect)
             {
                 endT = FrameField("구간 끝 (f)",
@@ -810,11 +830,17 @@ namespace ZZZ.Editor.AnimationTool
                 Undo.RecordObject(_config, "Edit Notify");
                 notify.Type = type; notify.NormalizedTime = normT;
                 notify.EventName = eName;
+                notify.Hit = hit;
                 notify.EndNormalizedTime = endT; notify.Locked = locked;
                 notify.TransitionMode = transitionMode;
                 notify.NextSection = nextSection;
                 EditorUtility.SetDirty(_config);
-                if (typeChanged) _fxDirty = true;   // Effect↔다른 타입 전환 시 프리뷰 재생성
+                SceneView.RepaintAll();
+                bool bindingChanged = type == NotifyType.Hit && hit != null
+                    && (hit.Origin != previousHitOrigin
+                        || !string.Equals(hit.EffectKey, previousEffectKey,
+                            StringComparison.Ordinal));
+                if (typeChanged || bindingChanged) _fxDirty = true;
             }
 
             // Effect 타입이면 조합(Composite) 편집 + 씬 프리뷰를 여기서 인라인으로 (별도 탭 없음)
@@ -836,6 +862,139 @@ namespace ZZZ.Editor.AnimationTool
                 Repaint();
             }
             GUI.backgroundColor = Color.white;
+        }
+
+        private void DrawHitData(HitData hit)
+        {
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("Hit Payload", EditorStyles.boldLabel);
+
+            hit.Damage = EditorGUILayout.FloatField("Damage", hit.Damage);
+            hit.Strength = (AttackStrength)EditorGUILayout.EnumPopup(
+                "Strength", hit.Strength);
+            hit.TargetMask = EditorGUILayout.MaskField(
+                "Target Mask", hit.TargetMask.value, GetLayerNames());
+            hit.FriendlyFire = EditorGUILayout.Toggle("Friendly Fire", hit.FriendlyFire);
+            hit.IncludeTriggers = EditorGUILayout.Toggle(
+                "Include Triggers", hit.IncludeTriggers);
+
+            hit.Origin = (HitOrigin)EditorGUILayout.EnumPopup("Origin", hit.Origin);
+            if (hit.Origin == HitOrigin.Socket)
+                hit.Socket = EditorGUILayout.TextField("Socket", hit.Socket);
+            else if (hit.Origin == HitOrigin.Effect)
+                hit.EffectKey = DrawEffectBindingKey(hit.EffectKey);
+            hit.PositionOffset = EditorGUILayout.Vector3Field(
+                "Position Offset", hit.PositionOffset);
+            hit.EulerOffset = EditorGUILayout.Vector3Field(
+                "Euler Offset", hit.EulerOffset);
+
+            hit.Shape = (HitShape)EditorGUILayout.EnumPopup("Shape", hit.Shape);
+            switch (hit.Shape)
+            {
+                case HitShape.Sphere:
+                    hit.Radius = EditorGUILayout.FloatField("Radius", hit.Radius);
+                    break;
+                case HitShape.Cone:
+                    hit.Radius = EditorGUILayout.FloatField("Radius", hit.Radius);
+                    hit.Angle = EditorGUILayout.Slider("Angle", hit.Angle, 0f, 360f);
+                    break;
+                case HitShape.Box:
+                    hit.BoxSize = EditorGUILayout.Vector3Field("Box Size", hit.BoxSize);
+                    break;
+                case HitShape.Capsule:
+                    hit.Radius = EditorGUILayout.FloatField("Radius", hit.Radius);
+                    hit.Length = EditorGUILayout.FloatField("Length", hit.Length);
+                    break;
+                case HitShape.ExpandingSphere:
+                    hit.StartRadius = EditorGUILayout.FloatField(
+                        "Start Radius", hit.StartRadius);
+                    hit.EndRadius = EditorGUILayout.FloatField(
+                        "End Radius", hit.EndRadius);
+                    hit.Duration = EditorGUILayout.FloatField("Duration", hit.Duration);
+                    hit.RadiusCurve = EditorGUILayout.CurveField(
+                        "Radius Curve", hit.RadiusCurve);
+                    break;
+            }
+
+            hit.QueryMode = (HitQueryMode)EditorGUILayout.EnumPopup(
+                new GUIContent("Query Mode",
+                    "Overlap은 현재 위치만 검사합니다. Sweep은 구간형 Hit에서 이전 위치부터 현재 위치까지 함께 검사합니다."),
+                hit.QueryMode);
+            hit.Frequency = (HitFrequency)EditorGUILayout.EnumPopup(
+                "Frequency", hit.Frequency);
+            if (hit.Frequency == HitFrequency.RepeatInterval)
+                hit.RepeatInterval = EditorGUILayout.FloatField(
+                    "Repeat Interval", hit.RepeatInterval);
+        }
+
+        private string DrawEffectBindingKey(string currentKey)
+        {
+            var keys = new List<string>();
+            if (_config != null)
+            {
+                for (int clipIndex = 0; clipIndex < _config.Clips.Count; clipIndex++)
+                {
+                    List<TrackNotify> notifies = _config.Clips[clipIndex].Notifies;
+                    for (int notifyIndex = 0; notifyIndex < notifies.Count; notifyIndex++)
+                    {
+                        CompositeEffect effect = notifies[notifyIndex].Effect;
+                        if (effect == null) continue;
+                        for (int entryIndex = 0; entryIndex < effect.Entries.Count; entryIndex++)
+                        {
+                            string key = effect.Entries[entryIndex]?.BindingKey?.Trim();
+                            if (!string.IsNullOrEmpty(key) && !keys.Contains(key))
+                                keys.Add(key);
+                        }
+                    }
+                }
+            }
+
+            keys.Sort(StringComparer.Ordinal);
+            currentKey = currentKey?.Trim() ?? "";
+            bool missing = !string.IsNullOrEmpty(currentKey) && !keys.Contains(currentKey);
+            if (missing) keys.Add(currentKey);
+
+            var labels = new string[keys.Count + 1];
+            labels[0] = "(Select Effect Key)";
+            for (int i = 0; i < keys.Count; i++)
+                labels[i + 1] = missing && keys[i] == currentKey
+                    ? $"{keys[i]} (Missing)"
+                    : keys[i];
+
+            int selected = string.IsNullOrEmpty(currentKey)
+                ? 0
+                : Mathf.Max(0, keys.IndexOf(currentKey) + 1);
+            selected = EditorGUILayout.Popup("Effect Key", selected, labels);
+            string result = selected > 0 ? keys[selected - 1] : "";
+
+            if (keys.Count == 0)
+                EditorGUILayout.HelpBox(
+                    "먼저 Effect Notify의 CompositeEffect Entry에 Binding Key를 지정하세요.",
+                    MessageType.Warning);
+            else if (missing && result == currentKey)
+                EditorGUILayout.HelpBox(
+                    $"'{currentKey}' 키를 가진 Effect Entry가 현재 Config에 없습니다.",
+                    MessageType.Warning);
+            return result;
+        }
+
+        private static string[] s_layerNames;
+
+        private static string[] GetLayerNames()
+        {
+            if (s_layerNames == null) s_layerNames = BuildLayerNames();
+            return s_layerNames;
+        }
+
+        private static string[] BuildLayerNames()
+        {
+            var names = new string[32];
+            for (int i = 0; i < names.Length; i++)
+            {
+                string layerName = LayerMask.LayerToName(i);
+                names[i] = string.IsNullOrEmpty(layerName) ? $"Layer {i}" : layerName;
+            }
+            return names;
         }
 
         // 선택 클립의 모든 Notify를 프레임 순 칩으로 나열 — 겹쳐서 타임라인 클릭이 어려울 때
@@ -862,7 +1021,7 @@ namespace ZZZ.Editor.AnimationTool
                 var n   = tc.Notifies[idx];
                 string head = n.Type switch
                 {
-                    NotifyType.Effect => "E", NotifyType.Camera => "C",
+                    NotifyType.Effect => "E", NotifyType.Hit => "H", NotifyType.Camera => "C",
                     NotifyType.Sound  => "S", _ => "N",
                 };
                 int f = Mathf.RoundToInt(n.NormalizedTime * clipFrames);
@@ -883,11 +1042,301 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
+        private static readonly Color HitColor =
+            new Color(1f, 0.25f, 0.12f, 0.95f);
+        private static readonly Color HitRangeColor =
+            new Color(1f, 0.65f, 0.1f, 0.35f);
+
+        private void OnSceneGUI(SceneView sceneView)
+        {
+            if (_target == null || _config == null) return;
+            if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return;
+
+            TrackClip clip = _config.Clips[_notifyClipIdx];
+            if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
+
+            TrackNotify notify = clip.Notifies[_selectedNotify];
+            HitData hit = notify?.Payload is HitNotifyPayload ? notify.Hit : null;
+            if (hit == null) return;
+
+            Transform origin = ResolveHitPreviewOrigin(notify);
+            if (origin == null) return;
+
+            Vector3 center = origin.TransformPoint(hit.PositionOffset);
+            Quaternion rotation = origin.rotation * hit.RotationOffset;
+            DrawHitShape(hit, center, rotation, HitPreviewProgress(clip, notify));
+            DrawHitLabel(hit, center);
+            DrawHitHandles(hit, origin, center, rotation);
+        }
+
+        private Transform ResolveHitPreviewOrigin(TrackNotify notify)
+        {
+            if (notify.Hit.Origin == HitOrigin.Effect)
+            {
+                for (int i = 0; i < _fxAtoms.Count; i++)
+                {
+                    FxPreviewAtom atom = _fxAtoms[i];
+                    if (!string.Equals(atom.Entry.BindingKey?.Trim(),
+                            notify.Hit.EffectKey, StringComparison.Ordinal)
+                        || atom.Root == null
+                        || !atom.Root.activeInHierarchy)
+                        continue;
+                    return atom.Root.transform;
+                }
+                return null;
+            }
+
+            if (notify.Hit.Origin != HitOrigin.Socket) return _target.transform;
+            Transform socket = FindDescendant(_target.transform, notify.Hit.Socket);
+            return socket != null ? socket : _target.transform;
+        }
+
+        private float HitPreviewProgress(TrackClip clip, TrackNotify notify)
+        {
+            if (clip.Clip == null || clip.Clip.length <= 0f) return 0f;
+
+            float normalizedTime;
+            if (_comboMode && _comboActiveClip == _notifyClipIdx)
+            {
+                normalizedTime = _comboClipTime / clip.Clip.length;
+            }
+            else
+            {
+                float clipDuration = clip.Clip.length / Mathf.Max(0.01f, clip.Speed);
+                float localTime = _trackTime - GetClipStartTime(_notifyClipIdx);
+                normalizedTime = clipDuration > 0f ? localTime / clipDuration : 0f;
+            }
+
+            if (notify.IsInterval)
+                return Mathf.InverseLerp(
+                    notify.NormalizedTime, notify.EndNormalizedTime, normalizedTime);
+
+            return 0f;
+        }
+
+        private static void DrawHitShape(
+            HitData hit, Vector3 center, Quaternion rotation, float progress)
+        {
+            using (new Handles.DrawingScope(HitColor))
+            {
+                switch (hit.Shape)
+                {
+                    case HitShape.Sphere:
+                        DrawWireSphere(center, rotation, hit.Radius);
+                        break;
+                    case HitShape.Cone:
+                        DrawWireCone(center, rotation, hit.Radius, hit.Angle);
+                        break;
+                    case HitShape.Box:
+                        using (new Handles.DrawingScope(
+                            HitColor, Matrix4x4.TRS(center, rotation, Vector3.one)))
+                            Handles.DrawWireCube(Vector3.zero, hit.BoxSize);
+                        break;
+                    case HitShape.Capsule:
+                        DrawWireCapsule(
+                            center, center + rotation * Vector3.forward * hit.Length,
+                            rotation, hit.Radius);
+                        break;
+                    case HitShape.ExpandingSphere:
+                        using (new Handles.DrawingScope(HitRangeColor))
+                        {
+                            DrawWireSphere(center, rotation, hit.StartRadius);
+                            DrawWireSphere(center, rotation, hit.EndRadius);
+                        }
+                        DrawWireSphere(
+                            center, rotation, Mathf.Max(0f, hit.EvaluateRadius(progress)));
+                        break;
+                }
+            }
+        }
+
+        private static void DrawHitLabel(HitData hit, Vector3 center)
+        {
+            float size = HandleUtility.GetHandleSize(center);
+            string detail = hit.Shape switch
+            {
+                HitShape.Sphere => $"r {hit.Radius:0.00}",
+                HitShape.Cone => $"r {hit.Radius:0.00} / {hit.Angle:0.#} deg",
+                HitShape.Box =>
+                    $"{hit.BoxSize.x:0.00} x {hit.BoxSize.y:0.00} x {hit.BoxSize.z:0.00}",
+                HitShape.Capsule => $"r {hit.Radius:0.00} / len {hit.Length:0.00}",
+                HitShape.ExpandingSphere =>
+                    $"{hit.StartRadius:0.00} -> {hit.EndRadius:0.00}",
+                _ => "",
+            };
+            Handles.Label(center + Vector3.up * size * 0.35f,
+                $"{hit.Shape}  {detail}");
+        }
+
+        private void DrawHitHandles(
+            HitData hit, Transform origin, Vector3 center, Quaternion rotation)
+        {
+            EditorGUI.BeginChangeCheck();
+            Vector3 newCenter = Handles.PositionHandle(center, rotation);
+            Quaternion newRotation = Handles.RotationHandle(rotation, center);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_config, "Edit Hit Transform");
+                hit.PositionOffset = origin.InverseTransformPoint(newCenter);
+                hit.EulerOffset =
+                    (Quaternion.Inverse(origin.rotation) * newRotation).eulerAngles;
+                MarkHitPreviewChanged();
+                center = newCenter;
+                rotation = newRotation;
+            }
+
+            switch (hit.Shape)
+            {
+                case HitShape.Sphere:
+                case HitShape.Cone:
+                case HitShape.Capsule:
+                    EditorGUI.BeginChangeCheck();
+                    float radius = Handles.RadiusHandle(rotation, center, hit.Radius);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(_config, "Edit Hit Radius");
+                        hit.Radius = radius;
+                        MarkHitPreviewChanged();
+                    }
+                    break;
+                case HitShape.Box:
+                    EditorGUI.BeginChangeCheck();
+                    Vector3 size = Handles.ScaleHandle(
+                        hit.BoxSize, center, rotation, HandleUtility.GetHandleSize(center));
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(_config, "Edit Hit Box");
+                        hit.BoxSize = size;
+                        MarkHitPreviewChanged();
+                    }
+                    break;
+                case HitShape.ExpandingSphere:
+                    using (new Handles.DrawingScope(new Color(1f, 0.75f, 0.1f, 1f)))
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        float startRadius = Handles.RadiusHandle(
+                            rotation, center, hit.StartRadius);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            Undo.RecordObject(_config, "Edit Hit Start Radius");
+                            hit.StartRadius = Mathf.Min(startRadius, hit.EndRadius);
+                            MarkHitPreviewChanged();
+                        }
+                    }
+                    using (new Handles.DrawingScope(HitColor))
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        float endRadius = Handles.RadiusHandle(
+                            rotation, center, hit.EndRadius);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            Undo.RecordObject(_config, "Edit Hit End Radius");
+                            hit.EndRadius = endRadius;
+                            MarkHitPreviewChanged();
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private void MarkHitPreviewChanged()
+        {
+            EditorUtility.SetDirty(_config);
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        private static void DrawWireSphere(
+            Vector3 center, Quaternion rotation, float radius)
+        {
+            if (radius <= 0f) return;
+            Handles.DrawWireDisc(center, rotation * Vector3.right, radius);
+            Handles.DrawWireDisc(center, rotation * Vector3.up, radius);
+            Handles.DrawWireDisc(center, rotation * Vector3.forward, radius);
+        }
+
+        private static void DrawWireCone(
+            Vector3 center, Quaternion rotation, float radius, float angle)
+        {
+            if (radius <= 0f) return;
+            float halfAngle = Mathf.Clamp(angle * 0.5f, 0f, 180f);
+            Vector3 forward = rotation * Vector3.forward;
+            Vector3 right = rotation * Vector3.right;
+            Vector3 up = rotation * Vector3.up;
+            Vector3 horizontalStart = Quaternion.AngleAxis(-halfAngle, up) * forward;
+            Vector3 verticalStart = Quaternion.AngleAxis(-halfAngle, right) * forward;
+
+            Handles.DrawWireArc(center, up, horizontalStart, angle, radius);
+            Handles.DrawWireArc(center, right, verticalStart, angle, radius);
+
+            float axial = Mathf.Cos(halfAngle * Mathf.Deg2Rad) * radius;
+            float ringRadius = Mathf.Sin(halfAngle * Mathf.Deg2Rad) * radius;
+            Vector3 capCenter = center + forward * axial;
+            Handles.DrawWireDisc(capCenter, forward, ringRadius);
+            Handles.DrawLine(center, capCenter + right * ringRadius);
+            Handles.DrawLine(center, capCenter - right * ringRadius);
+            Handles.DrawLine(center, capCenter + up * ringRadius);
+            Handles.DrawLine(center, capCenter - up * ringRadius);
+        }
+
+        private static void DrawWireCapsule(
+            Vector3 start, Vector3 end, Quaternion rotation, float radius)
+        {
+            if (radius <= 0f) return;
+            Vector3 right = rotation * Vector3.right * radius;
+            Vector3 up = rotation * Vector3.up * radius;
+            DrawWireSphere(start, rotation, radius);
+            DrawWireSphere(end, rotation, radius);
+            Handles.DrawLine(start + right, end + right);
+            Handles.DrawLine(start - right, end - right);
+            Handles.DrawLine(start + up, end + up);
+            Handles.DrawLine(start - up, end - up);
+        }
+
         private static void DrawSeparator()
         {
             EditorGUILayout.Space(2);
             var r = EditorGUILayout.GetControlRect(false, 1f);
             EditorGUI.DrawRect(r, new Color(0.3f, 0.3f, 0.3f, 0.5f));
+        }
+    }
+
+    internal static class NotifyPayloadMigration
+    {
+        [MenuItem("Tools/ZZZ/Migrate Animation Notify Payloads")]
+        private static void MigrateAll()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:AnimationConfig");
+            int configCount = 0;
+            int notifyCount = 0;
+
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                AnimationConfig config = AssetDatabase.LoadAssetAtPath<AnimationConfig>(path);
+                if (config == null) continue;
+
+                bool changed = false;
+                for (int clipIndex = 0; clipIndex < config.Clips.Count; clipIndex++)
+                {
+                    List<TrackNotify> notifies = config.Clips[clipIndex].Notifies;
+                    for (int notifyIndex = 0; notifyIndex < notifies.Count; notifyIndex++)
+                    {
+                        TrackNotify notify = notifies[notifyIndex];
+                        if (notify == null || !notify.MigratePayload()) continue;
+                        changed = true;
+                        notifyCount++;
+                    }
+                }
+
+                if (!changed) continue;
+                EditorUtility.SetDirty(config);
+                configCount++;
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Notify Payload migration complete: {configCount} configs, "
+                + $"{notifyCount} notifies.");
         }
     }
 }

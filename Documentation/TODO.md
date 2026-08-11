@@ -4,11 +4,20 @@
 ## 진행중
 
 
+## 최근 완료
+
+- [x] **페이로드 기반 Notify** — `TrackNotify`의 공통 타이밍과 `[SerializeReference] NotifyPayload`를 분리하고 기존 에셋을 마이그레이션
+- [x] **공용 타격 판정** — 플레이어·몬스터가 같은 `HitService`를 사용하며 Sphere/Cone/Box/Capsule/ExpandingSphere와 Overlap/Sweep 지원
+- [x] **이펙트 원점 바인딩** — `CompositeEffectEntry.BindingKey`와 `HitData.EffectKey`로 풀링된 실제 이펙트 Transform을 캐릭터별 스코프에서 추적
+- [x] **타격 범위 디버그** — AnimationConfigTool Scene View 편집 기즈모와 플레이 중 Game View 디버그 라인 지원
+- [x] **FireBeam 풀 반납 검증** — 최상위 ParticleSystem의 Stop Action을 Callback으로 설정하고 재사용 확인
+
+
 ## 예정 (로드맵)
 
 - [ ] **몬스터 루트모션/추격** — `MonsterController`에 플레이어와 같은 `OnAnimatorMove` 기반 `deltaPosition/deltaRotation` 처리와 워프·추격을 구현(현재 Idle+Hit 제자리 재생)
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
-- [ ] **이펙트 시스템 잔여** — 플레이 모드 실전 검증(풀 반납/지연 재생/구간 이펙트 트레일). 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료 — 실전 검증만 남음
+- [ ] **이펙트 시스템 잔여** — 지연 재생과 구간 이펙트 트레일의 플레이 모드 실전 검증. 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
 
 ## 모바일 빌드 & 최적화 (목표)

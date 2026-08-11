@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Combat;
 using ZZZ.Effects;
 
 namespace ZZZ.Player.StateMachine.States
@@ -14,17 +15,21 @@ namespace ZZZ.Player.StateMachine.States
         private readonly IConfigSignals  Signals;
         private readonly AnimationConfig _homeConfig;   // 진입/복귀 기본 config
         private readonly SectionContext  _sc;           // 섹션 모듈에 넘기는 핸들 묶음
+        private bool _showHitGizmos;
+        private float _hitGizmoDuration;
 
         private AnimationConfig _config;   // 현재 구동 중 config
         private int             _active;   // 현재 클립 인덱스
         private bool[]          _notifyFired;
         // 구간(Interval) 이펙트의 활성 핸들 — 단발이거나 미진행이면 null. _notifyFired와 인덱스 정렬, 섹션 스코프.
         private EffectHandle[]  _notifyActive;
+        private HitHandle[]     _hitActive;
         private EffectTransitionMode[] _notifyTransitionModes;
         private string[]        _notifyNextSections;
         private readonly List<EffectHandle> _carriedEffects = new List<EffectHandle>();
         private readonly List<PendingNextEffect> _pendingNextEffects =
             new List<PendingNextEffect>();
+        private readonly EffectBindingScope _effectBindings = new EffectBindingScope();
         private float           _clipTime; // 현재 섹션 진입 후 경과 시간(초) — 전환마다 0으로 리셋
 
         private sealed class PendingNextEffect
@@ -47,19 +52,28 @@ namespace ZZZ.Player.StateMachine.States
 
         // 캐릭터(플레이어/몬스터)별 컨텍스트·신호·조건소스를 주입받는다 — 구상 타입 비의존.
         public ConfigState(ConfigContext ctx, IConfigSignals signals,
-            ILinkConditionContext condCtx, AnimationConfig homeConfig)
+            ILinkConditionContext condCtx, AnimationConfig homeConfig,
+            bool showHitGizmos = false, float hitGizmoDuration = 0.1f)
         {
             Ctx         = ctx;
             Signals     = signals;
             _homeConfig = homeConfig;
             _condCtx    = condCtx;
             _sc         = new SectionContext { Ctx = ctx, Machine = signals };
+            _showHitGizmos = showHitGizmos;
+            _hitGizmoDuration = Mathf.Max(0f, hitGizmoDuration);
         }
 
         public void Enter()
         {
             SwitchConfig(_homeConfig, null, 0f);
             Signals.ConsumeInput();
+        }
+
+        public void SetHitDebug(bool showHitGizmos, float hitGizmoDuration)
+        {
+            _showHitGizmos = showHitGizmos;
+            _hitGizmoDuration = Mathf.Max(0f, hitGizmoDuration);
         }
 
         // 외부 이벤트(피격 등)로 현재 config를 즉시 갈아끼운다.
@@ -78,7 +92,9 @@ namespace ZZZ.Player.StateMachine.States
             if (_config == null || _config.Clips.Count == 0)
             {
                 StopTrackedEffects(false);
+                StopTrackedHits();
                 _pendingNextEffects.Clear();
+                _effectBindings.Clear();
                 _active = -1;
                 return;
             }
@@ -245,6 +261,7 @@ namespace ZZZ.Player.StateMachine.States
             bool sameSectionReentry = false)
         {
             string destinationSection = _config.Clips[_active].SectionName;
+            StopTrackedHits();
             if (!sameSectionReentry)
                 StopTrackedEffects(true, destinationSection);
             PlayPendingNextEffects(destinationSection, sameSectionReentry);
@@ -258,6 +275,7 @@ namespace ZZZ.Player.StateMachine.States
             {
                 _notifyFired = null;
                 _notifyActive = null;
+                _hitActive = null;
                 _notifyTransitionModes = null;
                 _notifyNextSections = null;
                 return;
@@ -306,14 +324,15 @@ namespace ZZZ.Player.StateMachine.States
                 _notifyFired = new bool[tc.Notifies.Count];
                 _notifyActive = new EffectHandle[tc.Notifies.Count];
             }
+            _hitActive = new HitHandle[tc.Notifies.Count];
             for (int i = 0; i < tc.Notifies.Count; i++)
             {
                 if (!preserveEffectState) continue;
 
                 TrackNotify notify = tc.Notifies[i];
-                bool preserveNotify = notify.Type == NotifyType.Effect
-                    && (notify.TransitionMode == EffectTransitionMode.Next
-                        || notify.TransitionMode == EffectTransitionMode.Stop
+                bool preserveNotify = notify.Payload is EffectNotifyPayload effectPayload
+                    && (effectPayload.TransitionMode == EffectTransitionMode.Next
+                        || effectPayload.TransitionMode == EffectTransitionMode.Stop
                         && _notifyActive[i] != null);
                 if (!preserveNotify)
                 {
@@ -362,12 +381,40 @@ namespace ZZZ.Player.StateMachine.States
                 if (!_notifyFired[i] && p >= notify.NormalizedTime)
                 {
                     _notifyFired[i] = true;
-                    EffectHandle handle = notify.Type == NotifyType.Effect
+                    if (notify.Payload is HitNotifyPayload hitPayload)
+                    {
+                        var hitContext = new HitExecutionContext(
+                            Ctx.Transform, null, _effectBindings,
+                            _showHitGizmos, _hitGizmoDuration);
+                        if (notify.IsInterval
+                            || hitPayload.Hit.Origin == HitOrigin.Effect)
+                            _hitActive[i] = HitService.Begin(
+                                hitPayload.Hit, hitContext);
+                        else
+                            HitService.Execute(hitPayload.Hit, hitContext);
+                        continue;
+                    }
+                    EffectHandle handle = notify.Payload is EffectNotifyPayload
                         && notify.TransitionMode == EffectTransitionMode.Next
                         ? QueueNextEffect(notify)
                         : DispatchNotify(notify);
-                    if (notify.Type == NotifyType.Effect && handle != null)
+                    if (notify.Payload is EffectNotifyPayload && handle != null)
                         _notifyActive[i] = handle;
+                }
+
+                if (_hitActive != null && _hitActive[i] != null)
+                {
+                    float duration = notify.EndNormalizedTime - notify.NormalizedTime;
+                    float progress = duration > 0f
+                        ? Mathf.InverseLerp(
+                            notify.NormalizedTime, notify.EndNormalizedTime, p)
+                        : 1f;
+                    _hitActive[i].Tick(Time.deltaTime, progress);
+                    if (!notify.IsInterval && _hitActive[i].HasSampled)
+                    {
+                        _hitActive[i].Stop();
+                        _hitActive[i] = null;
+                    }
                 }
 
                 // 종료 — 구간 이펙트가 진행 중이고 끝 시점을 지났으면 방출 정지(잔여 파티클은 자연 소멸).
@@ -377,36 +424,47 @@ namespace ZZZ.Player.StateMachine.States
                     _notifyActive[i].Stop();
                     _notifyActive[i] = null;
                 }
+                if (notify.IsInterval && _hitActive != null && _hitActive[i] != null
+                    && p >= notify.EndNormalizedTime)
+                {
+                    _hitActive[i].Stop();
+                    _hitActive[i] = null;
+                }
             }
         }
 
         // 이펙트 재생이면 정지용 EffectHandle을 돌려준다(구간 이펙트만 사용). 그 외/단발은 null.
         private EffectHandle DispatchNotify(TrackNotify notify)
         {
-            switch (notify.Type)
+            switch (notify.Payload)
             {
-                case NotifyType.Effect:
-                    if (notify.Effect != null)
+                case EffectNotifyPayload effectPayload:
+                    if (effectPayload.Effect != null)
                         return EffectService.PlayAfterAnimation(
-                            notify.Effect,
-                            EffectPlayContext.ForCharacter(Ctx.Transform),
+                            effectPayload.Effect,
+                            EffectPlayContext.ForCharacter(
+                                Ctx.Transform, null, _effectBindings),
                             true);
                     return null;
-                default:
-                    if (!string.IsNullOrEmpty(notify.EventName))
+                case EventNotifyPayload eventPayload:
+                    if (!string.IsNullOrEmpty(eventPayload.EventName))
                         Ctx.GameObject.SendMessage(
-                            notify.EventName, SendMessageOptions.DontRequireReceiver);
+                            eventPayload.EventName, SendMessageOptions.DontRequireReceiver);
+                    return null;
+                default:
                     return null;
             }
         }
 
         private EffectHandle QueueNextEffect(TrackNotify notify)
         {
-            if (notify.Effect == null || string.IsNullOrEmpty(notify.NextSection)) return null;
+            if (!(notify.Payload is EffectNotifyPayload payload)
+                || payload.Effect == null
+                || string.IsNullOrEmpty(payload.NextSection)) return null;
             _pendingNextEffects.Add(new PendingNextEffect
             {
-                Effect = notify.Effect,
-                NextSection = notify.NextSection,
+                Effect = payload.Effect,
+                NextSection = payload.NextSection,
             });
             return null;
         }
@@ -423,7 +481,8 @@ namespace ZZZ.Player.StateMachine.States
 
                 EffectHandle handle = EffectService.PlayAfterAnimation(
                     pending.Effect,
-                    EffectPlayContext.ForCharacter(Ctx.Transform),
+                    EffectPlayContext.ForCharacter(
+                        Ctx.Transform, null, _effectBindings),
                     true);
                 if (handle != null) _carriedEffects.Add(handle);
                 _pendingNextEffects.RemoveAt(i);
@@ -467,12 +526,25 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
+        private void StopTrackedHits()
+        {
+            if (_hitActive == null) return;
+            for (int i = 0; i < _hitActive.Length; i++)
+            {
+                _hitActive[i]?.Stop();
+                _hitActive[i] = null;
+            }
+        }
+
         // 현재는 항상 활성이라 호출되지 않지만, 무적 누수 방지를 위한 정리 진입점으로 남겨둔다.
         public void Exit()
         {
             StopTrackedEffects(false);
+            StopTrackedHits();
             _pendingNextEffects.Clear();
+            _effectBindings.Clear();
             _notifyFired = null;
+            _hitActive = null;
             _notifyTransitionModes = null;
             _notifyNextSections = null;
             Ctx.Mover.ClearWarpTarget();

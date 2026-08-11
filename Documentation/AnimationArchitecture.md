@@ -80,7 +80,7 @@ AnimationConfig
 │     ├── Clip / Speed
 │     ├── MoveMode               None / RootMotion
 │     ├── Links    : List<ClipLink>     ← 이 섹션에서 분기 가능한 전이
-│     ├── Notifies : List<TrackNotify>  ← 재생 중 발동할 애니메이션 이벤트(이펙트/신호). 시점 또는 [NormalizedTime, EndNormalizedTime] 구간
+│     ├── Notifies : List<TrackNotify>  ← 공통 타이밍 + SerializeReference NotifyPayload
 │     └── Modules  : List<SectionModule>  ← 이동·회전·판정 등 섹션 기능(다형성)
 └── GlobalLinks : List<ClipLink>   ← 모든 섹션에 적용 (Any State 전이)
 ```
@@ -513,8 +513,8 @@ Assets/04.Scripts/
 │   ├── EnemySensor.cs               전방 부채꼴 적 탐지 (워프 타겟 / 거리 분기)
 │   ├── HitTarget.cs                 피격 대상(허수아비/몬스터) — HP 보유, OnDamaged 이벤트
 │   ├── IHittable.cs                 피격 가능 인터페이스
-│   ├── MeleeHitter.cs               OnAttackHit Notify → EnemySensor 범위 안 타격 (센서 기반)
-│   └── EffectHitVolume.cs           공격 이펙트 프리팹에 부착 → 스폰 시 자기 범위(SphereCollider) 타격 (이펙트 범위 기반)
+│   ├── HitContext.cs                판정 컨텍스트 + 동적 원점 Resolver 계약
+│   └── HitService.cs                모양 쿼리·팀 필터·반복 판정 + HitHandle
 │
 ├── Movement/
 │   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
@@ -608,3 +608,42 @@ Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자�
   (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)
 
 ---
+## Hit Notify
+
+공격 판정은 문자열 `OnAttackHit` 호출 대신 `HitNotifyPayload`와 인라인 `HitData`를 사용한다.
+단발 Notify는 지정 프레임에 한 번 판정하고, `EndNormalizedTime`이 시작보다 크면 해당 구간 동안
+동적 범위 또는 반복 판정을 유지한다. `ConfigState`는 섹션 이탈과 인터럽트 시 활성 `HitHandle`을
+항상 종료하므로 판정이 다음 상태로 누수되지 않는다.
+
+`HitQueryMode.Overlap`은 매 샘플의 현재 모양만 검사하고, `Sweep`은 첫 Overlap 이후 이전 중심에서
+현재 중심까지 이동 구간도 검사한다. Sphere·Cone·ExpandingSphere는 SphereCast, Box는 BoxCast,
+Capsule은 CapsuleCast를 사용한다. Sweep은 이전 위치가 필요한 구간형 Hit에서 의미가 있으며 단발
+Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플링 방식이고 `HitFrequency`는 같은
+대상의 재타격 정책이므로 독립적이다. 구간 중에는 매 프레임 공간을 검사하되 `OncePerActivation`은
+이미 맞은 대상을 제외하고, `RepeatInterval`은 지정 시간이 지나면 대상 기록을 비운다.
+
+`TrackNotify`는 공통 타이밍과 잠금만 소유하고, `[SerializeReference] NotifyPayload`가 타입별 데이터를
+소유한다. `HitNotifyPayload`는 모양, 원점, 대상 레이어, 팀 판정, 데미지, 재타격 정책을 담은
+`HitData`를 인라인으로 저장한다. 플레이어와 몬스터의 `ConfigState`는 동일한 Payload와
+`HitService`를 사용한다.
+
+`HitOrigin.Effect`는 Effect Notify 안에 판정 데이터를 넣지 않는다. `CompositeEffectEntry.BindingKey`와
+`HitData.EffectKey`를 같은 값으로 지정하면, 캐릭터별 `EffectBindingScope`가 풀에서 실제 생성된 Entry
+인스턴스의 Transform을 Hit 원점으로 연결한다. 키가 아직 등록되지 않은 Hit은 캐릭터 루트로 대체하지
+않고 기다리며, 이펙트가 생성되면 판정을 시작한다. 섹션을 이탈하기 전까지 키가 생기지 않으면 판정하지 않는다.
+
+기존 `Type/EventName/Effect/Hit` 필드는 역직렬화 호환용으로 숨겨 두었다. Animation Tool에서 에셋을
+열면 해당 Notify가 Payload로 변환되며, 전체 변환은
+`Tools/ZZZ/Migrate Animation Notify Payloads` 메뉴로 명시적으로 실행한다.
+
+Animation Tool에서 Hit Notify를 선택하면 Scene View에
+현재 판정 모양이 와이어로 표시된다. Inspector의 모양·반경·각도·크기·오프셋 값은 즉시 반영되며,
+Scene View의 위치·회전·반경·박스 크기 핸들로도 값을 편집할 수 있다. `ExpandingSphere`는 시작/종료
+반경과 현재 프리뷰 시간의 반경을 함께 표시한다. 원점이 Socket이면 프리뷰 캐릭터의 해당 Transform,
+Effect이면 선택한 `Effect Key`와 일치하는 Entry의 현재 프리뷰 Transform을 기준으로 표시한다.
+
+Play 중 실제 판정은 `PlayerStateMachine` 또는 `MonsterStateMachine`의 `Hit Debug/Show Hit Gizmos`를
+켜서 확인한다. Game View에서는 상단 `Gizmos` 버튼도 켜야 한다. 빨간 선은 현재 판정 모양이고,
+노란 선과 이전 모양은 Sweep 이동 구간이다. `Hit Gizmo Duration`은 단발 선의 표시 유지 시간이다.
+Play 중 옵션을 바꿔도 다음 공격부터 즉시 반영되며, Game View에서는 카메라 거리 기준의 다중선으로
+그려 단일 `Debug.DrawLine`보다 판정 외곽을 두껍게 표시한다.

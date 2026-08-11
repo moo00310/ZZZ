@@ -86,13 +86,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.11029412
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+    - NormalizedTime: 0.11029412
+      _payload:
+        rid: 986220386215526466
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 1
-      TransitionMode: 1
-      NextSection: Attack_Normal_Enhance_03
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018908
@@ -121,13 +124,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.15757558
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+    - NormalizedTime: 0.15757558
+      _payload:
+        rid: 986220386215526467
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018912
@@ -245,13 +251,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.07874016
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+    - NormalizedTime: 0.07874016
+      _payload:
+        rid: 986220386215526468
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 1
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018915
@@ -279,13 +288,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.15996811
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+    - NormalizedTime: 0.15996811
+      _payload:
+        rid: 986220386215526469
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018917
@@ -402,13 +414,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.16176471
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+    - NormalizedTime: 0.16176471
+      _payload:
+        rid: 986220386215526470
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_03
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018919
@@ -436,13 +451,16 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.10144709
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+    - NormalizedTime: 0.10144709
+      _payload:
+        rid: 986220386215526471
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 0
-      NextSection: 
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules:
     - rid: 6745857324881018920
@@ -513,13 +531,16 @@ MonoBehaviour:
       WindowStart: 0.76168835
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.88
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+    - NormalizedTime: 0.88
+      _payload:
+        rid: 986220386215526472
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_02
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules: []
   - SectionName: Avatar_Female_Size02_Burnice_Ani_Attack_RushToEnhance
@@ -546,19 +567,88 @@ MonoBehaviour:
       WindowStart: 0
       WindowEnd: 1
     Notifies:
-    - Type: 0
-      NormalizedTime: 0.8918919
-      EventName: Effect
-      Effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+    - NormalizedTime: 0.8918919
+      _payload:
+        rid: 986220386215526473
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      TransitionMode: 2
-      NextSection: Attack_Normal_Enhance_02
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
       Locked: 1
     Modules: []
   GlobalLinks: []
   references:
     version: 2
     RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 986220386215526466
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 1
+        _nextSection: Attack_Normal_Enhance_03
+    - rid: 986220386215526467
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526468
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 1
+        _nextSection: 
+    - rid: 986220386215526469
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526470
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_03
+    - rid: 986220386215526471
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 534b6735083653e45ada729979f5df8b, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 986220386215526472
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: 4297452f5ad610a4794e55042b77fa10, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_02
+    - rid: 986220386215526473
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 11400000, guid: a0e6c342134b7934c941219cf71034dd, type: 2}
+        _hit:
+          rid: -2
+        _transitionMode: 2
+        _nextSection: Attack_Normal_Enhance_02
     - rid: 6745857324881018908
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
