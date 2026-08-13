@@ -9,6 +9,8 @@ namespace ZZZ.Editor.AnimationTool
 {
     public partial class AnimationConfigTool
     {
+        private static TrackNotify _notifyClipboard;
+
         // ── 눈금자 플레이헤드 드래그 ─────────────────────────────
         private void HandleRulerInput(Rect rulerRect)
         {
@@ -218,7 +220,7 @@ namespace ZZZ.Editor.AnimationTool
                     if (ev.mousePosition.y < rowY || ev.mousePosition.y >= rowY + ClipH) continue;
                     if (ev.mousePosition.x < barX  || ev.mousePosition.x > barX + barW)  continue;
 
-                    // 기존 Notify 위에서 우클릭이면 → 잠금 토글/삭제 메뉴 (가장 가까운 마커 기준)
+                    // 기존 Notify 위에서 우클릭이면 → 잠금/복사/삭제 메뉴 (가장 가까운 마커 기준)
                     int   hitNi = -1;
                     float hitDx = NotifyHitRadius;
                     for (int ni = 0; ni < tc.Notifies.Count; ni++)
@@ -242,6 +244,12 @@ namespace ZZZ.Editor.AnimationTool
                             Repaint();
                         });
                         nmenu.AddSeparator("");
+                        nmenu.AddItem(new GUIContent("Copy Notify"), false, () =>
+                        {
+                            _notifyClipboard = CloneNotify(
+                                _config.Clips[capHitI].Notifies[capHitNi]);
+                        });
+                        nmenu.AddSeparator("");
                         nmenu.AddItem(new GUIContent("Delete Notify"), false, () =>
                         {
                             Undo.RecordObject(_config, "Delete Notify");
@@ -259,6 +267,17 @@ namespace ZZZ.Editor.AnimationTool
                     float normT = barW > 0f ? Mathf.Clamp01((ev.mousePosition.x - barX) / barW) : 0f;
                     int capI = i; float capN = normT;
                     var menu = new GenericMenu();
+                    if (_notifyClipboard != null)
+                    {
+                        menu.AddItem(
+                            new GUIContent($"Paste {_notifyClipboard.Type} Notify"),
+                            false, () => PasteNotify(capI, capN));
+                    }
+                    else
+                    {
+                        menu.AddDisabledItem(new GUIContent("Paste Notify"));
+                    }
+                    menu.AddSeparator("");
                     foreach (NotifyType nt in Enum.GetValues(typeof(NotifyType)))
                     {
                         var capType = nt;
@@ -280,6 +299,62 @@ namespace ZZZ.Editor.AnimationTool
                     break;
                 }
             }
+        }
+
+        private void PasteNotify(int clipIndex, float normalizedTime)
+        {
+            if (_notifyClipboard == null
+                || clipIndex < 0 || clipIndex >= _config.Clips.Count) return;
+
+            Undo.RecordObject(_config, "Paste Notify");
+            TrackNotify pasted = CloneNotify(_notifyClipboard);
+            float intervalLength = Mathf.Max(0f,
+                pasted.EndNormalizedTime - pasted.NormalizedTime);
+            pasted.NormalizedTime = Mathf.Clamp01(normalizedTime);
+            pasted.EndNormalizedTime = intervalLength > 0f
+                ? Mathf.Clamp01(pasted.NormalizedTime + intervalLength)
+                : 0f;
+
+            List<TrackNotify> notifies = _config.Clips[clipIndex].Notifies;
+            notifies.Add(pasted);
+            _selectedClip = clipIndex;
+            _selectedNotify = notifies.Count - 1;
+            _notifyClipIdx = clipIndex;
+            _fxDirty = true;
+            EditorUtility.SetDirty(_config);
+            _serializedConfig = new SerializedObject(_config);
+            Repaint();
+        }
+
+        private static TrackNotify CloneNotify(TrackNotify source)
+        {
+            var clone = new TrackNotify
+            {
+                Type = source.Type,
+                NormalizedTime = source.NormalizedTime,
+                EndNormalizedTime = source.EndNormalizedTime,
+                Locked = source.Locked,
+            };
+
+            switch (source.Payload)
+            {
+                case HitNotifyPayload hitPayload:
+                    clone.Hit = source.Hit != null ? new HitData(source.Hit) : null;
+                    if (clone.Payload is HitNotifyPayload clonedHit)
+                        clonedHit.SyncWithEffect = hitPayload.SyncWithEffect;
+                    break;
+                case EffectNotifyPayload:
+                    clone.Effect = source.Effect;
+                    clone.Hit = source.Hit != null ? new HitData(source.Hit) : null;
+                    clone.TransitionMode = source.TransitionMode;
+                    clone.NextSection = source.NextSection;
+                    break;
+                case EventNotifyPayload:
+                    clone.EventName = source.EventName;
+                    break;
+            }
+
+            return clone;
         }
 
         private void FocusClipInTimeline(int clipIndex, float viewWidth)

@@ -62,6 +62,13 @@ namespace ZZZ.Editor.AnimationTool
             {
                 SampleClipPose(tc, _comboActiveClip, ct, true);
             }
+
+            if (EffectPreviewActive)
+            {
+                float comboTime = GetClipStartTime(_comboActiveClip)
+                    + ct / Mathf.Max(0.01f, tc.Speed);
+                UpdateEffectPreview(comboTime);
+            }
         }
 
         // 이전 클립(from) 포즈와 새 클립(to) 포즈를 본 단위로 보간 (CrossFade 시뮬)

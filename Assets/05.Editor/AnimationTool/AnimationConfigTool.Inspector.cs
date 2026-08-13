@@ -767,10 +767,40 @@ namespace ZZZ.Editor.AnimationTool
                 eName = EditorGUILayout.TextField("Event Name", notify.EventName);
 
             HitData hit = notify.Hit != null ? new HitData(notify.Hit) : null;
+            bool syncHitFromHitNotify = notify.Payload is HitNotifyPayload currentHit
+                && currentHit.SyncWithEffect;
             if (type == NotifyType.Hit)
             {
                 hit ??= new HitData();
-                DrawHitData(hit);
+                syncHitFromHitNotify = EditorGUILayout.Toggle(
+                    new GUIContent("Sync With Effect",
+                        "Effect Key의 실제 실행 인스턴스에 Hit을 붙입니다. Effect가 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
+                    syncHitFromHitNotify);
+                DrawHitData(hit, syncHitFromHitNotify);
+                if (syncHitFromHitNotify && string.IsNullOrEmpty(hit.EffectKey))
+                    EditorGUILayout.HelpBox(
+                        "Effect Key를 지정하고 Composite Effect Entry의 Binding Key와 동일하게 맞춰야 합니다.",
+                        MessageType.Warning);
+            }
+            else if (type == NotifyType.Effect)
+            {
+                bool syncHitWithEffect = EditorGUILayout.Toggle(
+                    new GUIContent("Sync Hit With Effect",
+                        "Hit을 선택한 Effect Entry의 실제 생명주기에 묶습니다. Effect가 다른 섹션으로 Carry되면 Hit도 함께 유지되고, EffectHandle이 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
+                    hit != null);
+                if (syncHitWithEffect)
+                {
+                    if (hit == null)
+                    {
+                        hit = new HitData { Origin = HitOrigin.Effect };
+                    }
+                    DrawHitData(hit, true);
+                    if (string.IsNullOrEmpty(hit.EffectKey))
+                        EditorGUILayout.HelpBox(
+                            "Effect Key를 지정하고 Composite Effect Entry의 Binding Key와 동일하게 맞춰야 합니다.",
+                            MessageType.Warning);
+                }
+                else hit = null;
             }
             else hit = null;
             float endT = notify.EndNormalizedTime;
@@ -778,9 +808,18 @@ namespace ZZZ.Editor.AnimationTool
             string nextSection = notify.NextSection;
             if (type == NotifyType.Hit)
             {
-                endT = FrameField("Hit End (f)",
-                    "Time 이하이면 단발, Time보다 크면 동적 범위 또는 반복 판정 구간입니다.",
-                    tc, notify.EndNormalizedTime);
+                if (syncHitFromHitNotify)
+                {
+                    EditorGUILayout.LabelField(
+                        "Hit Lifetime", "Effect 생명주기 사용",
+                        EditorStyles.miniLabel);
+                }
+                else
+                {
+                    endT = FrameField("Hit End (f)",
+                        "Time 이하이면 단발, Time보다 크면 동적 범위 또는 반복 판정 구간입니다.",
+                        tc, notify.EndNormalizedTime);
+                }
             }
             if (type == NotifyType.Effect)
             {
@@ -831,12 +870,15 @@ namespace ZZZ.Editor.AnimationTool
                 notify.Type = type; notify.NormalizedTime = normT;
                 notify.EventName = eName;
                 notify.Hit = hit;
+                if (notify.Payload is HitNotifyPayload editedHit)
+                    editedHit.SyncWithEffect = syncHitFromHitNotify;
                 notify.EndNormalizedTime = endT; notify.Locked = locked;
                 notify.TransitionMode = transitionMode;
                 notify.NextSection = nextSection;
                 EditorUtility.SetDirty(_config);
                 SceneView.RepaintAll();
-                bool bindingChanged = type == NotifyType.Hit && hit != null
+                bool bindingChanged = (type == NotifyType.Hit
+                        || type == NotifyType.Effect) && hit != null
                     && (hit.Origin != previousHitOrigin
                         || !string.Equals(hit.EffectKey, previousEffectKey,
                             StringComparison.Ordinal));
@@ -864,23 +906,42 @@ namespace ZZZ.Editor.AnimationTool
             GUI.backgroundColor = Color.white;
         }
 
-        private void DrawHitData(HitData hit)
+        private void DrawHitData(HitData hit, bool effectOriginOnly = false)
         {
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("Hit Payload", EditorStyles.boldLabel);
+            hit.ShowGizmo = EditorGUILayout.Toggle(
+                new GUIContent("Show Gizmo",
+                    "Config Tool 상단 Hit Gizmos가 켜져 있을 때 이 Hit의 판정 기즈모를 표시합니다."),
+                hit.ShowGizmo);
 
             hit.Damage = EditorGUILayout.FloatField("Damage", hit.Damage);
             hit.Strength = (AttackStrength)EditorGUILayout.EnumPopup(
                 "Strength", hit.Strength);
             hit.TargetMask = EditorGUILayout.MaskField(
                 "Target Mask", hit.TargetMask.value, GetLayerNames());
-            hit.FriendlyFire = EditorGUILayout.Toggle("Friendly Fire", hit.FriendlyFire);
             hit.IncludeTriggers = EditorGUILayout.Toggle(
                 "Include Triggers", hit.IncludeTriggers);
 
-            hit.Origin = (HitOrigin)EditorGUILayout.EnumPopup("Origin", hit.Origin);
-            if (hit.Origin == HitOrigin.Socket)
-                hit.Socket = EditorGUILayout.TextField("Socket", hit.Socket);
+            if (effectOriginOnly) hit.Origin = HitOrigin.Effect;
+            using (new EditorGUI.DisabledScope(effectOriginOnly))
+                hit.Origin = (HitOrigin)EditorGUILayout.EnumPopup("Origin", hit.Origin);
+            if (hit.Origin == HitOrigin.CharacterRoot
+                || hit.Origin == HitOrigin.Socket)
+            {
+                bool socketOrigin = hit.Origin == HitOrigin.Socket;
+                if (socketOrigin)
+                    hit.Socket = EditorGUILayout.TextField("Socket", hit.Socket);
+                string[] trackingLabels = socketOrigin
+                    ? new[] { "Follow Socket", "Keep World Pose" }
+                    : new[] { "Follow Root", "Keep World Pose" };
+                hit.OriginTracking = (HitOriginTracking)EditorGUILayout.Popup(
+                    new GUIContent(socketOrigin ? "Socket Tracking" : "Root Tracking",
+                        socketOrigin
+                            ? "Follow Socket은 판정이 소켓을 계속 따라갑니다. Keep World Pose는 Hit 시작 순간의 위치와 회전을 월드 좌표로 유지합니다."
+                            : "Follow Root는 판정이 캐릭터 루트를 계속 따라갑니다. Keep World Pose는 Hit 시작 순간의 위치와 회전을 월드 좌표로 유지합니다."),
+                    (int)hit.OriginTracking, trackingLabels);
+            }
             else if (hit.Origin == HitOrigin.Effect)
                 hit.EffectKey = DrawEffectBindingKey(hit.EffectKey);
             hit.PositionOffset = EditorGUILayout.Vector3Field(
@@ -913,6 +974,16 @@ namespace ZZZ.Editor.AnimationTool
                     hit.Duration = EditorGUILayout.FloatField("Duration", hit.Duration);
                     hit.RadiusCurve = EditorGUILayout.CurveField(
                         "Radius Curve", hit.RadiusCurve);
+                    break;
+                case HitShape.ExpandingCone:
+                    hit.StartRadius = EditorGUILayout.FloatField(
+                        "Start Range", hit.StartRadius);
+                    hit.EndRadius = EditorGUILayout.FloatField(
+                        "End Range", hit.EndRadius);
+                    hit.Angle = EditorGUILayout.Slider("Angle", hit.Angle, 0f, 360f);
+                    hit.Duration = EditorGUILayout.FloatField("Duration", hit.Duration);
+                    hit.RadiusCurve = EditorGUILayout.CurveField(
+                        "Range Curve", hit.RadiusCurve);
                     break;
             }
 
@@ -1030,7 +1101,19 @@ namespace ZZZ.Editor.AnimationTool
                 bool cur = idx == _selectedNotify && _notifyClipIdx == _selectedClip;
                 Color prev = GUI.backgroundColor;
                 if (cur) GUI.backgroundColor = new Color(0.95f, 0.85f, 0.25f);
-                if (GUILayout.Button(label, EditorStyles.miniButton, GUILayout.Width(48f)))
+                Rect notifyButtonRect = GUILayoutUtility.GetRect(
+                    48f, EditorGUIUtility.singleLineHeight,
+                    EditorStyles.miniButton, GUILayout.Width(48f));
+                Event currentEvent = Event.current;
+                bool contextOpened = currentEvent.type == EventType.MouseDown
+                    && currentEvent.button == 1
+                    && notifyButtonRect.Contains(currentEvent.mousePosition);
+                if (contextOpened)
+                {
+                    ShowNotifyButtonMenu(tc, n);
+                    currentEvent.Use();
+                }
+                else if (GUI.Button(notifyButtonRect, label, EditorStyles.miniButton))
                 {
                     _selectedNotify = idx; _notifyClipIdx = _selectedClip;
                     GUI.FocusControl(null);
@@ -1042,6 +1125,28 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
+        private void ShowNotifyButtonMenu(TrackClip clip, TrackNotify notify)
+        {
+            int clipIndex = _config.Clips.IndexOf(clip);
+            float pasteTime = notify.NormalizedTime;
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Copy Notify"), false, () =>
+            {
+                _notifyClipboard = CloneNotify(notify);
+            });
+            if (_notifyClipboard != null)
+            {
+                menu.AddItem(
+                    new GUIContent($"Paste {_notifyClipboard.Type} Notify Here"),
+                    false, () => PasteNotify(clipIndex, pasteTime));
+            }
+            else
+            {
+                menu.AddDisabledItem(new GUIContent("Paste Notify Here"));
+            }
+            menu.ShowAsContext();
+        }
+
         private static readonly Color HitColor =
             new Color(1f, 0.25f, 0.12f, 0.95f);
         private static readonly Color HitRangeColor =
@@ -1049,15 +1154,18 @@ namespace ZZZ.Editor.AnimationTool
 
         private void OnSceneGUI(SceneView sceneView)
         {
-            if (_target == null || _config == null) return;
+            if (!_showHitPreviewGizmos || _target == null || _config == null) return;
             if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return;
 
             TrackClip clip = _config.Clips[_notifyClipIdx];
             if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
 
             TrackNotify notify = clip.Notifies[_selectedNotify];
-            HitData hit = notify?.Payload is HitNotifyPayload ? notify.Hit : null;
-            if (hit == null) return;
+            HitData hit = notify?.Payload is HitNotifyPayload
+                || notify?.Payload is EffectNotifyPayload
+                ? notify.Hit
+                : null;
+            if (hit == null || !hit.ShowGizmo) return;
 
             Transform origin = ResolveHitPreviewOrigin(notify);
             if (origin == null) return;
@@ -1078,9 +1186,9 @@ namespace ZZZ.Editor.AnimationTool
                     FxPreviewAtom atom = _fxAtoms[i];
                     if (!string.Equals(atom.Entry.BindingKey?.Trim(),
                             notify.Hit.EffectKey, StringComparison.Ordinal)
-                        || atom.Root == null
-                        || !atom.Root.activeInHierarchy)
+                        || atom.Root == null)
                         continue;
+                    if (!atom.Root.activeInHierarchy) PlaceFxAtom(atom);
                     return atom.Root.transform;
                 }
                 return null;
@@ -1110,6 +1218,14 @@ namespace ZZZ.Editor.AnimationTool
             if (notify.IsInterval)
                 return Mathf.InverseLerp(
                     notify.NormalizedTime, notify.EndNormalizedTime, normalizedTime);
+
+            if (notify.Payload is EffectNotifyPayload && notify.Hit != null)
+            {
+                float clipDuration = clip.Clip.length / Mathf.Max(0.01f, clip.Speed);
+                float elapsed = Mathf.Max(
+                    0f, (normalizedTime - notify.NormalizedTime) * clipDuration);
+                return Mathf.Clamp01(elapsed / notify.Hit.Duration);
+            }
 
             return 0f;
         }
@@ -1146,6 +1262,18 @@ namespace ZZZ.Editor.AnimationTool
                         DrawWireSphere(
                             center, rotation, Mathf.Max(0f, hit.EvaluateRadius(progress)));
                         break;
+                    case HitShape.ExpandingCone:
+                        using (new Handles.DrawingScope(HitRangeColor))
+                        {
+                            DrawWireCone(
+                                center, rotation, hit.StartRadius, hit.Angle);
+                            DrawWireCone(
+                                center, rotation, hit.EndRadius, hit.Angle);
+                        }
+                        DrawWireCone(
+                            center, rotation,
+                            Mathf.Max(0f, hit.EvaluateRadius(progress)), hit.Angle);
+                        break;
                 }
             }
         }
@@ -1162,6 +1290,8 @@ namespace ZZZ.Editor.AnimationTool
                 HitShape.Capsule => $"r {hit.Radius:0.00} / len {hit.Length:0.00}",
                 HitShape.ExpandingSphere =>
                     $"{hit.StartRadius:0.00} -> {hit.EndRadius:0.00}",
+                HitShape.ExpandingCone =>
+                    $"{hit.StartRadius:0.00} -> {hit.EndRadius:0.00} / {hit.Angle:0.#} deg",
                 _ => "",
             };
             Handles.Label(center + Vector3.up * size * 0.35f,
@@ -1211,6 +1341,7 @@ namespace ZZZ.Editor.AnimationTool
                     }
                     break;
                 case HitShape.ExpandingSphere:
+                case HitShape.ExpandingCone:
                     using (new Handles.DrawingScope(new Color(1f, 0.75f, 0.1f, 1f)))
                     {
                         EditorGUI.BeginChangeCheck();

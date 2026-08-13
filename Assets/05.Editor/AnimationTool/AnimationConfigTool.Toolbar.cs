@@ -41,6 +41,15 @@ namespace ZZZ.Editor.AnimationTool
                 _serializedConfig = _config != null ? new SerializedObject(_config) : null;
             }
 
+            bool previousHitGizmos = _showHitPreviewGizmos;
+            _showHitPreviewGizmos = GUILayout.Toggle(
+                _showHitPreviewGizmos,
+                new GUIContent("Hit Gizmos",
+                    "모든 Hit 기즈모 표시를 한 번에 켜거나 끕니다. 개별 Hit의 Show Gizmo 값은 유지됩니다."),
+                "Button", GUILayout.Width(82f));
+            if (_showHitPreviewGizmos != previousHitGizmos)
+                SceneView.RepaintAll();
+
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("New", GUILayout.Width(44)))
             {

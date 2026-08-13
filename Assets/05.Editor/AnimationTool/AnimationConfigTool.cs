@@ -13,6 +13,7 @@ namespace ZZZ.Editor.AnimationTool
         // [SerializeField] = Play 진입 시 도메인 리로드 후에도 선택 상태 유지
         [SerializeField] private GameObject      _target;
         [SerializeField] private AnimationConfig _config;
+        [SerializeField] private bool _showHitPreviewGizmos = true;
         private SerializedObject _serializedConfig;
 
         // ── 이펙트 프리뷰 활성 상태 ────────────────────────────────
@@ -249,7 +250,7 @@ namespace ZZZ.Editor.AnimationTool
         {
             get
             {
-                if (_config == null || _comboMode) return false;
+                if (_config == null) return false;
                 if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return false;
                 var clip = _config.Clips[_notifyClipIdx];
                 if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return false;
@@ -275,7 +276,21 @@ namespace ZZZ.Editor.AnimationTool
                 _fxPreviewClipIdx = _notifyClipIdx;
                 _fxPreviewNotifyIdx = _selectedNotify;
                 _fxDirty = true;
-                if (!EditorApplication.isPlaying) SampleAtTime(_trackTime, false);   // 즉시 한 번 스폰/샘플
+                if (!EditorApplication.isPlaying)
+                {
+                    if (_comboMode && _comboActiveClip >= 0
+                        && _comboActiveClip < _config.Clips.Count)
+                    {
+                        TrackClip activeClip = _config.Clips[_comboActiveClip];
+                        float comboTime = GetClipStartTime(_comboActiveClip)
+                            + _comboClipTime / Mathf.Max(0.01f, activeClip.Speed);
+                        UpdateEffectPreview(comboTime);
+                    }
+                    else
+                    {
+                        SampleAtTime(_trackTime, false);
+                    }
+                }
             }
             else
             {
