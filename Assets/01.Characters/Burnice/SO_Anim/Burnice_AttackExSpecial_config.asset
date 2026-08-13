@@ -374,7 +374,7 @@ MonoBehaviour:
           _originTracking: 0
           _socket: 
           _effectKey: Eff_FireBeam_Ex01_R
-          _positionOffset: {x: 0, y: 0, z: -0.5}
+          _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 4
           _radius: 1.5
