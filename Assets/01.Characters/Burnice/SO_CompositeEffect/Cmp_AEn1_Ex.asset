@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+    BindingKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -28,6 +29,7 @@ MonoBehaviour:
     IgnoreSocketRotation: 0
     Modules:
     - rid: 6745857424160194630
+    - rid: 986220445156769861
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -45,6 +47,12 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 986220445156769861
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.50637513
+        _playbackSpeed: 1
+        _startLifetime: 0
     - rid: 6745857424160194630
       type: {class: BakeToWorldEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
       data:

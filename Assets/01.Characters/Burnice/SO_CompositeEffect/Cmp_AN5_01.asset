@@ -14,18 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+    BindingKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
-    Duration: 0.5
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.5
-    Socket:
+    StartLifetime: 0
+    Socket: 
     PositionOffset: {x: 0, y: 0.5, z: 0.8}
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
     FollowSpawner: 1
     ParentToSpawnerRoot: 0
     IgnoreSocketRotation: 0
+    Modules:
+    - rid: 986220427068833871
     Despawn: 0
     Lifetime: 0
     ParamOverrides:
@@ -46,11 +49,12 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
+    BindingKey: 
     StartDelay: 0.085
     MaterialOverride: {fileID: 0}
-    Duration: 0.1
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.1
+    StartLifetime: 0
     Socket: FX_L_Weapon
     PositionOffset: {x: 0, y: 0.3, z: -0.1}
     EulerOffset: {x: -30, y: -10, z: 0}
@@ -58,6 +62,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 986220427068833872
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -73,11 +79,12 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
+    BindingKey: 
     StartDelay: 0.085
     MaterialOverride: {fileID: 0}
-    Duration: 0.1
+    Duration: 0
     PlaybackSpeed: 1
-    StartLifetime: 0.1
+    StartLifetime: 0
     Socket: FX_R_Weapon
     PositionOffset: {x: 0, y: 0.3, z: -0.1}
     EulerOffset: {x: -30, y: 10, z: 0}
@@ -85,6 +92,8 @@ MonoBehaviour:
     FollowSpawner: 0
     ParentToSpawnerRoot: 1
     IgnoreSocketRotation: 1
+    Modules:
+    - rid: 986220427068833873
     Despawn: 0
     Lifetime: 0
     ParamOverrides: []
@@ -99,3 +108,24 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 986220427068833871
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.5
+        _playbackSpeed: 1
+        _startLifetime: 0.5
+    - rid: 986220427068833872
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.1
+        _playbackSpeed: 1
+        _startLifetime: 0.1
+    - rid: 986220427068833873
+      type: {class: ParticlePlaybackEffectModule, ns: ZZZ.Effects, asm: Assembly-CSharp}
+      data:
+        _duration: 0.1
+        _playbackSpeed: 1
+        _startLifetime: 0.1

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
   - Prefab: {fileID: 8974169409375155309, guid: 3c79477f966537343b1ab0d814733c58, type: 3}
+    BindingKey: Eff_FireBeam_Ex01_R
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -43,6 +44,7 @@ MonoBehaviour:
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
   - Prefab: {fileID: 8974169409375155309, guid: 3c79477f966537343b1ab0d814733c58, type: 3}
+    BindingKey: Eff_FireBeam_Ex01_L
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0

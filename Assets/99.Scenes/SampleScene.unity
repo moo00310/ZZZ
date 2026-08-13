@@ -1098,7 +1098,7 @@ MonoBehaviour:
   _hitConfig: {fileID: 11400000, guid: 381e0531cf34d6f448443b287ff7650d, type: 2}
   _hitFrontSection: Hit_Stay
   _hitBackSection: Hit_Stay
-  _hitStunCooldown: 0.1
+  _hitStunCooldown: 0.05
 --- !u!114 &919132148190397885
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1113,6 +1113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Combat.HitTarget
   _maxHp: 100
   _team: 2
+  _trainingDummy: 1
 --- !u!114 &919132148190397886
 MonoBehaviour:
   m_ObjectHideFlags: 0
