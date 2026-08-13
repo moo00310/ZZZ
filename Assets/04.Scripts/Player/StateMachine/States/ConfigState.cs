@@ -24,6 +24,7 @@ namespace ZZZ.Player.StateMachine.States
         // 구간(Interval) 이펙트의 활성 핸들 — 단발이거나 미진행이면 null. _notifyFired와 인덱스 정렬, 섹션 스코프.
         private EffectHandle[]  _notifyActive;
         private HitHandle[]     _hitActive;
+        private bool[]          _hitSyncPending;
         private EffectTransitionMode[] _notifyTransitionModes;
         private string[]        _notifyNextSections;
         private readonly List<EffectHandle> _carriedEffects = new List<EffectHandle>();
@@ -35,6 +36,7 @@ namespace ZZZ.Player.StateMachine.States
         private sealed class PendingNextEffect
         {
             public CompositeEffect Effect;
+            public HitData Hit;
             public string NextSection;
         }
 
@@ -325,6 +327,7 @@ namespace ZZZ.Player.StateMachine.States
                 _notifyActive = new EffectHandle[tc.Notifies.Count];
             }
             _hitActive = new HitHandle[tc.Notifies.Count];
+            _hitSyncPending = new bool[tc.Notifies.Count];
             for (int i = 0; i < tc.Notifies.Count; i++)
             {
                 if (!preserveEffectState) continue;
@@ -383,6 +386,11 @@ namespace ZZZ.Player.StateMachine.States
                     _notifyFired[i] = true;
                     if (notify.Payload is HitNotifyPayload hitPayload)
                     {
+                        if (hitPayload.SyncWithEffect)
+                        {
+                            _hitSyncPending[i] = !TryAttachHitToEffect(hitPayload.Hit);
+                            continue;
+                        }
                         var hitContext = new HitExecutionContext(
                             Ctx.Transform, null, _effectBindings,
                             _showHitGizmos, _hitGizmoDuration);
@@ -401,6 +409,10 @@ namespace ZZZ.Player.StateMachine.States
                     if (notify.Payload is EffectNotifyPayload && handle != null)
                         _notifyActive[i] = handle;
                 }
+
+                if (_hitSyncPending != null && _hitSyncPending[i]
+                    && notify.Payload is HitNotifyPayload pendingHit)
+                    _hitSyncPending[i] = !TryAttachHitToEffect(pendingHit.Hit);
 
                 if (_hitActive != null && _hitActive[i] != null)
                 {
@@ -433,6 +445,14 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
+        private bool TryAttachHitToEffect(HitData hit)
+        {
+            if (hit == null || hit.Origin != HitOrigin.Effect) return false;
+            return _effectBindings.TryAttachHit(
+                hit.EffectKey, hit, Ctx.Transform,
+                _showHitGizmos, _hitGizmoDuration);
+        }
+
         // 이펙트 재생이면 정지용 EffectHandle을 돌려준다(구간 이펙트만 사용). 그 외/단발은 null.
         private EffectHandle DispatchNotify(TrackNotify notify)
         {
@@ -443,7 +463,8 @@ namespace ZZZ.Player.StateMachine.States
                         return EffectService.PlayAfterAnimation(
                             effectPayload.Effect,
                             EffectPlayContext.ForCharacter(
-                                Ctx.Transform, null, _effectBindings),
+                                Ctx.Transform, effectPayload.Hit, _effectBindings,
+                                _showHitGizmos, _hitGizmoDuration),
                             true);
                     return null;
                 case EventNotifyPayload eventPayload:
@@ -464,6 +485,7 @@ namespace ZZZ.Player.StateMachine.States
             _pendingNextEffects.Add(new PendingNextEffect
             {
                 Effect = payload.Effect,
+                Hit = payload.Hit,
                 NextSection = payload.NextSection,
             });
             return null;
@@ -482,7 +504,8 @@ namespace ZZZ.Player.StateMachine.States
                 EffectHandle handle = EffectService.PlayAfterAnimation(
                     pending.Effect,
                     EffectPlayContext.ForCharacter(
-                        Ctx.Transform, null, _effectBindings),
+                        Ctx.Transform, pending.Hit, _effectBindings,
+                        _showHitGizmos, _hitGizmoDuration),
                     true);
                 if (handle != null) _carriedEffects.Add(handle);
                 _pendingNextEffects.RemoveAt(i);
@@ -545,6 +568,7 @@ namespace ZZZ.Player.StateMachine.States
             _effectBindings.Clear();
             _notifyFired = null;
             _hitActive = null;
+            _hitSyncPending = null;
             _notifyTransitionModes = null;
             _notifyNextSections = null;
             Ctx.Mover.ClearWarpTarget();

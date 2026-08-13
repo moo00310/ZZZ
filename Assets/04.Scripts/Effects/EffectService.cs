@@ -10,21 +10,29 @@ namespace ZZZ.Effects
         public Transform CharacterRoot { get; }
         public HitData Hit             { get; }
         public EffectBindingScope Bindings { get; }
+        public bool DebugDraw { get; }
+        public float DebugDuration { get; }
 
         public EffectPlayContext(
             Transform spawner, Transform characterRoot, HitData hit = null,
-            EffectBindingScope bindings = null)
+            EffectBindingScope bindings = null, bool debugDraw = false,
+            float debugDuration = 0.1f)
         {
             Spawner       = spawner;
             CharacterRoot = characterRoot;
             Hit           = hit;
             Bindings      = bindings;
+            DebugDraw     = debugDraw;
+            DebugDuration = Mathf.Max(0f, debugDuration);
         }
 
         public static EffectPlayContext ForCharacter(
             Transform characterRoot, HitData hit = null,
-            EffectBindingScope bindings = null) =>
-            new EffectPlayContext(characterRoot, characterRoot, hit, bindings);
+            EffectBindingScope bindings = null, bool debugDraw = false,
+            float debugDuration = 0.1f) =>
+            new EffectPlayContext(
+                characterRoot, characterRoot, hit, bindings,
+                debugDraw, debugDuration);
     }
 
     public sealed class EffectBindingScope : IHitOriginResolver
@@ -33,13 +41,15 @@ namespace ZZZ.Effects
         {
             public int Id;
             public Transform Origin;
+            public PooledEffectHandle Handle;
         }
 
         private readonly Dictionary<string, List<Binding>> _bindings =
             new Dictionary<string, List<Binding>>(System.StringComparer.Ordinal);
         private int _nextId;
 
-        internal int Register(string key, Transform origin)
+        internal int Register(
+            string key, Transform origin, PooledEffectHandle handle)
         {
             key = Normalize(key);
             if (string.IsNullOrEmpty(key) || origin == null) return 0;
@@ -51,8 +61,31 @@ namespace ZZZ.Effects
 
             int id = ++_nextId;
             if (id == 0) id = ++_nextId;
-            list.Add(new Binding { Id = id, Origin = origin });
+            list.Add(new Binding { Id = id, Origin = origin, Handle = handle });
             return id;
+        }
+
+        internal bool TryAttachHit(
+            string key, HitData hit, Transform source,
+            bool debugDraw, float debugDuration)
+        {
+            key = Normalize(key);
+            if (hit == null || source == null || string.IsNullOrEmpty(key)
+                || !_bindings.TryGetValue(key, out List<Binding> list)) return false;
+
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                Binding binding = list[i];
+                if (binding.Origin != null
+                    && binding.Origin.gameObject.activeInHierarchy
+                    && binding.Handle != null)
+                    return binding.Handle.AttachSynchronizedHit(
+                        hit, source, debugDraw, debugDuration);
+
+                list.RemoveAt(i);
+            }
+            if (list.Count == 0) _bindings.Remove(key);
+            return false;
         }
 
         internal void Unregister(string key, int id)
@@ -209,7 +242,17 @@ namespace ZZZ.Effects
             handle.Bind(pool, entry);
 
             instance.SetActive(true);
-            handle.NotifyPlaybackStarted(context, entry.BindingKey);
+            HitData entryHit = context.Hit != null
+                && !string.IsNullOrEmpty(context.Hit.EffectKey)
+                && string.Equals(
+                    context.Hit.EffectKey, entry.BindingKey?.Trim(),
+                    System.StringComparison.Ordinal)
+                ? context.Hit
+                : null;
+            var entryContext = new EffectPlayContext(
+                context.Spawner, context.CharacterRoot, entryHit,
+                context.Bindings, context.DebugDraw, context.DebugDuration);
+            handle.NotifyPlaybackStarted(entryContext, entry.BindingKey);
             RestartParticles(instance);
             return handle;
         }

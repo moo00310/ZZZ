@@ -24,7 +24,7 @@ namespace ZZZ.Monster
         // 인터럽트 직후 이 시간 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지).
         // 데미지(HP 감소)는 매 히트 적용되고, '경직 모션 리셋'만 throttle한다.
         // 후속: C안(Hit config 구간별 슈퍼아머 윈도우)으로 확장 가능 — todo-monster-poise 참고.
-        [SerializeField] private float _hitStunCooldown = 0.3f;
+        [SerializeField] private float _hitStunCooldown = 0.05f;
 
         [Header("Hit Debug")]
         [Tooltip("Play 중 실제 Hit 판정과 Sweep 이동 구간을 Scene/Game View에 표시합니다. Game View의 Gizmos 버튼도 켜야 합니다.")]

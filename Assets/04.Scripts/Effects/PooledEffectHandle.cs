@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ZZZ.Combat;
 
 namespace ZZZ.Effects
 {
@@ -29,6 +30,9 @@ namespace ZZZ.Effects
         private EffectModuleRunner _moduleRunner;
         private IEffectPlaybackListener[] _playbackListeners;
         private bool _playbackActive;
+        private HitHandle _synchronizedHit;
+        private HitData _synchronizedHitDefinition;
+        private float _synchronizedHitElapsed;
         private int _bindingVersion;
         private EffectBindingScope _effectBindings;
         private string _effectBindingKey;
@@ -54,9 +58,56 @@ namespace ZZZ.Effects
             _effectBindings = context.Bindings;
             _effectBindingKey = bindingKey?.Trim() ?? "";
             if (_effectBindings != null && !string.IsNullOrEmpty(_effectBindingKey))
-                _effectBindingId = _effectBindings.Register(_effectBindingKey, transform);
+                _effectBindingId = _effectBindings.Register(
+                    _effectBindingKey, transform, this);
+            StartSynchronizedHit(context);
             for (int i = 0; i < _playbackListeners.Length; i++)
                 _playbackListeners[i].OnEffectPlay(context);
+        }
+
+        private void Update()
+        {
+            if (_synchronizedHit == null || _synchronizedHitDefinition == null) return;
+
+            _synchronizedHitElapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(
+                _synchronizedHitElapsed / _synchronizedHitDefinition.Duration);
+            _synchronizedHit.Tick(Time.deltaTime, progress);
+        }
+
+        private void StartSynchronizedHit(EffectPlayContext context)
+        {
+            StopSynchronizedHit();
+            if (context.Hit == null || context.CharacterRoot == null) return;
+            if (GetComponentInChildren<EffectHitVolume>(true) != null) return;
+
+            AttachSynchronizedHit(
+                context.Hit, context.CharacterRoot,
+                context.DebugDraw, context.DebugDuration);
+        }
+
+        internal bool AttachSynchronizedHit(
+            HitData hit, Transform source, bool debugDraw, float debugDuration)
+        {
+            if (hit == null || source == null || !gameObject.activeInHierarchy)
+                return false;
+
+            StopSynchronizedHit();
+            _synchronizedHitDefinition = hit;
+            _synchronizedHitElapsed = 0f;
+            _synchronizedHit = HitService.Begin(
+                _synchronizedHitDefinition,
+                new HitExecutionContext(
+                    source, transform, null, debugDraw, debugDuration));
+            return _synchronizedHit != null;
+        }
+
+        private void StopSynchronizedHit()
+        {
+            _synchronizedHit?.Stop();
+            _synchronizedHit = null;
+            _synchronizedHitDefinition = null;
+            _synchronizedHitElapsed = 0f;
         }
 
         // 셰이더 노브 오버라이드(MPB)용 캐시 — 프리팹의 선언(EffectParameterSet)과 대상 렌더러.
@@ -92,7 +143,7 @@ namespace ZZZ.Effects
             ApplyParticleOverrides(entry);
             float duration = EffectModuleSettings.Duration(entry);
             if (duration > 0f)
-                Invoke(nameof(StopEmitting), duration);
+                Invoke(nameof(EndPlaybackWindow), duration);
 
             if (_mode == DespawnMode.Fixed)
             {
@@ -205,6 +256,13 @@ namespace ZZZ.Effects
                 if (trailController != null) trailController.StopEmission();
         }
 
+        private void EndPlaybackWindow()
+        {
+            NotifyPlaybackStopped();
+            if (_moduleRunner != null) _moduleRunner.RequestStop();
+            StopEmitting();
+        }
+
         // 다른 ParticleSystem의 자식인 건 제외(중첩 서브이미터는 부모 정지에 딸려간다고 본다) — 남는 게 최상위.
         private List<ParticleSystem> CollectTopLevelSystems()
         {
@@ -250,6 +308,7 @@ namespace ZZZ.Effects
         private void NotifyPlaybackStopped()
         {
             ReleaseEffectBinding();
+            StopSynchronizedHit();
             if (!_playbackActive) return;
             _playbackActive = false;
             for (int i = 0; i < _playbackListeners.Length; i++)
@@ -259,6 +318,7 @@ namespace ZZZ.Effects
         private void OnDisable()
         {
             ReleaseEffectBinding();
+            StopSynchronizedHit();
         }
 
         private void ReleaseEffectBinding()

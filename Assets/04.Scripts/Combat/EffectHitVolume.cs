@@ -18,7 +18,9 @@ namespace ZZZ.Combat
             _elapsed = 0f;
             _handle = HitService.Begin(
                 _definition,
-                new HitExecutionContext(context.CharacterRoot, transform));
+                new HitExecutionContext(
+                    context.CharacterRoot, transform, null,
+                    context.DebugDraw, context.DebugDuration));
         }
 
         public void OnEffectStop()

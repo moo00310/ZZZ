@@ -15,7 +15,8 @@ namespace ZZZ
         Cone,
         Box,
         Capsule,
-        ExpandingSphere
+        ExpandingSphere,
+        ExpandingCone
     }
 
     public enum HitOrigin
@@ -23,6 +24,12 @@ namespace ZZZ
         CharacterRoot,
         Socket,
         Effect
+    }
+
+    public enum HitOriginTracking
+    {
+        Follow,
+        WorldSnapshot
     }
 
     public enum HitFrequency
@@ -43,9 +50,10 @@ namespace ZZZ
         [SerializeField, Min(0f)] private float _damage = 10f;
         [SerializeField] private AttackStrength _strength = AttackStrength.Light;
         [SerializeField] private LayerMask _targetMask = ~0;
-        [SerializeField] private bool _friendlyFire;
         [SerializeField] private bool _includeTriggers = true;
         [SerializeField] private HitOrigin _origin = HitOrigin.CharacterRoot;
+        [SerializeField] private HitOriginTracking _originTracking =
+            HitOriginTracking.Follow;
         [SerializeField] private string _socket = "";
         [SerializeField] private string _effectKey = "";
         [SerializeField] private Vector3 _positionOffset;
@@ -63,16 +71,21 @@ namespace ZZZ
         [SerializeField] private HitQueryMode _queryMode = HitQueryMode.Overlap;
         [SerializeField] private HitFrequency _frequency = HitFrequency.OncePerActivation;
         [SerializeField, Min(0.01f)] private float _repeatInterval = 0.2f;
+        [SerializeField] private bool _showGizmo = true;
 
         public float Damage { get => _damage; set => _damage = Mathf.Max(0f, value); }
         public AttackStrength Strength { get => _strength; set => _strength = value; }
         public LayerMask TargetMask { get => _targetMask; set => _targetMask = value; }
-        public bool FriendlyFire { get => _friendlyFire; set => _friendlyFire = value; }
         public bool IncludeTriggers { get => _includeTriggers; set => _includeTriggers = value; }
         public QueryTriggerInteraction TriggerInteraction => _includeTriggers
             ? QueryTriggerInteraction.Collide
             : QueryTriggerInteraction.Ignore;
         public HitOrigin Origin { get => _origin; set => _origin = value; }
+        public HitOriginTracking OriginTracking
+        {
+            get => _originTracking;
+            set => _originTracking = value;
+        }
         public string Socket { get => _socket; set => _socket = value ?? ""; }
         public string EffectKey
         {
@@ -102,6 +115,7 @@ namespace ZZZ
             get => _repeatInterval;
             set => _repeatInterval = Mathf.Max(0.01f, value);
         }
+        public bool ShowGizmo { get => _showGizmo; set => _showGizmo = value; }
 
         public HitData()
         {
@@ -113,9 +127,9 @@ namespace ZZZ
             _damage = source._damage;
             _strength = source._strength;
             _targetMask = source._targetMask;
-            _friendlyFire = source._friendlyFire;
             _includeTriggers = source._includeTriggers;
             _origin = source._origin;
+            _originTracking = source._originTracking;
             _socket = source._socket;
             _effectKey = source._effectKey;
             _positionOffset = source._positionOffset;
@@ -132,6 +146,7 @@ namespace ZZZ
             _queryMode = source._queryMode;
             _frequency = source._frequency;
             _repeatInterval = source._repeatInterval;
+            _showGizmo = source._showGizmo;
         }
 
         internal HitData(HitDefinition source)
@@ -140,9 +155,9 @@ namespace ZZZ
             _damage = source.Damage;
             _strength = source.Strength;
             _targetMask = source.TargetMask;
-            _friendlyFire = source.FriendlyFire;
             _includeTriggers = source.IncludeTriggers;
             _origin = source.Origin;
+            _originTracking = source.OriginTracking;
             _socket = source.Socket;
             _effectKey = source.EffectKey;
             _positionOffset = source.PositionOffset;
@@ -159,6 +174,7 @@ namespace ZZZ
             _queryMode = source.QueryMode;
             _frequency = source.Frequency;
             _repeatInterval = source.RepeatInterval;
+            _showGizmo = source.ShowGizmo;
         }
 
         public float EvaluateRadius(float normalizedProgress)
@@ -206,11 +222,12 @@ namespace ZZZ
 
         [Header("Target")]
         [SerializeField] private LayerMask _targetMask = ~0;
-        [SerializeField] private bool _friendlyFire;
         [SerializeField] private bool _includeTriggers = true;
 
         [Header("Origin")]
         [SerializeField] private HitOrigin _origin = HitOrigin.CharacterRoot;
+        [SerializeField] private HitOriginTracking _originTracking =
+            HitOriginTracking.Follow;
         [SerializeField] private string _socket = "";
         [SerializeField] private string _effectKey = "";
         [SerializeField] private Vector3 _positionOffset;
@@ -232,16 +249,17 @@ namespace ZZZ
         [SerializeField] private HitQueryMode _queryMode = HitQueryMode.Overlap;
         [SerializeField] private HitFrequency _frequency = HitFrequency.OncePerActivation;
         [SerializeField, Min(0.01f)] private float _repeatInterval = 0.2f;
+        [SerializeField] private bool _showGizmo = true;
 
         public float Damage => _damage;
         public AttackStrength Strength => _strength;
         public LayerMask TargetMask => _targetMask;
-        public bool FriendlyFire => _friendlyFire;
         public bool IncludeTriggers => _includeTriggers;
         public QueryTriggerInteraction TriggerInteraction => _includeTriggers
             ? QueryTriggerInteraction.Collide
             : QueryTriggerInteraction.Ignore;
         public HitOrigin Origin => _origin;
+        public HitOriginTracking OriginTracking => _originTracking;
         public string Socket => _socket;
         public string EffectKey => _effectKey;
         public Vector3 PositionOffset => _positionOffset;
@@ -259,6 +277,7 @@ namespace ZZZ
         public HitQueryMode QueryMode => _queryMode;
         public HitFrequency Frequency => _frequency;
         public float RepeatInterval => _repeatInterval;
+        public bool ShowGizmo => _showGizmo;
 
         public HitData CreateDataCopy() => new HitData(this);
 

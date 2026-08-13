@@ -8,6 +8,8 @@ namespace ZZZ.Combat
     {
         [SerializeField] private float _maxHp = 100f;
         [SerializeField] private CombatTeam _team = CombatTeam.Enemy;
+        [Tooltip("켜면 HP가 0이 되는 즉시 최대 HP로 복구되어 연속 Hit 테스트가 끊기지 않습니다.")]
+        [SerializeField] private bool _trainingDummy;
 
         public float CurrentHp { get; private set; }
         public float MaxHp     => _maxHp;
@@ -55,7 +57,14 @@ namespace ZZZ.Combat
             PlayHitFlash();
 
             if (CurrentHp <= 0f)
+            {
+                if (_trainingDummy)
+                {
+                    CurrentHp = _maxHp;
+                    return;
+                }
                 Die();
+            }
         }
 
         private void Die()

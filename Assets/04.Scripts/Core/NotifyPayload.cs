@@ -51,6 +51,7 @@ namespace ZZZ
     public sealed class HitNotifyPayload : NotifyPayload
     {
         [SerializeField] private HitData _hit = new HitData();
+        [SerializeField] private bool _syncWithEffect;
 
         public override NotifyType Type => NotifyType.Hit;
         public HitData Hit
@@ -58,14 +59,20 @@ namespace ZZZ
             get => _hit ??= new HitData();
             set => _hit = value ?? new HitData();
         }
+        public bool SyncWithEffect
+        {
+            get => _syncWithEffect;
+            set => _syncWithEffect = value;
+        }
 
         public HitNotifyPayload()
         {
         }
 
-        public HitNotifyPayload(HitData hit)
+        public HitNotifyPayload(HitData hit, bool syncWithEffect = false)
         {
             _hit = hit ?? new HitData();
+            _syncWithEffect = syncWithEffect;
         }
     }
 

@@ -26,12 +26,12 @@ namespace ZZZ.Combat
         internal static bool Query(HitHandle handle, float normalizedProgress)
         {
             HitData definition = handle.Definition;
-            Transform origin = handle.ResolveOrigin();
-            if (definition == null || origin == null) return false;
-
-            Quaternion rotation = origin.rotation * definition.RotationOffset;
-            Vector3 center = origin.TransformPoint(definition.PositionOffset);
-            float currentRadius = definition.Shape == HitShape.ExpandingSphere
+            if (definition == null
+                || !handle.TryResolvePose(out Vector3 center,
+                    out Quaternion rotation)) return false;
+            bool expanding = definition.Shape == HitShape.ExpandingSphere
+                || definition.Shape == HitShape.ExpandingCone;
+            float currentRadius = expanding
                 ? Mathf.Max(0f, definition.EvaluateRadius(normalizedProgress))
                 : definition.Radius;
 
@@ -55,7 +55,7 @@ namespace ZZZ.Combat
                     definition, center, rotation, currentRadius,
                     handle.HasPreviousPose, handle.PreviousCenter,
                     handle.PreviousRotation, handle.PreviousRadius,
-                    handle.DebugDuration);
+                    handle.DebugDuration, handle.HasAcceptedHit);
 
             handle.SetPreviousPose(center, rotation, currentRadius);
             return true;
@@ -131,7 +131,8 @@ namespace ZZZ.Combat
             HitData definition = handle.Definition;
             Vector3 hitPoint = hitCollider.ClosestPoint(center);
             Vector3 toTarget = hitPoint - center;
-            if (definition.Shape == HitShape.Cone)
+            if (definition.Shape == HitShape.Cone
+                || definition.Shape == HitShape.ExpandingCone)
             {
                 bool insideCurrent = IsInsideCone(
                     rotation * Vector3.forward, toTarget, definition.Angle);
@@ -192,8 +193,7 @@ namespace ZZZ.Combat
             if (target == null || target.HitTransform == null) return false;
             if (target.HitTransform == handle.Source
                 || target.HitTransform.IsChildOf(handle.Source)) return false;
-            if (!handle.Definition.FriendlyFire
-                && handle.SourceTeam != CombatTeam.Neutral
+            if (handle.SourceTeam != CombatTeam.Neutral
                 && target.Team == handle.SourceTeam) return false;
             return !handle.HasStruck(target);
         }
@@ -215,6 +215,9 @@ namespace ZZZ.Combat
     {
         private static readonly Color CurrentColor = new Color(1f, 0.2f, 0.1f, 1f);
         private static readonly Color SweepColor = new Color(1f, 0.75f, 0.1f, 0.8f);
+        private static readonly Color ConnectedColor = new Color(0.15f, 1f, 0.25f, 1f);
+        private static readonly Color ConnectedSweepColor =
+            new Color(0.25f, 1f, 0.65f, 0.85f);
         private static readonly Vector3[] BoxCorners = new Vector3[8];
         private static Vector3 s_lineRight;
         private static Vector3 s_lineUp;
@@ -223,7 +226,8 @@ namespace ZZZ.Combat
         internal static void Draw(
             HitData definition, Vector3 center, Quaternion rotation,
             float radius, bool hasPreviousPose, Vector3 previousCenter,
-            Quaternion previousRotation, float previousRadius, float duration)
+            Quaternion previousRotation, float previousRadius, float duration,
+            bool hasAcceptedHit)
         {
             Camera camera = Camera.main;
             if (camera != null)
@@ -240,12 +244,14 @@ namespace ZZZ.Combat
                 s_lineUp = Vector3.up * 0.01f;
             }
 
-            DrawShape(definition, center, rotation, radius, CurrentColor, duration);
+            Color currentColor = hasAcceptedHit ? ConnectedColor : CurrentColor;
+            Color sweepColor = hasAcceptedHit ? ConnectedSweepColor : SweepColor;
+            DrawShape(definition, center, rotation, radius, currentColor, duration);
             if (definition.QueryMode != HitQueryMode.Sweep || !hasPreviousPose) return;
 
-            DrawLine(previousCenter, center, SweepColor, duration);
+            DrawLine(previousCenter, center, sweepColor, duration);
             DrawShape(definition, previousCenter, previousRotation,
-                previousRadius, SweepColor, duration);
+                previousRadius, sweepColor, duration);
         }
 
         private static void DrawShape(
@@ -259,7 +265,8 @@ namespace ZZZ.Combat
                     DrawSphere(center, rotation, radius, color, duration);
                     break;
                 case HitShape.Cone:
-                    DrawCone(center, rotation, definition.Radius,
+                case HitShape.ExpandingCone:
+                    DrawCone(center, rotation, radius,
                         definition.Angle, color, duration);
                     break;
                 case HitShape.Box:
@@ -392,6 +399,9 @@ namespace ZZZ.Combat
         private float _nextRepeatTime;
         private bool _stopped;
         private bool _hasSampled;
+        private bool _hasOriginSnapshot;
+        private Vector3 _snapshotCenter;
+        private Quaternion _snapshotRotation;
         private readonly HitExecutionContext _context;
 
         internal HitData Definition { get; }
@@ -401,9 +411,10 @@ namespace ZZZ.Combat
         internal bool HasPreviousPose { get; private set; }
         internal Vector3 PreviousCenter { get; private set; }
         internal Quaternion PreviousRotation { get; private set; }
-        internal bool DebugDraw => _context.DebugDraw;
+        internal bool DebugDraw => _context.DebugDraw && Definition.ShowGizmo;
         internal float DebugDuration => _context.DebugDuration;
         public bool HasSampled => _hasSampled;
+        internal bool HasAcceptedHit { get; private set; }
 
         internal HitHandle(HitData definition, HitExecutionContext context)
         {
@@ -443,7 +454,11 @@ namespace ZZZ.Combat
         }
 
         internal bool HasStruck(IHittable target) => _struck.Contains(target);
-        internal void MarkStruck(IHittable target) => _struck.Add(target);
+        internal void MarkStruck(IHittable target)
+        {
+            _struck.Add(target);
+            HasAcceptedHit = true;
+        }
         internal void SetPreviousPose(
             Vector3 center, Quaternion rotation, float radius)
         {
@@ -452,7 +467,35 @@ namespace ZZZ.Combat
             PreviousRadius = radius;
             HasPreviousPose = true;
         }
-        internal Transform ResolveOrigin() =>
-            HitService.ResolveOrigin(Definition, _context);
+        internal bool TryResolvePose(out Vector3 center, out Quaternion rotation)
+        {
+            bool snapshot = (Definition.Origin == HitOrigin.CharacterRoot
+                    || Definition.Origin == HitOrigin.Socket)
+                && Definition.OriginTracking == HitOriginTracking.WorldSnapshot;
+            if (snapshot && _hasOriginSnapshot)
+            {
+                center = _snapshotCenter;
+                rotation = _snapshotRotation;
+                return true;
+            }
+
+            Transform origin = HitService.ResolveOrigin(Definition, _context);
+            if (origin == null)
+            {
+                center = default;
+                rotation = default;
+                return false;
+            }
+
+            center = origin.TransformPoint(Definition.PositionOffset);
+            rotation = origin.rotation * Definition.RotationOffset;
+            if (snapshot)
+            {
+                _snapshotCenter = center;
+                _snapshotRotation = rotation;
+                _hasOriginSnapshot = true;
+            }
+            return true;
+        }
     }
 }
