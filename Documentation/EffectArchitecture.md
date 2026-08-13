@@ -81,7 +81,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 | `Prefab` | 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 번들) |
 | `BindingKey` | 같은 캐릭터의 Hit Notify가 실제 실행 중인 Entry Transform을 찾는 선택적 키 |
 | `StartDelay` | 이 조합 안에서의 상대 시차(초) |
-| `Duration` | 방출 지속(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 **방출만 멈추고** 잔여 파티클은 자연 소멸 → `ParticleStopped`면 이어서 자동 반납. **Looping 이펙트를 조합마다 다른 길이로** 쓸 수 있다 |
+| `Duration` | 활성 재생 구간(초). 0 = 프리팹 원래 길이. 지정하면 그 시점에 모듈 종료와 Hit 연동을 먼저 끝내고 방출을 멈춘다. 잔여 파티클은 자연 소멸하며 `ParticleStopped`면 이어서 자동 반납된다. **Looping 이펙트를 조합마다 다른 길이로** 쓸 수 있다 |
 | `PlaybackSpeed` | 재생 속도 배율 — 프리팹에 구운 `simulationSpeed`에 곱해진다(원본은 캐시로 보존, 풀 재사용 시 매 재생 재적용). 전체 길이도 1/배율로 축소 |
 | `StartLifetime` | 파티클 Start Lifetime(초) 오버라이드. **0 = 프리팹 기본값**(안 덮음), >0이면 덮어써 나오고 사라지는 전체 속도 조절(작을수록 빠른 번쩍). `Duration`과 같은 '0=중립' 규칙이라 토글 없는 일반 필드 |
 | `MaterialOverride` | 렌더러 `sharedMaterial`을 조합마다 통째 스왑(텍스처+색+파라미터+블렌드). **null = 프리팹 기본**. 참조 스왑이라 인스턴스화/GC 없음 — [조합별 오버라이드](#조합별-오버라이드--노브-3층) 참조 |
@@ -234,7 +234,7 @@ FireNotifies (ConfigState, 매 프레임)
 
 핸들은 반납 외에 **Entry별 재생 제어**도 담당한다 — 풀 인스턴스가 Entry 간 공유되므로, Entry마다 달라지는
 값은 매 `Bind`에서 적용한다: `PlaybackSpeed`(프리팹 원본 `simulationSpeed` 캐시 × 배율),
-`Duration`(경과 시 `Stop(StopEmitting)` — 방출만 끊고 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결),
+`Duration`(경과 시 재생 리스너와 모듈에 종료를 알리고 `Stop(StopEmitting)` — 잔여 파티클은 자연 소멸 → `ParticleStopped` 반납으로 연결),
 셰이더 노브 MPB(아래 [셰이더 노브 오버라이드](#셰이더-노브-오버라이드--조합별-룩)). 구간 이펙트의 외부 정지 진입점
 `StopWindowed()`도 여기 있다 — `EffectHandle.Stop()`이 불러 방출만 멈춘다(Fixed 모드면 방출 정지 후 즉시 반납).
 
@@ -564,13 +564,29 @@ Animation Tool의 모듈 프리뷰는 Clear 후 첫 시뮬레이션 스텝에서
 
 ---
 
+## Effect와 Hit 생명주기 연동
+
+기본 공격 판정은 별도의 Hit Notify가 데이터를 소유하고 `BindingKey`로 이펙트 원점만 참조한다.
+클립을 넘어가는 이펙트와 판정 생명주기를 완전히 묶어야 할 때는 Effect Notify의
+`Sync Hit With Effect`를 사용한다. 이 경우 Effect Notify가 `HitData`를 함께 소유하며,
+`HitData.EffectKey`와 Entry의 `BindingKey`가 같은 실제 풀 인스턴스 하나에서 판정이 시작된다.
+Entry의 `PooledEffectHandle`이 정지되거나 풀에 반납될 때 판정도 종료되므로 `Stop`/`Next` 정책으로
+다음 섹션에 이월된 이펙트도 판정을 유지한다. 확장형 판정의 진행도는 `HitData.Duration`을 사용한다.
+Entry에 `Duration`이 지정된 경우에도 그 시점에 판정을 종료하고 `BakeToWorldEffectModule`을 실행하므로,
+소켓을 따라가던 활성 판정은 사라지고 월드 공간에 구운 파티클 꼬리만 남는다.
+
+프리팹에 기존 `EffectHitVolume`이 붙어 있으면 해당 컴포넌트가 같은 수명 연동을 담당하고,
+그렇지 않으면 `PooledEffectHandle`이 판정을 직접 구동한다.
+
+Hit 데이터를 별도 Notify에서 관리하려면 Hit Notify의 `Sync With Effect`를 사용할 수 있다.
+이 옵션은 `Origin`을 Effect로 고정하고 `Effect Key`가 가리키는 현재 풀 인스턴스에 판정을 붙인다.
+Hit Notify가 Effect보다 먼저 발동한 경우에는 같은 섹션에서 해당 Binding이 등록될 때까지 재시도하며,
+연결된 뒤에는 Effect의 정지·반납과 함께 판정을 종료한다.
+
+---
+
 ## 남은 것 / 로드맵
 
 - **구간형(지속) 노티파이** — ✅ 구현됨. `TrackNotify.EndNormalizedTime`로 `[Start, End]` 구간 유지 → [구간 이펙트](#구간interval-이펙트--시점이-아니라-start-end) 참조. 남은 건 플레이 모드 실전 검증(트레일)
 - **`SendMessage` → 이벤트 릴레이** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 캐릭터별 이벤트 릴레이(강타입 `event Action<string>`, 인스턴스 스코프)로 교체 예정 ([TODO.md](TODO.md))
 - **Addressables 전환** — 모바일 대비, 스킬 VFX를 사용 직전 로드/종료 후 Release ([TODO.md](TODO.md) 모바일 절)
-## Effect-linked hit compatibility
-
-`EffectHitVolume`과 `EffectNotifyPayload`의 기존 Hit 필드는 이전 직렬화 데이터 호환을 위해 남겨 두지만,
-Animation Tool과 `ConfigState`의 신규 실행 경로에서는 사용하지 않는다. 신규 공격은 항상 별도의
-Hit Notify가 데이터를 소유하고 `BindingKey`로 이펙트 원점만 참조한다.

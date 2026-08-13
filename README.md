@@ -60,6 +60,8 @@ AnimationConfig ── 전이, 재생 구간, 이벤트, 구간 기능
 - 플레이 중 현재 Config, Section, 입력 상태 확인
 - 애니메이션 위에서 이펙트 시점과 위치 조정
 - Hit Payload의 모양·크기·원점을 Scene View에서 편집하고 플레이 중 범위 확인
+- Notify 우클릭 복사·붙여넣기와 Hit 기즈모 일괄·개별 표시
+- 실행 중인 Effect Entry와 Hit 원점·생명주기 동기화
 
 ### EffectTool
 

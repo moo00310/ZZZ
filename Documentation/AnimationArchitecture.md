@@ -616,7 +616,7 @@ Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자�
 항상 종료하므로 판정이 다음 상태로 누수되지 않는다.
 
 `HitQueryMode.Overlap`은 매 샘플의 현재 모양만 검사하고, `Sweep`은 첫 Overlap 이후 이전 중심에서
-현재 중심까지 이동 구간도 검사한다. Sphere·Cone·ExpandingSphere는 SphereCast, Box는 BoxCast,
+현재 중심까지 이동 구간도 검사한다. Sphere·Cone·ExpandingSphere·ExpandingCone은 SphereCast, Box는 BoxCast,
 Capsule은 CapsuleCast를 사용한다. Sweep은 이전 위치가 필요한 구간형 Hit에서 의미가 있으며 단발
 Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플링 방식이고 `HitFrequency`는 같은
 대상의 재타격 정책이므로 독립적이다. 구간 중에는 매 프레임 공간을 검사하되 `OncePerActivation`은
@@ -627,10 +627,22 @@ Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플
 `HitData`를 인라인으로 저장한다. 플레이어와 몬스터의 `ConfigState`는 동일한 Payload와
 `HitService`를 사용한다.
 
-`HitOrigin.Effect`는 Effect Notify 안에 판정 데이터를 넣지 않는다. `CompositeEffectEntry.BindingKey`와
-`HitData.EffectKey`를 같은 값으로 지정하면, 캐릭터별 `EffectBindingScope`가 풀에서 실제 생성된 Entry
-인스턴스의 Transform을 Hit 원점으로 연결한다. 키가 아직 등록되지 않은 Hit은 캐릭터 루트로 대체하지
-않고 기다리며, 이펙트가 생성되면 판정을 시작한다. 섹션을 이탈하기 전까지 키가 생기지 않으면 판정하지 않는다.
+`HitOrigin.Effect`는 `CompositeEffectEntry.BindingKey`와 `HitData.EffectKey`를 같은 값으로 지정한다.
+캐릭터별 `EffectBindingScope`가 풀에서 실제 생성된 Entry Transform을 찾아 Hit 원점으로 연결하며,
+키가 없는 동안 캐릭터 루트로 대체하지 않는다.
+
+| 구성 | 판정 데이터 위치 | 수명 |
+|---|---|---|
+| 일반 Effect 원점 Hit | Hit Notify | `Hit End` 또는 섹션 이탈까지 유지하며 매 샘플 Effect Transform을 추적 |
+| `Sync With Effect` | Hit Notify | Binding이 생길 때까지 기다린 뒤 실제 Effect Entry의 정지·반납과 함께 종료 |
+| `Sync Hit With Effect` | Effect Notify | Effect 재생과 동시에 시작하며 `Stop`/`Next`로 이월된 Entry 수명까지 공유 |
+
+`HitOrigin.CharacterRoot`와 `HitOrigin.Socket`은 각각 `Root Tracking`과 `Socket Tracking`을 제공한다.
+`Follow Root`/`Follow Socket`은 구간 동안 선택한 원점의 위치와 회전을 계속 따라가고,
+`Keep World Pose`는 Hit 시작 순간에 오프셋까지 적용된 판정 위치와 회전을 월드 좌표로 저장해
+캐릭터나 소켓이 움직여도 그 자리에 유지한다. 기존 데이터의 기본값은 `Follow`이다.
+
+아군 오사는 지원하지 않는다. Source와 같은 팀의 `IHittable`은 항상 판정 대상에서 제외한다.
 
 기존 `Type/EventName/Effect/Hit` 필드는 역직렬화 호환용으로 숨겨 두었다. Animation Tool에서 에셋을
 열면 해당 Notify가 Payload로 변환되며, 전체 변환은
@@ -639,11 +651,27 @@ Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플
 Animation Tool에서 Hit Notify를 선택하면 Scene View에
 현재 판정 모양이 와이어로 표시된다. Inspector의 모양·반경·각도·크기·오프셋 값은 즉시 반영되며,
 Scene View의 위치·회전·반경·박스 크기 핸들로도 값을 편집할 수 있다. `ExpandingSphere`는 시작/종료
-반경과 현재 프리뷰 시간의 반경을 함께 표시한다. 원점이 Socket이면 프리뷰 캐릭터의 해당 Transform,
+반경과 현재 프리뷰 시간의 반경을 함께 표시하고, `ExpandingCone`은 시작/종료 사거리와 현재 사거리의
+원뿔을 함께 표시한다. 원점이 Socket이면 프리뷰 캐릭터의 해당 Transform,
 Effect이면 선택한 `Effect Key`와 일치하는 Entry의 현재 프리뷰 Transform을 기준으로 표시한다.
 
 Play 중 실제 판정은 `PlayerStateMachine` 또는 `MonsterStateMachine`의 `Hit Debug/Show Hit Gizmos`를
 켜서 확인한다. Game View에서는 상단 `Gizmos` 버튼도 켜야 한다. 빨간 선은 현재 판정 모양이고,
-노란 선과 이전 모양은 Sweep 이동 구간이다. `Hit Gizmo Duration`은 단발 선의 표시 유지 시간이다.
+노란 선과 이전 모양은 Sweep 이동 구간이다. 대상이 실제로 Hit을 `Accepted`하면 해당 판정이 끝날 때까지
+현재 모양은 초록색, Sweep 구간은 청록색으로 바뀐다. `Hit Gizmo Duration`은 단발 선의 표시 유지 시간이다.
 Play 중 옵션을 바꿔도 다음 공격부터 즉시 반영되며, Game View에서는 카메라 거리 기준의 다중선으로
-그려 단일 `Debug.DrawLine`보다 판정 외곽을 두껍게 표시한다.
+그려 단일 `Debug.DrawLine`보다 판정 외곽을 두껍게 표시한다. 각 Hit Payload의 `Show Gizmo`는
+개별 표시 스위치이며, 전역 옵션과 개별 옵션이 모두 켜진 Hit만 런타임과 Scene 미리보기에 표시된다.
+
+`HitTarget.Training Dummy`를 켜면 HP가 0이 되는 타격까지 정상 처리한 직후 최대 HP로 즉시 복구한다.
+`OnDeath`와 2초 재생성 대기를 건너뛰므로 연속 콤보의 Hit 누락 여부를 반복해서 검사할 때 사용한다.
+
+Effect와 동기화한 Hit은 `Hit End` 대신 실제 Effect Entry의 생명주기를 따른다. Effect가
+`Stop`/`Next` 전환 정책으로 다음 섹션에 Carry되면 Hit도 유지되며, EffectHandle 정지 또는 자연 소멸 후
+풀 반납 시 함께 종료된다. 확장형 판정의 성장 진행도는 `HitData.Duration`을 사용한다.
+
+타임라인의 Notify 마커 또는 Inspector의 `이 클립의 Notify` 버튼을 우클릭해 `Copy Notify`를 선택하고
+다른 섹션의 원하는 시점을 우클릭하면 복사한 Notify를 붙여넣을 수 있다. Inspector의 Notify 버튼을
+우클릭해 해당 Notify 시점에 바로 붙여넣는 것도 가능하다. 붙여넣기는 구간 길이를 유지하면서 시작 시점을 옮긴다.
+Effect 에셋 참조는 공유하지만 `HitData`와 `AnimationCurve`는 깊은 복사하므로 원본과 복사본을
+각각 조정할 수 있다.
