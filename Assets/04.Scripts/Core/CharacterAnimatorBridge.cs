@@ -1,12 +1,14 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace ZZZ.Player.StateMachine
+namespace ZZZ
 {
     // 애니메이터 얇은 래퍼 — config가 클립을 이름으로 재생(Play)하고, 피격 흔들림(additive)을 구동한다.
     // 플레이어/몬스터 공용 (IAnimatorBridge). 흔들림 State 이름만 캐릭터별로 인스펙터 설정.
     [RequireComponent(typeof(Animator))]
-    public class AnimatorBridge : MonoBehaviour, IAnimatorBridge
+    [MovedFrom(true, "ZZZ.Player.StateMachine", "Assembly-CSharp", "AnimatorBridge")]
+    public class CharacterAnimatorBridge : MonoBehaviour, IAnimatorBridge
     {
         [Header("Additive Hit Shake (layer 1)")]
         [SerializeField] private int   _additiveLayer = 1;

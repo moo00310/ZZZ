@@ -456,7 +456,7 @@ namespace ZZZ.Effects
     }
 
     // Animator가 소켓 계층에 원본 루트 이동을 임시로 쓰는 동안에는 계층에서 분리된 직전 보정 포즈를
-    // 유지하고, PlayerController가 LateUpdate에서 Bip001을 보정한 뒤 현재 소켓 포즈를 다시 복사한다.
+    // 유지하고, PlayerMotor가 LateUpdate에서 Bip001을 보정한 뒤 현재 소켓 포즈를 다시 복사한다.
     [DefaultExecutionOrder(90)]
     internal sealed class EffectSocketFollower : MonoBehaviour
     {

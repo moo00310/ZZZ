@@ -18,7 +18,7 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 0.2f)] private float _entryBlend = 0.03f;
 
         // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
-        private PlayerStateMachine _machine;
+        private PlayerActionController _controller;
         private ConfigState        _state;
         private ConfigRegistry     _registry;
         private string             _parryPrefix;  // 쳐냄 섹션 접두어 (Attack_ParryAid_ → +L/H) — ParryTrigger와 공유
@@ -26,9 +26,10 @@ namespace ZZZ.Player.StateMachine
         // 연속 피격 카운트 — hit이 아닌 상태에서 새로 맞으면 0으로 리셋.
         private int _comboHitCount;
 
-        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry, string parryPrefix)
+        public void Init(PlayerActionController controller, ConfigState state,
+            ConfigRegistry registry, string parryPrefix)
         {
-            _machine     = machine;
+            _controller  = controller;
             _state       = state;
             _registry    = registry;
             _parryPrefix = parryPrefix;
@@ -45,18 +46,18 @@ namespace ZZZ.Player.StateMachine
         //   direction : 반응 방향("Front"/"Back") → 섹션 이름에 사용
         public void Trigger(string direction = "Back")
         {
-            if (_machine.Invulnerable) return;   // 회피 i-frame 중이면 피격 무시
+            if (_controller.Invulnerable) return;   // 회피 i-frame 중이면 피격 무시
 
             // 패링 활성 중이면 피격 대신 쳐냄(deflect)으로 분기 — 적 공격 강도로 L/H 결정.
             // 카운터 follow-up은 ParryAid_L/H config의 Link(Attack=Normal → Counter)가 처리한다.
-            if (_machine.ParryActive && TryDeflect()) return;
+            if (_controller.ParryActive && TryDeflect()) return;
 
             // 등록된 config 중 이번 피격 섹션(L/H 둘 다 같은 config에 있음)을 가진 것을 찾는다.
             AnimationConfig hitConfig = _registry.FindWithSection($"Hit_L_{direction}")
                                      ?? _registry.FindWithSection($"Hit_H_{direction}");
             if (hitConfig == null)
             {
-                Debug.LogWarning($"[Hit] 'Hit_*_{direction}' 섹션을 가진 config가 없음 — PlayerStateMachine 인스펙터 'Configs' 리스트 확인", _machine);
+                Debug.LogWarning($"[Hit] 'Hit_*_{direction}' 섹션을 가진 config가 없음 — PlayerActionController 인스펙터 'Configs' 리스트 확인", _controller);
                 return;
             }
 
@@ -77,12 +78,12 @@ namespace ZZZ.Player.StateMachine
         // 패링 성공 — 적 공격 강도로 ParryAid_L/H 진입. 섹션 config가 없으면 false(일반 피격으로 폴백).
         private bool TryDeflect()
         {
-            string strength = _machine.IncomingStrength == AttackStrength.Heavy ? "H" : "L";
+            string strength = _controller.IncomingStrength == AttackStrength.Heavy ? "H" : "L";
             string section  = _parryPrefix + strength;
             var parryConfig = _registry.FindWithSection(section);
             if (parryConfig == null)
             {
-                Debug.LogWarning($"[Parry] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트 확인", _machine);
+                Debug.LogWarning($"[Parry] '{section}' 섹션을 가진 config가 없음 — PlayerActionController 'Configs' 리스트 확인", _controller);
                 return false;
             }
 

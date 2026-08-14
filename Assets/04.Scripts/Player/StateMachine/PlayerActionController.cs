@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
 using ZZZ.Combat;
 using ZZZ.Effects;
@@ -9,11 +10,11 @@ namespace ZZZ.Player.StateMachine
 {
     // 얇은 코디네이터 — config 러너(ConfigState)를 소유·구동하고, 협력 객체(입력 버퍼/트리거)를 조립한다.
     // 실제 로직은 InputBuffer / HitTrigger / DodgeTrigger / ConfigRegistry로 분리. 여기서는 조립 + facade만.
-    [RequireComponent(typeof(PlayerController))]
-    [RequireComponent(typeof(AnimatorBridge))]
-    [RequireComponent(typeof(CharacterController))]
+    [RequireComponent(typeof(PlayerMotor))]
+    [RequireComponent(typeof(CharacterAnimatorBridge))]
     [RequireComponent(typeof(PlayerResources))]
-    public class PlayerStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor,
+    [MovedFrom(true, "ZZZ.Player.StateMachine", "Assembly-CSharp", "PlayerStateMachine")]
+    public class PlayerActionController : MonoBehaviour, IConfigSignals, ILiveMonitor,
         IInputMonitor, IPlayerInputTarget, IHittable, IHitSource
     {
         [Header("Animation Config")]
@@ -45,9 +46,8 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Min(0f)] private float _hitGizmoDuration = 0.1f;
 
         private ConfigState        _state;   // 단일 config 러너 — 전이는 config가 관리
-        private PlayerStateContext _ctx;
         private InputBuffer        _input;
-        private PlayerController   _controller;
+        private PlayerMotor        _motor;
         private bool               _isRunning;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
@@ -83,20 +83,18 @@ namespace ZZZ.Player.StateMachine
 
         private void Awake()
         {
-            _controller    = GetComponent<PlayerController>();
-            var animator   = GetComponent<AnimatorBridge>();
-            var cc         = GetComponent<CharacterController>();
+            _motor         = GetComponent<PlayerMotor>();
+            var animator   = GetComponent<CharacterAnimatorBridge>();
             var resources  = GetComponent<PlayerResources>();
-            var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();   // 거리 분기용 (PlayerController.Awake 순서와 무관하게 직접 획득)
+            var sensor     = GetComponent<ZZZ.Combat.EnemySensor>();
 
-            _ctx   = new PlayerStateContext(_controller, animator, cc, transform);
-            var condCtx = new PlayerConditionContext(_ctx, this);
+            var condCtx = new PlayerConditionContext(_motor, transform, this);
             var cfgCtx  = new ConfigContext
             {
-                Mover      = _controller,
+                Mover      = _motor,
                 Animator   = animator,
                 Transform  = transform,
-                GameObject = _controller.gameObject,
+                GameObject = gameObject,
             };
             _state = new ConfigState(
                 cfgCtx, this, condCtx, _startConfig,
@@ -130,7 +128,7 @@ namespace ZZZ.Player.StateMachine
                 foreach (var c in _configs) yield return c;
         }
 
-        // Start는 모든 Awake가 끝난 뒤 실행 → AnimatorBridge._animator 초기화 보장
+        // Start는 모든 Awake가 끝난 뒤 실행 → CharacterAnimatorBridge 초기화 보장
         private void Start() => ActivateCharacter();
 
         private void Update()
@@ -184,7 +182,7 @@ namespace ZZZ.Player.StateMachine
 
         public void SetMoveInput(Vector2 input)
         {
-            if (_controller != null) _controller.SetMoveInput(input);
+            if (_motor != null) _motor.SetMoveInput(input);
         }
 
         public void BufferInput(ComboInput input)
@@ -200,7 +198,7 @@ namespace ZZZ.Player.StateMachine
         public void ClearInput()
         {
             _input?.Clear();
-            if (_controller != null) _controller.SetMoveInput(Vector2.zero);
+            if (_motor != null) _motor.SetMoveInput(Vector2.zero);
         }
 
         public void ActivateCharacter()

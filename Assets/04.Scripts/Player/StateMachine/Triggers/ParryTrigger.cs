@@ -21,14 +21,15 @@ namespace ZZZ.Player.StateMachine
         public string Prefix => _prefix;
 
         // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
-        private PlayerStateMachine _machine;
+        private PlayerActionController _controller;
         private ConfigState        _state;
         private ConfigRegistry     _registry;
         private InputBuffer        _input;
 
-        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry, InputBuffer input)
+        public void Init(PlayerActionController controller, ConfigState state,
+            ConfigRegistry registry, InputBuffer input)
         {
-            _machine  = machine;
+            _controller = controller;
             _state    = state;
             _registry = registry;
             _input    = input;
@@ -40,7 +41,7 @@ namespace ZZZ.Player.StateMachine
             var cfg = _registry.FindWithSection(section);
             if (cfg == null)
             {
-                Debug.LogWarning($"[Parry] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", _machine);
+                Debug.LogWarning($"[Parry] '{section}' 섹션을 가진 config가 없음 — PlayerActionController 'Configs' 리스트와 섹션 이름 확인", _controller);
                 return;
             }
 

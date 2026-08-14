@@ -10,12 +10,12 @@ PlayerRuntime
 ├── PlayerInput
 ├── PlayerInputRouter
 └── SquadController
-    ├── 활성 캐릭터의 PlayerStateMachine으로 입력 전달
+    ├── 활성 캐릭터의 PlayerActionController로 입력 전달
     └── 활성 캐릭터의 CameraPoint로 카메라 타깃 변경
 
 PlayableCharacter 프리팹
-├── PlayerController
-├── PlayerStateMachine
+├── PlayerMotor
+├── PlayerActionController
 └── CameraPoint
 ```
 
@@ -31,7 +31,7 @@ PlayableCharacter 프리팹
 
 ### PlayableCharacter
 
-캐릭터 프리팹에 붙는 파사드다. 해당 프리팹의 `PlayerStateMachine`과
+캐릭터 프리팹에 붙는 파사드다. 해당 프리팹의 `PlayerActionController`와
 카메라가 바라볼 `CameraPoint`를 `SquadController`에 제공한다.
 
 캐릭터별 애니메이션 설정, 이동, 자원, 전투 상태는 각 프리팹 내부에 유지한다.
@@ -45,7 +45,7 @@ PlayableCharacter 프리팹
 3. 이전 캐릭터를 비활성화한다.
 4. 이전 캐릭터의 월드 위치를 새 캐릭터에 전달한다.
 5. 새 캐릭터를 활성화하고 기본 `AnimationConfig`를 시작한다.
-6. 입력 타깃을 새 `PlayerStateMachine`으로 변경한다.
+6. 입력 타깃을 새 `PlayerActionController`로 변경한다.
 7. TPS 카메라 타깃을 새 캐릭터의 `CameraPoint`로 변경한다.
 
 현재 교체 데이터는 위치만 공유한다. 캐릭터별 회전, 자원, 콤보 상태는 각 인스턴스가
@@ -53,9 +53,9 @@ PlayableCharacter 프리팹
 
 ## 새 캐릭터 추가
 
-1. 캐릭터 루트에 `PlayerController`, `PlayerStateMachine`과 필수 의존 컴포넌트를 구성한다.
+1. 캐릭터 루트에 `PlayerMotor`, `PlayerActionController`와 필수 의존 컴포넌트를 구성한다.
 2. 루트에 `PlayableCharacter`를 추가한다.
-3. `State Machine`에 루트의 `PlayerStateMachine`을 연결한다.
+3. `Action Controller`에 루트의 `PlayerActionController`를 연결한다.
 4. 프리팹 하위에 `CameraPoint`를 만들고 `Camera Point`에 연결한다.
 5. 캐릭터를 프리팹으로 저장한다.
 6. 씬의 `PlayerRuntime > SquadController > Character Prefabs` 목록에 프리팹을 추가한다.

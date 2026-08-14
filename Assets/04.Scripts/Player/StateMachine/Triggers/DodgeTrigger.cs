@@ -6,7 +6,7 @@ namespace ZZZ.Player.StateMachine
 {
     // 회피 트리거 (push) — 어떤 config에 있든 회피 입력 시 강제 진입. 콤보보다 우선(공격 중 캔슬).
     // Hit과 같은 방식: 입력 상태로 섹션 이름(접두어+방향)을 만들고 registry에서 검색해 진입한다.
-    // 설정은 이 객체가 직접 들고(PlayerStateMachine이 [SerializeField]로 인스펙터 노출),
+    // 설정은 이 객체가 직접 들고(PlayerActionController가 [SerializeField]로 인스펙터 노출),
     // 런타임 의존(머신/상태/레지스트리/입력/자원)은 Init으로 주입한다.
     [System.Serializable]
     public class DodgeTrigger
@@ -18,16 +18,17 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 1f)] private float _reinterrupt = 0.3f;
 
         // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
-        private PlayerStateMachine _machine;
+        private PlayerActionController _controller;
         private ConfigState        _state;
         private ConfigRegistry     _registry;
         private InputBuffer        _input;
         private PlayerResources    _resources;   // 대쉬 충전/쿨 게이트 (null이면 게이트 없음)
 
-        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
+        public void Init(PlayerActionController controller, ConfigState state,
+            ConfigRegistry registry,
             InputBuffer input, PlayerResources resources)
         {
-            _machine   = machine;
+            _controller = controller;
             _state     = state;
             _registry  = registry;
             _input     = input;
@@ -49,7 +50,7 @@ namespace ZZZ.Player.StateMachine
             var cfg = _registry.FindWithSection(section);
             if (cfg == null)
             {
-                Debug.LogWarning($"[Dodge] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", _machine);
+                Debug.LogWarning($"[Dodge] '{section}' 섹션을 가진 config가 없음 — PlayerActionController 'Configs' 리스트와 섹션 이름 확인", _controller);
                 return;
             }
 
@@ -76,7 +77,7 @@ namespace ZZZ.Player.StateMachine
 
             // 방향 입력은 뒤(↓)를 포함해 모두 입력 방향으로 재조준 후 전진 회피.
             // → 카메라 뒤를 보던 중 ↓ 입력 시 그쪽으로 돌아 전진한다(백스텝으로 빠지지 않음).
-            if (_machine.IncomingAttackActive)             // 적 공격 윈도우 안 → 퍼펙트
+            if (_controller.IncomingAttackActive)          // 적 공격 윈도우 안 → 퍼펙트
                 return d == MoveDir.Left ? "Left" : "Right";
 
             return "Front";

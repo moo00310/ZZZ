@@ -1093,7 +1093,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 017a45c51d4761d4594a88d0414002d2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Monster.MonsterStateMachine
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Monster.MonsterActionController
   _idleConfig: {fileID: 11400000, guid: 21f584489d598a948ac3ef07883b30d4, type: 2}
   _hitConfig: {fileID: 11400000, guid: 381e0531cf34d6f448443b287ff7650d, type: 2}
   _hitFrontSection: Hit_Stay
@@ -1125,7 +1125,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f938fd97269f334f8cd9440d92a5fc8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Monster.MonsterController
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Monster.MonsterMotor
 --- !u!95 &919132148190397887
 Animator:
   serializedVersion: 7
@@ -1159,7 +1159,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a06b10c051756bb43a4de43c759f1619, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.StateMachine.AnimatorBridge
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.CharacterAnimatorBridge
   _additiveLayer: 1
   _shakeFade: 0.15
   _hitShakeState: Monster_Durahan_Ani_Hit_Shake

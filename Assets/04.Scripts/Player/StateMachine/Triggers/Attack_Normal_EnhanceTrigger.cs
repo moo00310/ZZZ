@@ -8,7 +8,7 @@ namespace ZZZ.Player.StateMachine
     // 강화 공격 트리거 (push) — 콤보 링크(Attack=Attack_Normal_Enhance)가 받지 못한 경우의 전역 폴백.
     // 콤보 중에는 각 공격 섹션의 Attack_Normal_Enhance 링크가 윈도우 안에서 입력을 소비해 진입하고(우선),
     // 걷기/Idle처럼 링크가 없는 상태에서는 이 트리거가 입력을 받아 강화 공격 config로 강제 진입한다.
-    // 그래서 PlayerStateMachine은 _state.Update(콤보 링크 평가) 이후 입력이 남아 있을 때만 이걸 부른다.
+    // 그래서 PlayerActionController는 _state.Update(콤보 링크 평가) 이후 입력이 남아 있을 때만 이걸 부른다.
     //
     // 진입 섹션 선택(폴백 Trigger) — 이동 입력 Forward(W) → 앞 섹션, 그 외는 전방 적과의 거리로 근/중/원 분기.
     //   전용 섹션이 config에 없으면 거리 분기로 폴백, 거리 변종이 없으면 가까운 단계로.
@@ -40,16 +40,17 @@ namespace ZZZ.Player.StateMachine
         [SerializeField, Range(0f, 1f)] private float _reinterrupt = 0.3f;
 
         // ── 런타임 의존 (직렬화 안 함, Init으로 주입) ──
-        private PlayerStateMachine _machine;
+        private PlayerActionController _controller;
         private ConfigState        _state;
         private ConfigRegistry     _registry;
         private InputBuffer        _input;
         private EnemySensor        _sensor;
 
-        public void Init(PlayerStateMachine machine, ConfigState state, ConfigRegistry registry,
+        public void Init(PlayerActionController controller, ConfigState state,
+            ConfigRegistry registry,
             InputBuffer input, EnemySensor sensor)
         {
-            _machine  = machine;
+            _controller = controller;
             _state    = state;
             _registry = registry;
             _input    = input;
@@ -62,7 +63,7 @@ namespace ZZZ.Player.StateMachine
             var    cfg     = _registry.FindWithSection(section);
             if (cfg == null)
             {
-                Debug.LogWarning($"[Attack_Normal_Enhance] '{section}' 섹션을 가진 config가 없음 — PlayerStateMachine 'Configs' 리스트와 섹션 이름 확인", _machine);
+                Debug.LogWarning($"[Attack_Normal_Enhance] '{section}' 섹션을 가진 config가 없음 — PlayerActionController 'Configs' 리스트와 섹션 이름 확인", _controller);
                 return;
             }
 
@@ -81,7 +82,7 @@ namespace ZZZ.Player.StateMachine
         // 폴백 진입 섹션: 앞(W)만 전용, 그 외는 거리 분기. 전용 섹션이 config에 없으면 거리 분기로 폴백.
         private string PickSection()
         {
-            switch (_machine.CurrentMoveDir)
+            switch (_controller.CurrentMoveDir)
             {
                 case MoveDir.Forward: return Resolve(_sectionForward) ?? PickSectionByDistance();
                 default:              return PickSectionByDistance();   // Neutral·Back·Left·Right → 거리

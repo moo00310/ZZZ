@@ -7,22 +7,25 @@ namespace ZZZ.Player.StateMachine
     // ConfigState에 ILinkConditionContext로 주입된다. 몬스터는 별도 컨텍스트를 구현해 주입한다.
     public sealed class PlayerConditionContext : ILinkConditionContext
     {
-        private readonly PlayerStateContext _ctx;
-        private readonly PlayerStateMachine _machine;
+        private readonly PlayerMotor _motor;
+        private readonly Transform _transform;
+        private readonly PlayerActionController _controller;
 
-        public PlayerConditionContext(PlayerStateContext ctx, PlayerStateMachine machine)
+        public PlayerConditionContext(
+            PlayerMotor motor, Transform transform, PlayerActionController controller)
         {
-            _ctx     = ctx;
-            _machine = machine;
+            _motor = motor;
+            _transform = transform;
+            _controller = controller;
         }
 
-        public bool       HasBufferedInput => _machine.HasBufferedInput;
-        public ComboInput BufferedInput    => _machine.BufferedInput;
-        public bool       IsHeld(ComboInput input) => _machine.IsInputHeld(input);
-        public void       ConsumeInput()   => _machine.ConsumeInput();
+        public bool       HasBufferedInput => _controller.HasBufferedInput;
+        public ComboInput BufferedInput    => _controller.BufferedInput;
+        public bool       IsHeld(ComboInput input) => _controller.IsInputHeld(input);
+        public void       ConsumeInput()   => _controller.ConsumeInput();
 
-        public MoveDir CurrentMoveDir => _ctx.Controller.CurrentMoveDir;
-        public Vector3 InputDir       => _ctx.Controller.MoveDirection;
-        public Vector3 Forward        => _ctx.Transform.forward;
+        public MoveDir CurrentMoveDir => _motor.CurrentMoveDir;
+        public Vector3 InputDir       => _motor.MoveDirection;
+        public Vector3 Forward        => _transform.forward;
     }
 }

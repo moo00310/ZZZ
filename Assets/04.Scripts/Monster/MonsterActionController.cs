@@ -1,16 +1,19 @@
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
 using ZZZ.Combat;
 using ZZZ.Player.StateMachine.States;   // ConfigState (현재 위치 — 공유 엔진. 추후 중립 네임스페이스로 이전 가능)
 
 namespace ZZZ.Monster
 {
-    // 몬스터판 PlayerStateMachine — 입력 없는 얇은 코디네이터.
+    // 플레이어의 PlayerActionController에 대응하는 입력 없는 코디네이터.
     // ConfigState(공유 엔진)를 소유·구동하고, 피격 이벤트로 Hit config에 인터럽트한다.
-    // 부품(Controller/AnimatorBridge/Context)만 몬스터 것이고 ConfigState 본체는 플레이어와 동일.
-    [RequireComponent(typeof(MonsterController))]
+    // 부품(Mover/Animator/Context)만 몬스터 것이고 ConfigState 본체는 플레이어와 동일.
+    [RequireComponent(typeof(MonsterMotor))]
     [RequireComponent(typeof(HitTarget))]
-    public class MonsterStateMachine : MonoBehaviour, IConfigSignals, ILiveMonitor, IHitSource
+    [MovedFrom(true, "ZZZ.Monster", "Assembly-CSharp", "MonsterStateMachine")]
+    public class MonsterActionController : MonoBehaviour, IConfigSignals,
+        ILiveMonitor, IHitSource
     {
         [Header("Configs")]
         [SerializeField] private AnimationConfig _idleConfig;   // 시작/복귀 기본 (home)
@@ -52,14 +55,14 @@ namespace ZZZ.Monster
 
         private void Awake()
         {
-            var controller = GetComponent<MonsterController>();
-            // Play/ApplyAnimatorSpeed만 쓰므로 AnimatorBridge를 그대로 붙여 재사용 가능
-            // (인터페이스로 받음 — 추후 MonsterAnimatorBridge로 교체해도 무영향).
+            var motor = GetComponent<MonsterMotor>();
+            // Play/ApplyAnimatorSpeed만 쓰므로 CharacterAnimatorBridge를 그대로 재사용한다.
+            // 인터페이스로 받아 캐릭터별 구현으로 교체해도 ConfigState에는 영향이 없다.
             var animator   = GetComponent<IAnimatorBridge>();
 
             var ctx = new ConfigContext
             {
-                Mover      = controller,
+                Mover      = motor,
                 Animator   = animator,
                 Transform  = transform,
                 GameObject = gameObject,
@@ -82,7 +85,7 @@ namespace ZZZ.Monster
             EffectOwnership.Unregister(this, _idleConfig, _hitConfig);
         }
 
-        // Start는 모든 Awake 이후 → AnimatorBridge 초기화 보장
+        // Start는 모든 Awake 이후 → CharacterAnimatorBridge 초기화 보장
         private void Start()  => _state.Enter();
         private void Update()
         {

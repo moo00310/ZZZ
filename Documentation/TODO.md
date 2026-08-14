@@ -54,7 +54,7 @@
 
 ## 예정 (로드맵)
 
-- [ ] **몬스터 루트모션/추격** — `MonsterController`에 플레이어와 같은 `OnAnimatorMove` 기반 `deltaPosition/deltaRotation` 처리와 워프·추격을 구현(현재 Idle+Hit 제자리 재생)
+- [ ] **몬스터 루트모션/추격** — `MonsterMotor`에 플레이어와 같은 `OnAnimatorMove` 기반 `deltaPosition/deltaRotation` 처리와 워프·추격을 구현(현재 Idle+Hit 제자리 재생)
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
 - [ ] **이펙트 시스템 잔여** — 지연 재생과 구간 이펙트 트레일의 플레이 모드 실전 검증. 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
@@ -103,7 +103,7 @@
 ### 5) GC / 런타임 메모리 (코드)
 - [ ] **`SendMessage` → 이벤트 릴레이** — `DispatchNotify`의 `default` 분기(`Ctx.GameObject.SendMessage(EventName, DontRequireReceiver)`, Camera/Sound/Custom 공용)를 **캐릭터별 이벤트 릴레이**(강타입 `event Action<string>`)로 교체. SendMessage 단점: 리플렉션 비용 / 오타 조용한 실패 / 타입 안전성 없음.
   - 왜 릴레이(전역 버스 아님): Notify 연출은 대부분 그 캐릭터 자신이 반응(피격·사운드) → 인스턴스별 릴레이면 그 캐릭터를 직접 구독해 **인스턴스 구분·`Source` 필터 불필요**, 전역 정적 상태 없음(캐릭터와 함께 GC). 제약: 데이터는 공유 SO(`TrackNotify`)라 페이로드는 문자열 `EventName` 유지(**UnityEvent 불가**).
-  - 구현: 캐릭터에 릴레이 컴포넌트(`event Action<string> OnNotify`) → `ConfigState`가 `ConfigContext`의 릴레이 참조로 발행. 구독자(사운드/카메라/피격 핸들러)는 같은 캐릭터에서 `OnEnable`/`OnDisable`로 구독·해제. `ConfigContext.GameObject`(SendMessage 전용)를 **릴레이 참조로 교체** → 설정처 `MonsterStateMachine`/`PlayerStateMachine` 2곳 수정.
+  - 구현: 캐릭터에 릴레이 컴포넌트(`event Action<string> OnNotify`) → `ConfigState`가 `ConfigContext`의 릴레이 참조로 발행. 구독자(사운드/카메라/피격 핸들러)는 같은 캐릭터에서 `OnEnable`/`OnDisable`로 구독·해제. `ConfigContext.GameObject`(SendMessage 전용)를 **릴레이 참조로 교체** → 설정처 `MonsterActionController`/`PlayerActionController` 2곳 수정.
   - 남는 숙제: 구독 리스너가 없으면 무동작 → 실제 연출 붙일 때 함께 구현. 한 이벤트를 여러 캐릭터/전역 시스템이 들어야 하면 그때 이벤트 버스·SO 이벤트 채널로 승격.
 
 ## 발견된 버그

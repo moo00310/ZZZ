@@ -5,7 +5,7 @@
 ## 입력 차단
 
 `InputBlockModule`은 지정한 normalized time 구간에서 특정 `ComboInput`을 차단한다.
-`PlayerStateMachine`은 일반 강화 공격 트리거를 실행하기 전에 현재 섹션의
+`PlayerActionController`는 일반 강화 공격 트리거를 실행하기 전에 현재 섹션의
 `ConfigState.ActiveSectionBlocks()`를 확인한다. 링크가 입력을 소비하는 것과 별개로,
 현재 동작 중 같은 입력이 전역 트리거로 빠지는 상황을 막을 때 사용한다.
 

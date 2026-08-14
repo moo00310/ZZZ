@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace ZZZ.Player
 {
     using ZZZ;
 
     [System.Flags]
-    public enum PlayerStateFlags
+    public enum PlayerMotorFlags
     {
         None           = 0,
         CodeMovement   = 1 << 0,
@@ -15,7 +16,8 @@ namespace ZZZ.Player
     }
 
     [RequireComponent(typeof(CharacterController), typeof(Animator))]
-    public class PlayerController : MonoBehaviour, IConfigMover
+    [MovedFrom(true, "ZZZ.Player", "Assembly-CSharp", "PlayerController")]
+    public class PlayerMotor : MonoBehaviour, IConfigMover
     {
         [Header("Locomotion")]
         [SerializeField] private float _rotationSpeed = 15f;
@@ -101,15 +103,15 @@ namespace ZZZ.Player
             }
         }
 
-        public PlayerStateFlags CurrentFlags
+        public PlayerMotorFlags CurrentFlags
         {
             get
             {
-                PlayerStateFlags flags = PlayerStateFlags.None;
-                if (UseCodeMovement) flags |= PlayerStateFlags.CodeMovement;
-                if (IsRootMotionActive) flags |= PlayerStateFlags.RootMotion;
-                if (!AllowRotation) flags |= PlayerStateFlags.RotationLocked;
-                if (WarpWindowActive) flags |= PlayerStateFlags.WarpActive;
+                PlayerMotorFlags flags = PlayerMotorFlags.None;
+                if (UseCodeMovement) flags |= PlayerMotorFlags.CodeMovement;
+                if (IsRootMotionActive) flags |= PlayerMotorFlags.RootMotion;
+                if (!AllowRotation) flags |= PlayerMotorFlags.RotationLocked;
+                if (WarpWindowActive) flags |= PlayerMotorFlags.WarpActive;
                 return flags;
             }
         }

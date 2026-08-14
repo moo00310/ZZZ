@@ -25,7 +25,7 @@
 ### 클래스 / 구조체 / 열거형
 ```csharp
 // PascalCase
-public class PlayerController { }
+public class PlayerMotor { }
 public struct HitData { }
 public enum AttackType { Light, Heavy, Special }
 ```

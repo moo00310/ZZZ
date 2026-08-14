@@ -17,7 +17,7 @@ namespace ZZZ.Player
     [RequireComponent(typeof(PlayerInput))]
     public sealed class PlayerInputRouter : MonoBehaviour
     {
-        [SerializeField] private PlayerStateMachine _initialTarget;
+        [SerializeField] private PlayerActionController _initialTarget;
 
         private PlayerInput        _playerInput;
         private MonoBehaviour      _targetBehaviour;

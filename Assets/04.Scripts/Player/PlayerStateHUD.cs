@@ -3,6 +3,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using ZZZ.Player.StateMachine;
 
 namespace ZZZ.Player
@@ -14,8 +15,10 @@ namespace ZZZ.Player
     public class PlayerStateHUD : MonoBehaviour
     {
         [Header("References (비우면 자동 탐색)")]
-        [SerializeField] private PlayerStateMachine _stateMachine;
-        [SerializeField] private PlayerController    _controller;
+        [FormerlySerializedAs("_stateMachine")]
+        [SerializeField] private PlayerActionController _actionController;
+        [FormerlySerializedAs("_controller")]
+        [SerializeField] private PlayerMotor _motor;
 
         [Header("Display")]
         [SerializeField] private Key     _toggleKey = Key.F1;
@@ -28,8 +31,9 @@ namespace ZZZ.Player
 
         private void Awake()
         {
-            if (_stateMachine == null) _stateMachine = GetComponentInParent<PlayerStateMachine>();
-            if (_controller   == null) _controller   = GetComponentInParent<PlayerController>();
+            if (_actionController == null)
+                _actionController = GetComponentInParent<PlayerActionController>();
+            if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
         }
 
         private void Update()
@@ -54,39 +58,44 @@ namespace ZZZ.Player
 
             GUILayout.Label($"PLAYER STATE   [{_toggleKey}] 토글", _header);
 
-            if (_stateMachine != null)
+            if (_actionController != null)
             {
-                Label("Config",  _stateMachine.CurrentConfig != null ? _stateMachine.CurrentConfig.name : "-");
-                Label("Section", _stateMachine.CurrentSection ?? "-");
-                LabelBar("nt",   _stateMachine.CurrentNormalizedTime);
-                Label("MoveDir", _stateMachine.CurrentMoveDir.ToString());
+                Label("Config", _actionController.CurrentConfig != null
+                    ? _actionController.CurrentConfig.name : "-");
+                Label("Section", _actionController.CurrentSection ?? "-");
+                LabelBar("nt", _actionController.CurrentNormalizedTime);
+                Label("MoveDir", _actionController.CurrentMoveDir.ToString());
 
-                string buf = _stateMachine.HasBufferedInput ? _stateMachine.BufferedInput.ToString() : "-";
-                LabelColored("Input Buf", buf, _stateMachine.HasBufferedInput ? Color.cyan : Color.grey);
+                string buf = _actionController.HasBufferedInput
+                    ? _actionController.BufferedInput.ToString() : "-";
+                LabelColored("Input Buf", buf,
+                    _actionController.HasBufferedInput ? Color.cyan : Color.grey);
 
-                LabelColored("I-Frame", _stateMachine.Invulnerable ? "INVULN" : "-",
-                    _stateMachine.Invulnerable ? Color.yellow : Color.grey);
+                LabelColored("I-Frame", _actionController.Invulnerable ? "INVULN" : "-",
+                    _actionController.Invulnerable ? Color.yellow : Color.grey);
 
-                LabelColored("Parry", _stateMachine.ParryActive ? "ACTIVE" : "-",
-                    _stateMachine.ParryActive ? new Color(0.4f, 0.8f, 1f) : Color.grey);
+                LabelColored("Parry", _actionController.ParryActive ? "ACTIVE" : "-",
+                    _actionController.ParryActive
+                        ? new Color(0.4f, 0.8f, 1f) : Color.grey);
 
-                string atk = _stateMachine.IncomingAttackActive
-                    ? $"PERFECT! ({_stateMachine.IncomingStrength})" : "-";
+                string atk = _actionController.IncomingAttackActive
+                    ? $"PERFECT! ({_actionController.IncomingStrength})" : "-";
                 LabelColored("Atk Window", atk,
-                    _stateMachine.IncomingAttackActive ? new Color(1f, 0.4f, 0.7f) : Color.grey);
+                    _actionController.IncomingAttackActive
+                        ? new Color(1f, 0.4f, 0.7f) : Color.grey);
             }
 
-            if (_controller != null)
+            if (_motor != null)
             {
-                Label("Speed",    _controller.CurrentSpeed.ToString("F2"));
-                LabelColored("Flags", _controller.CurrentFlags.ToString(),
-                    _controller.CurrentFlags == PlayerStateFlags.None ? Color.grey : Color.green);
+                Label("Speed", _motor.CurrentSpeed.ToString("F2"));
+                LabelColored("Flags", _motor.CurrentFlags.ToString(),
+                    _motor.CurrentFlags == PlayerMotorFlags.None ? Color.grey : Color.green);
 
                 // 개별 플래그를 색으로 한 줄에 — 켜짐 초록 / 꺼짐 회색
-                DrawFlagRow(_controller.CurrentFlags);
+                DrawFlagRow(_motor.CurrentFlags);
 
-                if (_controller.IsRootMotionActive)
-                    Label("RootΔ", _controller.LastRootDelta.ToString("F4"));
+                if (_motor.IsRootMotionActive)
+                    Label("RootΔ", _motor.LastRootDelta.ToString("F4"));
             }
 
             GUILayout.EndArea();
@@ -110,12 +119,12 @@ namespace ZZZ.Player
             GUILayout.Label($"<b>{key}</b>  [{bar}] {t01:F2}", _label);
         }
 
-        private void DrawFlagRow(PlayerStateFlags flags)
+        private void DrawFlagRow(PlayerMotorFlags flags)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            foreach (PlayerStateFlags v in System.Enum.GetValues(typeof(PlayerStateFlags)))
+            foreach (PlayerMotorFlags v in System.Enum.GetValues(typeof(PlayerMotorFlags)))
             {
-                if (v == PlayerStateFlags.None) continue;
+                if (v == PlayerMotorFlags.None) continue;
                 bool on  = (flags & v) != 0;
                 string c = on ? "7CFC00" : "606060";   // 초록 / 회색
                 sb.Append($"<color=#{c}>{v}</color>  ");

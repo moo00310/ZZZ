@@ -29,7 +29,7 @@ AnimationConfig ── 전이, 재생 구간, 이벤트, 구간 기능
   ConfigState ──── 조건 평가와 애니메이션 흐름 실행
        │
        ├────────── Animator: 클립 재생
-       ├────────── PlayerController: 이동과 회전
+       ├────────── PlayerMotor: 이동과 회전
        ├────────── EffectService: 이펙트 재생, 키 바인딩과 풀링
        └────────── HitService: Overlap/Sweep 판정과 피격 전달
 ```

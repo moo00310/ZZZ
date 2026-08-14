@@ -1367,7 +1367,6 @@ GameObject:
   - component: {fileID: 5508322027037014441}
   - component: {fileID: 3724266460484320341}
   - component: {fileID: 7334887429754876192}
-  - component: {fileID: 3415556820704070776}
   - component: {fileID: 3731661064136392671}
   - component: {fileID: 7641824737164803945}
   m_Layer: 0
@@ -1440,7 +1439,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8580145dfa62ea4fa50e691232b5241, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerController
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerMotor
   _rotationSpeed: 15
   _rotationEaseTime: 0
   _bip001Bone: {fileID: 4588594420981034427}
@@ -1480,7 +1479,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a06b10c051756bb43a4de43c759f1619, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.StateMachine.AnimatorBridge
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.CharacterAnimatorBridge
   _additiveLayer: 1
   _shakeFade: 0.15
   _hitShakeState: Avatar_Female_Size02_Burnice_Ani_Hit_Shake
@@ -1495,7 +1494,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b0bc1bffa839d0419cb4e06c3f621c5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.StateMachine.PlayerStateMachine
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.StateMachine.PlayerActionController
   _startConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
   _configs:
   - {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
@@ -1540,7 +1539,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6b0682e4fb9418192db1d6549031b33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayableCharacter
-  _stateMachine: {fileID: 5508322027037014441}
+  _actionController: {fileID: 5508322027037014441}
   _cameraPoint: {fileID: 3859276340687948475}
 --- !u!114 &7334887429754876192
 MonoBehaviour:
@@ -1559,19 +1558,6 @@ MonoBehaviour:
   _mask:
     serializedVersion: 2
     m_Bits: 64
---- !u!114 &3415556820704070776
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1430500293498163557}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5138dd6d25cc9b44d94f9a40b66c2eed, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Combat.MeleeHitter
-  _damage: 10
 --- !u!114 &3731661064136392671
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1598,8 +1584,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80638e4034da53145ac0f45386dd383c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerStateHUD
-  _stateMachine: {fileID: 0}
-  _controller: {fileID: 0}
+  _actionController: {fileID: 0}
+  _motor: {fileID: 0}
   _toggleKey: 105
   _visible: 1
   _origin: {x: 12, y: 12}

@@ -76,7 +76,7 @@ namespace ZZZ.Editor.AnimationTool
             DrawLiveTargetSelector();
 
             if (_liveMachine == null)
-                GUILayout.Label("씬에서 추적할 캐릭터(PlayerStateMachine/MonsterStateMachine)를 찾는 중…",
+                GUILayout.Label("씬에서 추적할 캐릭터(PlayerActionController/MonsterActionController)를 찾는 중…",
                     EditorStyles.miniLabel);
             else if (_liveConfig == null)
                 GUILayout.Label("현재 State가 ConfigState가 아님", EditorStyles.miniLabel);

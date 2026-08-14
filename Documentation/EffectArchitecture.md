@@ -101,7 +101,7 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 ### 소켓 추종과 루트모션 평가 순서
 
 Burnice 클립은 `Animator.deltaPosition`으로 최상위 캐릭터를 이동시키면서, 같은 프레임의
-`Bip001` 포즈에도 원본 수평 이동이 남는다. `PlayerController.LateUpdate`가 `Bip001`의 X·Z를
+`Bip001` 포즈에도 원본 수평 이동이 남는다. `PlayerMotor.LateUpdate`가 `Bip001`의 X·Z를
 제거하므로 최종 모델은 정상 위치에 보이지만, 이펙트를 소켓의 직접 자식으로 두면 Animator 평가
 중간의 보정 전 좌표가 파티클 방출 위치로 들어갈 수 있다.
 

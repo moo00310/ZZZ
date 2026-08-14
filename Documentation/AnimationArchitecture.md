@@ -15,7 +15,7 @@
 [ Input ]
     │  (공용 PlayerInput → PlayerInputRouter → 활성 캐릭터)
     ▼
-[ PlayerStateMachine ]        ← MonoBehaviour, 얇은 코디네이터(조립 + facade)
+[ PlayerActionController ]    ← MonoBehaviour, 얇은 코디네이터(조립 + facade)
     │   · 협력 객체 조립: InputBuffer / HitTrigger / DodgeTrigger / ParryTrigger /
     │     Attack_Normal_EnhanceTrigger / ConfigRegistry / EnemySensor
     │   · 무적(Invulnerable)·패링(ParryActive)·들어오는 공격 윈도우 보유 + facade 노출
@@ -36,7 +36,7 @@
     │
     ├── 클립 재생 ──────────────┐
     │                          ▼
-    │              [ AnimatorBridge ]        ← Animator 접근 유일 창구 (파사드, 플레이어·몬스터 공용)
+    │              [ CharacterAnimatorBridge ] ← Animator 접근 유일 창구 (파사드, 플레이어·몬스터 공용)
     │                          │  Play(클립명) = CrossFadeInFixedTime / additive 흔들림
     │                          ▼
     │              [ Unity Animator ]        ← 클립 재생만 (파라미터/Transition 미사용)
@@ -45,15 +45,15 @@
     │
     └── 이동/회전 ─────────────┐
                                ▼
-                   [ PlayerController ]      ← 루트모션(위치=Bip001 / 회전=Root yaw) · 워프 · 부스트
+                   [ PlayerMotor ]           ← 루트모션(위치=Bip001 / 회전=Root yaw) · 워프 · 부스트
 ```
 
-> **상태 머신 프레임워크가 따로 없다.** `PlayerStateMachine`이 `ConfigState` 인스턴스 **하나**를
+> **상태 머신 프레임워크가 따로 없다.** `PlayerActionController`가 `ConfigState` 인스턴스 **하나**를
 > 들고 직접 `Update()`를 돌린다. 상태 전환(콤보·대시·회피·피격 복귀)은 별도 State 클래스로
 > 갈아끼우는 게 아니라, `ConfigState`가 **config를 갈아끼우는(SwitchConfig)** 방식으로 처리한다.
 
-> **`ConfigState`는 플레이어 전용이 아니다 — 몬스터와 공유하는 엔진이다.** 구상 타입(`PlayerController`/
-> `AnimatorBridge`/`PlayerStateMachine`)에 직접 의존하지 않고, [`ConfigDriving.cs`](../Assets/04.Scripts/Core/ConfigDriving.cs)의
+> **`ConfigState`는 플레이어 전용이 아니다 — 몬스터와 공유하는 엔진이다.** 구상 타입(`PlayerMotor`/
+> `CharacterAnimatorBridge`/`PlayerActionController`)에 직접 의존하지 않고, [`ConfigDriving.cs`](../Assets/04.Scripts/Core/ConfigDriving.cs)의
 > 인터페이스(`IConfigMover`/`IAnimatorBridge`/`IConfigSignals`)와 조건 컨텍스트(`ILinkConditionContext`)에만 의존한다.
 > 이 둘(Mover·Animator)을 묶어 넘기는 `ConfigContext`는 **구상 클래스**(다형성은 그 필드 타입에만 있음).
 > 플레이어·몬스터가 각자 `Awake`에서 `ConfigContext`를 채우고 조건 컨텍스트(`PlayerConditionContext`/`MonsterConditionContext`)를 주입해 같은 엔진을 구동한다.
@@ -146,7 +146,7 @@ Layer 1 (Additive)
 
 - 이동(Idle/Walk/Run)도 Blend Tree가 아니라 각 클립을 직접 `Play`로 전환한다.
 - 따라서 Animator 파라미터는 **사용하지 않는다.** (재생 상태는 코드/데이터가 관리)
-- `AnimatorBridge.Play()`는 `CrossFadeInFixedTime`(초 단위 고정 시간)을 쓴다 →
+- `CharacterAnimatorBridge.Play()`는 `CrossFadeInFixedTime`(초 단위 고정 시간)을 쓴다 →
   config의 `BlendDuration`(초)과 단위가 일치. 함께 `ApplyAnimatorSpeed(Speed)`로
   애니 재생 속도를 로직 타임라인과 맞춘다(안 맞추면 전환 딜레이 발생).
 
@@ -226,7 +226,7 @@ Layer 1 (Additive)
 
 ### 루트모션 (`OnAnimatorMove`)
 
-프리팹의 `Apply Root Motion`을 켜고, [PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs)의
+프리팹의 `Apply Root Motion`을 켜고, [PlayerMotor.cs](../Assets/04.Scripts/Player/PlayerMotor.cs)의
 `OnAnimatorMove`가 `Animator.deltaPosition/deltaRotation`을 받아 직접 적용한다. 콜백이 존재하므로
 Animator가 Transform을 자동 이동하지 않고, 컨트롤러가 최종 적용을 소유한다.
 
@@ -272,7 +272,7 @@ RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`
 나오는 본을 그 섹션의 회전 소스로 고정하므로, 클립에 따라 회전 곡선이 `Root` 또는 `Bip001`에
 들어 있어도 같은 경로로 처리한다.
 
-**메커니즘** ([PlayerController.cs](../Assets/04.Scripts/Player/PlayerController.cs) `LateUpdate`)
+**메커니즘** ([PlayerMotor.cs](../Assets/04.Scripts/Player/PlayerMotor.cs) `LateUpdate`)
 
 | 단계 | 처리 |
 |------|------|
@@ -391,7 +391,7 @@ HitTrigger.Trigger()
 ## 피격 (외부 이벤트 진입)
 
 ```
-충돌 검출 → PlayerStateMachine.TriggerHitFrom → HitTrigger.TriggerFrom(attackerPos)
+충돌 검출 → PlayerActionController.TriggerHitFrom → HitTrigger.TriggerFrom(attackerPos)
     │  공격자 위치로 Front/Back 판정 (또는 PlayerTestTriggers의 H=Back / J=Front)
     ▼
 HitTrigger.Trigger(direction)
@@ -410,8 +410,8 @@ ConfigState.InterruptWith(hitConfig, "Hit_{L|H}_{Front|Back}", _hitEntryBlend)
 
 ### 문제와 해결
 
-- **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`AnimatorBridge.ShakeRoutine`).
-  - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `AnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절 *(→ SendMessage는 캐릭터별 강타입 이벤트 릴레이로 교체 예정, [TODO.md](TODO.md))*
+- **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`CharacterAnimatorBridge.ShakeRoutine`).
+  - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `CharacterAnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절 *(→ SendMessage는 캐릭터별 강타입 이벤트 릴레이로 교체 예정, [TODO.md](TODO.md))*
 - **같은 약한 움찔거림만 반복돼 단조로움** → escalation: 연속타 카운트로 약(L) ↔ 강(H) 반응을 교대 재생
 - **연타 stunlock(보조 가드)** → 반응이 충분히 진행되기 전(`_hitReinterruptThreshold`)엔 새 피격을 무시
 
@@ -450,7 +450,7 @@ PlayerInputRouter
 
 **동작** — 두 경로가 있다.
 1. **콤보 중** — 각 공격 섹션의 `Attack_Normal_Enhance` Link가 윈도우 안에서 입력을 먼저 소비(우선).
-2. **걷기/Idle 등 링크가 없는 상태** — `PlayerStateMachine`이 `ConfigState.Update`(콤보 링크 평가) 후
+2. **걷기/Idle 등 링크가 없는 상태** — `PlayerActionController`가 `ConfigState.Update`(콤보 링크 평가) 후
    입력이 남아 있으면 `Attack_Normal_EnhanceTrigger`(전역 폴백)를 호출.
 
 폴백 트리거의 섹션 선택 — **방향 우선 → 중립이면 거리** ([Attack_Normal_EnhanceTrigger.cs](../Assets/04.Scripts/Player/StateMachine/Triggers/Attack_Normal_EnhanceTrigger.cs)):
@@ -469,10 +469,10 @@ PlayerInputRouter
 
 ## 트리거·config 인스펙터 연동
 
-이벤트 진입 config(Hit, Evade 등)는 `PlayerStateMachine._configs`에 드롭만 하면 **섹션 이름으로 자동 검색**(`FindConfigWithSection`)해 진입한다 — 코드 수정 불필요(링크로 도달하는 콤보 config는 `TargetConfig` 참조라 리스트에 넣을 필요 없음).
+이벤트 진입 config(Hit, Evade 등)는 `PlayerActionController._configs`에 드롭만 하면 **섹션 이름으로 자동 검색**(`FindConfigWithSection`)해 진입한다 — 코드 수정 불필요(링크로 도달하는 콤보 config는 `TargetConfig` 참조라 리스트에 넣을 필요 없음).
 
 > **트리거 설정도 인스펙터에서** — `Hit/Dodge/Parry/Attack_Normal_Enhance` 트리거는 `[Serializable]` 객체라
-> 각자 설정(섹션 이름·blend·거리 임계 등)을 직접 들고, `PlayerStateMachine` 인스펙터에 폴드로 노출된다.
+> 각자 설정(섹션 이름·blend·거리 임계 등)을 직접 들고, `PlayerActionController` 인스펙터에 폴드로 노출된다.
 > 런타임 의존(상태/레지스트리/입력)만 `Init()`으로 주입한다. (평평하던 머신 필드 정리)
 
 ---
@@ -489,12 +489,12 @@ PlayerInputRouter
 
 | 부품 | 구현 인터페이스 | 역할 |
 |------|----------------|------|
-| `MonsterStateMachine` | `IConfigSignals` · `ILiveMonitor` | 입력 없는 코디네이터. `Awake`에서 `new ConfigState(...)` 조립, `Start`에서 `Enter()`, 매 프레임 `Update()`. `HitTarget.OnDamaged` 구독 → 앞/뒤 판정 후 Hit config로 `InterruptWith` |
-| `MonsterController` | `IConfigMover` | v1(Idle+Hit, 제자리)은 `ConfigState`가 세팅하는 값들을 **보관만**(no-op). `FaceToward`만 즉시 회전으로 구현. 루트모션/넉백/추격은 후속 |
+| `MonsterActionController` | `IConfigSignals` · `ILiveMonitor` | 입력 없는 코디네이터. `Awake`에서 `new ConfigState(...)` 조립, `Start`에서 `Enter()`, 매 프레임 `Update()`. `HitTarget.OnDamaged` 구독 → 앞/뒤 판정 후 Hit config로 `InterruptWith` |
+| `MonsterMotor` | `IConfigMover` | v1(Idle+Hit, 제자리)은 `ConfigState`가 세팅하는 값들을 **보관만**(no-op). `FaceToward`만 즉시 회전으로 구현. 루트모션/넉백/추격은 후속 |
 | `ConfigContext` (공용) | — (구상 클래스) | 몬스터 컴포넌트(Mover/Animator/Transform/GO)를 묶어 `ConfigState`에 주입. `Awake`에서 직접 채움 — 전용 컨텍스트 클래스 없음 |
 | `MonsterConditionContext` | `ILinkConditionContext` | 입력 개념이 없어 질의가 전부 빈 값. Idle+Hit는 입력 조건이 없어 `Always`/`None`이 자동 통과하고 OnEnd로 복귀 |
 
-- **AnimatorBridge·HitTarget 그대로 재사용** — `MonsterStateMachine`은 `IAnimatorBridge`로 같은 `AnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
+- **CharacterAnimatorBridge·HitTarget 그대로 재사용** — `MonsterActionController`는 `IAnimatorBridge`로 같은 `CharacterAnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
 - **경직(poise) A안 — 히트 쿨다운** : 인터럽트 직후 `_hitStunCooldown`(기본 0.3s) 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지). 데미지(HP)는 매 히트 적용되고 '모션 리셋'만 throttle. 후속으로 C안(Hit config 구간별 슈퍼아머 윈도우) 확장 가능.
 - **한계(현 스캐폴드)** — 실제 이동/AI가 없다(제자리 Idle+Hit). 거리/체력 기반 AI 조건이 생기면 `ILinkConditionContext`를 확장하고 몬스터 컨텍스트가 채우면 된다(플레이어 쪽은 새 멤버를 기본값으로). `ConfigState`는 현재 `ZZZ.Player.StateMachine.States`에 있으나 공유 엔진이라 추후 중립 네임스페이스로 이전 가능.
 
@@ -506,7 +506,8 @@ PlayerInputRouter
 Assets/04.Scripts/
 ├── Core/                            공유 코어 (플레이어·몬스터 엔진)
 │   ├── AnimationConfig.cs           ScriptableObject + TrackClip/ClipLink/Notify/enum 정의
-│   ├── ConfigDriving.cs             ConfigState가 의존하는 공유 인터페이스 (ConfigContext/Mover/AnimatorBridge/Signals + ILiveMonitor/IInputMonitor)
+│   ├── ConfigDriving.cs             ConfigState가 의존하는 공유 인터페이스 (ConfigContext/Mover/Animator/Signals + ILiveMonitor/IInputMonitor)
+│   ├── CharacterAnimatorBridge.cs   Animator 파사드 (Play + additive Hit_Shake) — 플레이어·몬스터 공용
 │   └── LinkCondition.cs             다형성 전이 조건 베이스 + InputCondition/AlwaysCondition + ILinkConditionContext
 │
 ├── Combat/
@@ -520,12 +521,12 @@ Assets/04.Scripts/
 │   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
 │
 ├── Monster/                         몬스터 — 같은 ConfigState 사용 (Idle+Hit)
-│   ├── MonsterStateMachine.cs       입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
-│   ├── MonsterController.cs         IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
+│   ├── MonsterActionController.cs   입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
+│   ├── MonsterMotor.cs              IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
 │   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
 │
 └── Player/
-    ├── PlayerController.cs           OnAnimatorMove 루트모션·워프·회전 소유권·CharacterController 이동
+    ├── PlayerMotor.cs                OnAnimatorMove 루트모션·워프·회전 소유권·CharacterController 이동
     ├── PlayerInputRouter.cs          공용 PlayerInput 콜백 → 활성 캐릭터 입력 인터페이스
     ├── SquadController.cs            캐릭터 생성·교체 및 입력/카메라 타깃 전환
     ├── PlayableCharacter.cs          캐릭터 프리팹의 상태 머신·CameraPoint 파사드
@@ -534,10 +535,8 @@ Assets/04.Scripts/
     ├── TPSCameraController.cs        커스텀 TPS 카메라
     │
     └── StateMachine/
-        ├── PlayerStateMachine.cs     코디네이터 — 입력버퍼·트리거·config 검색 조립 + facade
-        ├── PlayerStateContext.cs     상태 공유 데이터 (Controller/Animator/CC/Transform)
+        ├── PlayerActionController.cs 코디네이터 — 입력버퍼·트리거·config 검색 조립 + facade
         ├── PlayerConditionContext.cs 플레이어 입력/방향을 LinkCondition에 공급 (ILinkConditionContext)
-        ├── AnimatorBridge.cs         Animator 파사드 (Play + additive Hit_Shake) — 플레이어·몬스터 공용
         ├── PlayerTestTriggers.cs     테스트 입력(H/J/K) 분리 컴포넌트
         ├── ConfigRegistry.cs         섹션 이름으로 config 검색 (FindWithSection)
         ├── InputBuffer.cs            선입력 버퍼
@@ -572,7 +571,7 @@ Assets/04.Scripts/
 `PlayerRuntime`은 `PlayerInput`, `PlayerInputRouter`, `SquadController`를 한 번만 소유한다.
 `SquadController`는 등록된 `PlayableCharacter` 프리팹을 미리 생성하고, 활성 캐릭터 하나에만
 입력을 전달한다. 교체 시 이전 캐릭터의 월드 위치만 다음 캐릭터에 넘긴 뒤
-`PlayerStateMachine`과 `TPSCameraController`의 타깃을 함께 변경한다.
+`PlayerActionController`와 `TPSCameraController`의 타깃을 함께 변경한다.
 
 비활성 캐릭터는 `ConfigState.Exit()`로 실행 중인 이펙트와 상태 플래그를 정리한 다음 꺼진다.
 일반 교체는 한 캐릭터만 활성화하며, 두 캐릭터가 겹쳐 재생되는 Assist 연출은 별도 교체 모드로
@@ -604,7 +603,7 @@ Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자�
   펼치면 모듈별 행에서 `WindowModule` 구간과 진입·전체 섹션 모듈을 분리해 표시.
   `WindowModule`의 양 끝 핸들은 타임라인에서 직접 드래그할 수 있으며 클립 프레임에 스냅된다.
 - **Combo 프리뷰** : 공격 입력은 단일 드롭다운으로 '눌러둠(held)' 선택 → Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
-- **라이브 모니터** : 플레이 중 `PlayerStateMachine`을 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
+- **라이브 모니터** : 플레이 중 `PlayerActionController`를 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
   (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)
 
 ---
@@ -655,7 +654,7 @@ Scene View의 위치·회전·반경·박스 크기 핸들로도 값을 편집�
 원뿔을 함께 표시한다. 원점이 Socket이면 프리뷰 캐릭터의 해당 Transform,
 Effect이면 선택한 `Effect Key`와 일치하는 Entry의 현재 프리뷰 Transform을 기준으로 표시한다.
 
-Play 중 실제 판정은 `PlayerStateMachine` 또는 `MonsterStateMachine`의 `Hit Debug/Show Hit Gizmos`를
+Play 중 실제 판정은 `PlayerActionController` 또는 `MonsterActionController`의 `Hit Debug/Show Hit Gizmos`를
 켜서 확인한다. Game View에서는 상단 `Gizmos` 버튼도 켜야 한다. 빨간 선은 현재 판정 모양이고,
 노란 선과 이전 모양은 Sweep 이동 구간이다. 대상이 실제로 Hit을 `Accepted`하면 해당 판정이 끝날 때까지
 현재 모양은 초록색, Sweep 구간은 청록색으로 바뀐다. `Hit Gizmo Duration`은 단발 선의 표시 유지 시간이다.
