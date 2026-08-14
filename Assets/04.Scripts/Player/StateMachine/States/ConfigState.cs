@@ -38,6 +38,7 @@ namespace ZZZ.Player.StateMachine.States
             public CompositeEffect Effect;
             public HitData Hit;
             public string NextSection;
+            public float NormalizedTime;
         }
 
         // OnEndIfMatched 링크의 윈도우 래치 상태 — 섹션 진입마다 비운다(섹션 스코프).
@@ -388,7 +389,8 @@ namespace ZZZ.Player.StateMachine.States
                     {
                         if (hitPayload.SyncWithEffect)
                         {
-                            _hitSyncPending[i] = !TryAttachHitToEffect(hitPayload.Hit);
+                            _hitSyncPending[i] = !TryAttachSynchronizedHit(
+                                tc, notify, hitPayload.Hit);
                             continue;
                         }
                         var hitContext = new HitExecutionContext(
@@ -404,7 +406,7 @@ namespace ZZZ.Player.StateMachine.States
                     }
                     EffectHandle handle = notify.Payload is EffectNotifyPayload
                         && notify.TransitionMode == EffectTransitionMode.Next
-                        ? QueueNextEffect(notify)
+                        ? QueueNextEffect(tc, notify)
                         : DispatchNotify(notify);
                     if (notify.Payload is EffectNotifyPayload && handle != null)
                         _notifyActive[i] = handle;
@@ -412,7 +414,8 @@ namespace ZZZ.Player.StateMachine.States
 
                 if (_hitSyncPending != null && _hitSyncPending[i]
                     && notify.Payload is HitNotifyPayload pendingHit)
-                    _hitSyncPending[i] = !TryAttachHitToEffect(pendingHit.Hit);
+                    _hitSyncPending[i] = !TryAttachSynchronizedHit(
+                        tc, notify, pendingHit.Hit);
 
                 if (_hitActive != null && _hitActive[i] != null)
                 {
@@ -453,6 +456,69 @@ namespace ZZZ.Player.StateMachine.States
                 _showHitGizmos, _hitGizmoDuration);
         }
 
+        private bool TryAttachSynchronizedHit(
+            TrackClip clip, TrackNotify hitNotify, HitData hit)
+        {
+            if (hit == null || hit.Origin != HitOrigin.Effect) return false;
+            if (TryAssignHitToPendingNextEffect(hitNotify.NormalizedTime, hit))
+                return true;
+
+            // A same-time Next effect has no live binding until the section changes.
+            if (HasMatchingNextEffect(clip, hitNotify.NormalizedTime, hit))
+                return false;
+
+            return TryAttachHitToEffect(hit);
+        }
+
+        private bool TryAssignHitToPendingNextEffect(float normalizedTime, HitData hit)
+        {
+            for (int i = _pendingNextEffects.Count - 1; i >= 0; i--)
+            {
+                PendingNextEffect pending = _pendingNextEffects[i];
+                if (!Mathf.Approximately(pending.NormalizedTime, normalizedTime)
+                    || !CanBindHit(pending.Effect, hit))
+                    continue;
+
+                if (pending.Hit == null) pending.Hit = hit;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool HasMatchingNextEffect(
+            TrackClip clip, float normalizedTime, HitData hit)
+        {
+            for (int i = 0; i < clip.Notifies.Count; i++)
+            {
+                TrackNotify notify = clip.Notifies[i];
+                if (!Mathf.Approximately(notify.NormalizedTime, normalizedTime)
+                    || notify.TransitionMode != EffectTransitionMode.Next
+                    || !(notify.Payload is EffectNotifyPayload payload)
+                    || !CanBindHit(payload.Effect, hit))
+                    continue;
+
+                return true;
+            }
+            return false;
+        }
+
+        private static bool CanBindHit(CompositeEffect effect, HitData hit)
+        {
+            if (effect == null || hit == null
+                || string.IsNullOrEmpty(hit.EffectKey)) return false;
+
+            string effectKey = hit.EffectKey;
+            for (int i = 0; i < effect.Entries.Count; i++)
+            {
+                CompositeEffectEntry entry = effect.Entries[i];
+                if (entry != null && string.Equals(
+                    entry.BindingKey?.Trim(), effectKey,
+                    System.StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
+        }
+
         // 이펙트 재생이면 정지용 EffectHandle을 돌려준다(구간 이펙트만 사용). 그 외/단발은 null.
         private EffectHandle DispatchNotify(TrackNotify notify)
         {
@@ -477,18 +543,40 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
-        private EffectHandle QueueNextEffect(TrackNotify notify)
+        private EffectHandle QueueNextEffect(TrackClip clip, TrackNotify notify)
         {
             if (!(notify.Payload is EffectNotifyPayload payload)
                 || payload.Effect == null
                 || string.IsNullOrEmpty(payload.NextSection)) return null;
-            _pendingNextEffects.Add(new PendingNextEffect
+            var pending = new PendingNextEffect
             {
                 Effect = payload.Effect,
                 Hit = payload.Hit,
                 NextSection = payload.NextSection,
-            });
+                NormalizedTime = notify.NormalizedTime,
+            };
+            _pendingNextEffects.Add(pending);
+            AssignFiredHitToPendingNextEffect(clip, pending);
             return null;
+        }
+
+        private void AssignFiredHitToPendingNextEffect(
+            TrackClip clip, PendingNextEffect pending)
+        {
+            for (int i = 0; i < clip.Notifies.Count; i++)
+            {
+                if (!_notifyFired[i] || !_hitSyncPending[i]
+                    || !(clip.Notifies[i].Payload is HitNotifyPayload payload)
+                    || !payload.SyncWithEffect
+                    || !Mathf.Approximately(
+                        clip.Notifies[i].NormalizedTime, pending.NormalizedTime)
+                    || !CanBindHit(pending.Effect, payload.Hit))
+                    continue;
+
+                if (pending.Hit == null) pending.Hit = payload.Hit;
+                _hitSyncPending[i] = false;
+                return;
+            }
         }
 
         private void PlayPendingNextEffects(string destinationSection,

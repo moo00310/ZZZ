@@ -581,7 +581,24 @@ Entry에 `Duration`이 지정된 경우에도 그 시점에 판정을 종료하�
 Hit 데이터를 별도 Notify에서 관리하려면 Hit Notify의 `Sync With Effect`를 사용할 수 있다.
 이 옵션은 `Origin`을 Effect로 고정하고 `Effect Key`가 가리키는 현재 풀 인스턴스에 판정을 붙인다.
 Hit Notify가 Effect보다 먼저 발동한 경우에는 같은 섹션에서 해당 Binding이 등록될 때까지 재시도하며,
-연결된 뒤에는 Effect의 정지·반납과 함께 판정을 종료한다.
+연결된 뒤에는 Effect의 정지·반납과 함께 판정을 종료한다. 같은 `NormalizedTime`에 있는 Effect Notify가
+`Next`라면 즉시 Binding을 찾지 않고 `BindingKey`가 일치하는 예약 Effect에 Hit를 함께 저장한다.
+Notify 목록 순서와 관계없이 목적 섹션에서 Effect가 생성될 때 판정도 함께 시작한다.
+
+### Effect 연동 Hit 작성 체크리스트
+
+- CompositeEffect Entry의 `BindingKey`와 Hit의 `Effect Key`는 대소문자를 포함해 정확히 맞춘다.
+- 같은 손·발사체 역할을 여러 섹션에서 재사용하면 동일한 키를 써도 된다. 좌우처럼 동시에 구분해야 하는
+  원점은 `Eff_FireBeam_Enhance_L`, `Eff_FireBeam_Enhance_R`처럼 서로 다른 키를 사용한다.
+- 현재 섹션에서 바로 보여야 하는 Effect는 `Keep` 또는 `Stop`을 사용한다. `Next`는 지정한 목적 섹션에
+  진입한 뒤 생성해야 하는 Effect에만 사용한다.
+- 별도 Hit Notify를 `Next` Effect와 묶을 때는 두 Notify의 `NormalizedTime`을 같게 두고
+  `Sync With Effect`를 켠다. `Next Section`도 실제 Link 목적지와 일치해야 한다.
+- Effect Notify 내부 Hit와 별도 `Sync With Effect` Hit를 같은 Effect에 중복 설정하지 않는다.
+
+첫 실행에서 Effect 또는 Hit가 빠지면 먼저 Transition Mode를 확인한다. `Next`는 현재 섹션에서
+Binding을 만들지 않으므로 목적 섹션 전환 전에는 보이지 않는 것이 정상이다. Effect는 보이지만 Hit만
+없다면 `BindingKey`/`Effect Key`, `NormalizedTime`, `Sync With Effect` 순서로 확인한다.
 
 ---
 
