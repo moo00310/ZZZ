@@ -117,10 +117,10 @@ AnimationConfig
 | `AlwaysCondition` | 무조건 true — 몬스터의 "끝나면 idle 복귀"(OnEnd) 같은 가드 없는 전이용 (플레이어 `Attack=None`='입력 없을 때'와는 의미가 다름) |
 | `DistanceCondition` *(예정)* | 타깃과의 거리 조건 (근접→공격 / 원거리→접근). `IMonsterConditionContext.DistanceToTarget` 질의 |
 | `HealthCondition` *(예정)* | 자기/타깃 체력 비율 조건 (저체력→광폭화 패턴 등) |
-| `AIDecisionCondition` *(예정)* | BT/블랙보드가 내린 결정을 받는 조건 (예: `Decision == Attack`). BT는 결정만 쓰고, 전이 타이밍은 링크가 유지 |
+| `AIDecisionCondition` | `MonsterFsm`이 버퍼에 기록한 `MonsterDecision`을 검사하고 링크 발동 시 소비한다. FSM은 콤보 지속 여부를 정하고, 링크가 실제 전이 타이밍과 대상 섹션을 소유한다 |
 
-> 위 셋은 아직 미구현 — `LinkCondition` 다형성과 `ILinkConditionContext` 주입 구조가 열어둔 확장 자리다.
-> 몬스터 AI 도입 시 서브클래스 1개 + 컨텍스트 질의 추가로 붙고, `ConfigState` 평가 로직은 안 건드린다.
+> 거리·체력 조건은 아직 미구현이다. 캐릭터 전용 조건은 공통 `ILinkConditionContext`를 직접 늘리지 않고
+> 파생 컨텍스트 인터페이스를 추가한다. `AIDecisionCondition`은 `IMonsterDecisionContext`로 이 패턴을 사용한다.
 
 - **WhenMatched** : 윈도우 구간 안에서 조건 충족 즉시 (콤보 입력 / 방향 이동 / 복귀)
 - **OnRelease** : 윈도우 안에서 Attack 키를 **뗀 순간** (홀드 차지 → 릴리스). 누름 버퍼가 아니라 실제 홀드 상태로 판정
@@ -479,8 +479,8 @@ PlayerInputRouter
 
 ## 몬스터 (공유 엔진 재사용)
 
-**왜** — 피격 반응·복귀 같은 흐름은 플레이어와 똑같이 "config를 읽어 클립을 틀고 OnEnd로 복귀"하는 구조다.
-그래서 몬스터용 상태머신을 새로 짜지 않고 **같은 `ConfigState` 엔진을 재사용**한다. 그러려면 `ConfigState`가
+**왜** — 피격 반응·복귀 같은 실행은 플레이어와 똑같이 "config를 읽어 클립과 Notify를 실행"하는 구조다.
+그래서 몬스터 행동 판단은 `MonsterFsm`이 맡되, 애니메이션 실행에는 **같은 `ConfigState` 엔진을 재사용**한다. 그러려면 `ConfigState`가
 플레이어 구상 타입에 묶이면 안 되므로, 의존을 [`ConfigDriving.cs`](../Assets/04.Scripts/Core/ConfigDriving.cs)의
 인터페이스로 추출했다(`IConfigMover`/`IAnimatorBridge`/`IConfigSignals` + 조건 `ILinkConditionContext`).
 이 표면들을 묶어 넘기는 `ConfigContext`는 구상 클래스다(번들 자체는 다형성이 필요 없어 인터페이스로 두지 않음).
@@ -489,14 +489,17 @@ PlayerInputRouter
 
 | 부품 | 구현 인터페이스 | 역할 |
 |------|----------------|------|
-| `MonsterActionController` | `IConfigSignals` · `ILiveMonitor` | 입력 없는 코디네이터. `Awake`에서 `new ConfigState(...)` 조립, `Start`에서 `Enter()`, 매 프레임 `Update()`. `HitTarget.OnDamaged` 구독 → 앞/뒤 판정 후 Hit config로 `InterruptWith` |
-| `MonsterMotor` | `IConfigMover` | v1(Idle+Hit, 제자리)은 `ConfigState`가 세팅하는 값들을 **보관만**(no-op). `FaceToward`만 즉시 회전으로 구현. 루트모션/넉백/추격은 후속 |
+| `MonsterAI` | — | Unity 생명주기와 `TargetProvider` 연결을 담당하는 얇은 호스트. `MonsterFsm`을 생성하고 `LateUpdate`에서 Tick하지만 행동 조건은 판단하지 않는다 |
+| `MonsterFsm` | — | Idle/Attack/WalkBack/Hit의 상위 행동 FSM. 타깃 거리·쿨다운으로 상태 전이를 판단하고, 공격 중에는 `ContinueCombo` Decision을 버퍼에 기록한다 |
+| `MonsterActionController` | `IConfigSignals` · `ILiveMonitor` | `ConfigState`를 조립하고 FSM이 선택한 Idle/Attack/WalkBack/Hit Config를 실행한다. 거리·페이즈 같은 행동 판단은 갖지 않는다 |
+| `MonsterConditionContext` | `IMonsterDecisionContext` | FSM의 짧은 Decision 버퍼를 Config Link에 제공한다. `AIDecisionCondition`이 조건을 확인하고 링크 발동 시 소비한다 |
+| `MonsterMotor` | `IConfigMover` | `Animator.deltaPosition/deltaRotation`을 실제 Transform에 적용하고 `Bip001`의 중복 수평 이동을 제거한다 |
 | `ConfigContext` (공용) | — (구상 클래스) | 몬스터 컴포넌트(Mover/Animator/Transform/GO)를 묶어 `ConfigState`에 주입. `Awake`에서 직접 채움 — 전용 컨텍스트 클래스 없음 |
-| `MonsterConditionContext` | `ILinkConditionContext` | 입력 개념이 없어 질의가 전부 빈 값. Idle+Hit는 입력 조건이 없어 `Always`/`None`이 자동 통과하고 OnEnd로 복귀 |
 
 - **CharacterAnimatorBridge·HitTarget 그대로 재사용** — `MonsterActionController`는 `IAnimatorBridge`로 같은 `CharacterAnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
 - **경직(poise) A안 — 히트 쿨다운** : 인터럽트 직후 `_hitStunCooldown`(기본 0.3s) 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지). 데미지(HP)는 매 히트 적용되고 '모션 리셋'만 throttle. 후속으로 C안(Hit config 구간별 슈퍼아머 윈도우) 확장 가능.
-- **한계(현 스캐폴드)** — 실제 이동/AI가 없다(제자리 Idle+Hit). 거리/체력 기반 AI 조건이 생기면 `ILinkConditionContext`를 확장하고 몬스터 컨텍스트가 채우면 된다(플레이어 쪽은 새 멤버를 기본값으로). `ConfigState`는 현재 `ZZZ.Player.StateMachine.States`에 있으나 공유 엔진이라 추후 중립 네임스페이스로 이전 가능.
+- **상위 판단과 클립 내부 흐름의 경계** — 공격 시작·피격·행동 완료 후 복귀는 `MonsterFsm`이 결정한다. Attack01→02 같은 콤보와 캔슬 가능 프레임은 Config의 Link가 소유하고, FSM은 `MonsterDecision`만 버퍼에 기록한다. `AIDecisionCondition`은 해당 신호가 링크 윈도우에 들어왔을 때 전이하고 즉시 소비한다.
+- **강제 인터럽트** — 피격처럼 애니메이션 윈도우를 기다리면 안 되는 전이는 FSM이 `MonsterActionController.TryPlayHit`으로 즉시 Config를 교체한다. 일반 콤보는 Config Link가 먼저 평가되고 FSM은 최종 섹션 완료 뒤에만 다음 상위 상태로 이동한다.
 
 ---
 
@@ -520,10 +523,12 @@ Assets/04.Scripts/
 ├── Movement/
 │   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
 │
-├── Monster/                         몬스터 — 같은 ConfigState 사용 (Idle+Hit)
-│   ├── MonsterActionController.cs   입력 없는 코디네이터 (IConfigSignals/ILiveMonitor) — 피격 시 Hit config 인터럽트
-│   ├── MonsterMotor.cs              IConfigMover 구현 — v1은 제자리 재생(보관만), FaceToward만 실제 회전
-│   └── MonsterConditionContext.cs   ILinkConditionContext 구현 — 입력 없음(전부 빈 값)
+├── Monster/                         몬스터 — 상위 FSM 판단 + 같은 ConfigState 실행기 사용
+│   ├── MonsterAI.cs                 TargetProvider와 순수 C# MonsterFsm의 MonoBehaviour 호스트
+│   ├── MonsterStateMachine.cs       상위 행동 판단·상태 전이·AI Decision 생성
+│   ├── MonsterActionController.cs   선택된 Config 실행 + ConfigState 조립
+│   ├── MonsterMotor.cs              루트모션 적용 + Bip001 중복 수평 이동 제거
+│   └── MonsterConditionContext.cs   Decision 버퍼 + AIDecisionCondition
 │
 └── Player/
     ├── PlayerMotor.cs                OnAnimatorMove 루트모션·워프·회전 소유권·CharacterController 이동

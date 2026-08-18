@@ -54,7 +54,7 @@
 
 ## 예정 (로드맵)
 
-- [ ] **몬스터 루트모션/추격** — `MonsterMotor`에 플레이어와 같은 `OnAnimatorMove` 기반 `deltaPosition/deltaRotation` 처리와 워프·추격을 구현(현재 Idle+Hit 제자리 재생)
+- [ ] **몬스터 추격·워프 확장** — `MonsterMotor`의 `deltaPosition/deltaRotation` 적용과 `Bip001` 중복 수평 이동 제거는 완료. 사거리 밖 추격과 공격 타깃 워프를 추가하고 플레이 모드에서 충돌 이동을 검증
 - [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
 - [ ] **이펙트 시스템 잔여** — 지연 재생과 구간 이펙트 트레일의 플레이 모드 실전 검증. 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료
 - [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
