@@ -1,21 +1,96 @@
+using System;
 using UnityEngine;
 using ZZZ;
 
 namespace ZZZ.Monster
 {
-    // 몬스터용 링크 조건 컨텍스트 — 입력 개념이 없으므로 입력 질의는 전부 빈 값.
-    // ConfigState 생성자가 ILinkConditionContext를 요구하므로 stub 하나는 필요하다.
-    // (Idle+Hit는 입력 조건이 없어 None 조건이 자동 통과, OnEnd로 복귀한다.)
-    // 거리/체력 등 AI 조건이 생기면 IMonsterConditionContext로 확장해 여기에 채운다.
-    public sealed class MonsterConditionContext : ILinkConditionContext
+    public enum MonsterDecision
     {
-        public bool       HasBufferedInput => false;
-        public ComboInput BufferedInput    => ComboInput.None;
-        public bool       IsHeld(ComboInput input) => false;
-        public void       ConsumeInput() { }
+        None,
+        ContinueCombo,
+        Cancel,
+        SpecialFollowUp,
+    }
+
+    public interface IMonsterDecisionContext : ILinkConditionContext
+    {
+        bool HasDecision(MonsterDecision decision);
+        void ConsumeDecision(MonsterDecision decision);
+    }
+
+    public sealed class MonsterConditionContext : IMonsterDecisionContext
+    {
+        private MonsterDecision _bufferedDecision;
+        private float _decisionTimeRemaining;
+
+        public bool HasBufferedInput => false;
+        public ComboInput BufferedInput => ComboInput.None;
+        public bool IsHeld(ComboInput input) => false;
+        public void ConsumeInput() { }
 
         public MoveDir CurrentMoveDir => MoveDir.Neutral;
-        public Vector3 InputDir       => Vector3.zero;
-        public Vector3 Forward        => Vector3.zero;
+        public Vector3 InputDir => Vector3.zero;
+        public Vector3 Forward => Vector3.zero;
+
+        public void Tick(float deltaTime)
+        {
+            if (_bufferedDecision == MonsterDecision.None) return;
+
+            _decisionTimeRemaining -= deltaTime;
+            if (_decisionTimeRemaining <= 0f)
+                ClearDecision();
+        }
+
+        public void BufferDecision(MonsterDecision decision, float duration)
+        {
+            if (decision == MonsterDecision.None || duration <= 0f)
+            {
+                ClearDecision();
+                return;
+            }
+
+            _bufferedDecision = decision;
+            _decisionTimeRemaining = duration;
+        }
+
+        public bool HasDecision(MonsterDecision decision)
+        {
+            return decision != MonsterDecision.None
+                && _bufferedDecision == decision
+                && _decisionTimeRemaining > 0f;
+        }
+
+        public void ConsumeDecision(MonsterDecision decision)
+        {
+            if (_bufferedDecision == decision)
+                ClearDecision();
+        }
+
+        public void ClearDecision()
+        {
+            _bufferedDecision = MonsterDecision.None;
+            _decisionTimeRemaining = 0f;
+        }
+    }
+
+    [Serializable]
+    public sealed class AIDecisionCondition : LinkCondition
+    {
+        public MonsterDecision Decision = MonsterDecision.ContinueCombo;
+
+        public override bool Matches(ILinkConditionContext context)
+        {
+            return context is IMonsterDecisionContext monsterContext
+                && monsterContext.HasDecision(Decision);
+        }
+
+        public override void Consume(ILinkConditionContext context)
+        {
+            if (context is IMonsterDecisionContext monsterContext)
+                monsterContext.ConsumeDecision(Decision);
+        }
+
+        public override string DisplayName => $"AI {Decision}";
+        public override string MenuName => "Monster/AI Decision";
     }
 }

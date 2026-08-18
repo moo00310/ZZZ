@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Monster_Durahan_Ani_Idle
-    Clip: {fileID: 7400000, guid: 9da1b57d8f642f949a82d1e43a00ef5f, type: 2}
+    Clip: {fileID: 7400000, guid: 2f9f830861dfc91409a34f73e273a265, type: 2}
     Speed: 1
     MoveMode: 2
     Links: []

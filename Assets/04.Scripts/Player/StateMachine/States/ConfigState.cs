@@ -675,6 +675,17 @@ namespace ZZZ.Player.StateMachine.States
             (_config != null && _active >= 0 && _active < _config.Clips.Count)
                 ? SectionNormalizedTime(_config.Clips[_active]) : 0f;
         public MoveDir CurrentMoveDir        => Ctx.Mover.CurrentMoveDir;
+        public bool IsCurrentSectionComplete
+        {
+            get
+            {
+                if (_config == null || _active < 0 || _active >= _config.Clips.Count)
+                    return false;
+
+                TrackClip clip = _config.Clips[_active];
+                return !clip.IsLooping && SectionNormalizedTime(clip) >= EndThreshold(clip);
+            }
+        }
 
         // 현재 섹션(또는 config 공통 GlobalLinks)에 이 공격 입력을 받는 링크가 있는지.
         // 있으면 그 섹션이 입력을 '직접' 처리한다는 뜻 → 전역 폴백 트리거(강화 등)가 윈도우 전에 입력을

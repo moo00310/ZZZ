@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
+  m_Name: Durahan_Hit_Config
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
+  TrackName: New Track
+  LoopTrack: 0
+  DoneThreshold: 0
+  EntrySection: 
+  Clips:
+  - SectionName: Monster_Durahan_Ani_Hit_Stay
+    Clip: {fileID: 7400000, guid: 837efaa1b69a37e40b138bc5bb017f26, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links: []
+    Notifies: []
+    Modules: []
+  - SectionName: Monster_Durahan_Ani_Hit_H_Front
+    Clip: {fileID: 7400000, guid: 78d1299b970e47e4491e4806c3f645e3, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links: []
+    Notifies: []
+    Modules: []
+  GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []

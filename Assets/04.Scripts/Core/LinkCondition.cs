@@ -34,9 +34,8 @@ namespace ZZZ
         public virtual string MenuName    => GetType().Name;
     }
 
-    // 조건 평가에 필요한 런타임 질의 묶음 — 플레이어/몬스터가 각자 구현해 ConfigState에 주입한다.
-    // 지금은 플레이어 입력/방향 질의만. 몬스터 조건(거리/체력/AI결정)을 추가할 때 이 인터페이스를
-    // 확장하고 몬스터 컨텍스트가 구현하면 된다(플레이어 쪽은 새 멤버를 기본값/무동작으로 채움).
+    // 조건 평가에 필요한 공통 런타임 질의 묶음 — 플레이어/몬스터가 각자 구현해 ConfigState에 주입한다.
+    // 캐릭터 전용 질의는 이 인터페이스를 직접 늘리지 않고 파생 컨텍스트 인터페이스로 확장한다.
     public interface ILinkConditionContext
     {
         // ── 입력 버퍼 ──

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 589bc986f64e9d64e99dce99df22c012, type: 3}
+  m_Name: Durahan_Attack_Config
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.AnimationConfig
+  TrackName: Durahan Attack
+  LoopTrack: 0
+  DoneThreshold: 0
+  EntrySection: Monster_Durahan_Ani_Attack_01_01
+  Clips:
+  - SectionName: Monster_Durahan_Ani_Attack_01_01
+    Clip: {fileID: 7400000, guid: 816d9b4303cd9c74f9fd2b68ba31529d, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links: []
+    Notifies: []
+    Modules: []
+  GlobalLinks: []
+  references:
+    version: 2
+    RefIds: []
