@@ -10,6 +10,7 @@ namespace ZZZ.Monster
         [SerializeField] private TargetProvider _targetProvider;
         [SerializeField] private Transform _target;
         [SerializeField, Min(0f)] private float _attackRange = 3f;
+        [SerializeField, Range(0f, 180f)] private float _largeAngleAttackThreshold = 60f;
 
         [Header("Decision")]
         [SerializeField, Min(0.01f)] private float _decisionInterval = 0.15f;
@@ -34,8 +35,9 @@ namespace ZZZ.Monster
             if (_targetProvider != null)
             {
                 _targetProvider.TargetChanged += SetTarget;
-                SetTarget(_targetProvider.CurrentTarget);
+                _target = _targetProvider.CurrentTarget;
             }
+            SetTarget(_target);
         }
 
         private void OnDisable()
@@ -51,6 +53,7 @@ namespace ZZZ.Monster
                 _actions,
                 _actions.ConditionContext,
                 _attackRange,
+                _largeAngleAttackThreshold,
                 _decisionInterval,
                 _initialAttackDelay,
                 _attackCooldown);
@@ -60,12 +63,13 @@ namespace ZZZ.Monster
 
         private void LateUpdate()
         {
-            _fsm?.Tick(Time.deltaTime);
+            _fsm?.Tick(Time.deltaTime * _actions.HitLagSpeed);
         }
 
         public void SetTarget(Transform target)
         {
             _target = target;
+            _actions.SetTarget(target);
             _fsm?.SetTarget(target);
         }
 

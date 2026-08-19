@@ -170,6 +170,7 @@ MonoBehaviour:
     Notifies: []
     Modules:
     - rid: 6745857324881018924
+    - rid: 986220581176737881
   - SectionName: Evade_Left
     Clip: {fileID: 7400000, guid: 079ef89690fe5c448a159d0afa8cd708, type: 2}
     Speed: 1
@@ -218,6 +219,7 @@ MonoBehaviour:
       Locked: 1
     Modules:
     - rid: 6745857324881018926
+    - rid: 986220581176737882
   - SectionName: Evade_Right
     Clip: {fileID: 7400000, guid: 82fb651cc5b1ecc45a76e95545fc2e20, type: 2}
     Speed: 1
@@ -266,6 +268,7 @@ MonoBehaviour:
       Locked: 1
     Modules:
     - rid: 6745857324881018928
+    - rid: 986220581176737883
   - SectionName: Attack_Normal_Enhance_Front_02
     Clip: {fileID: 7400000, guid: 29677e01caca6134fb900a07069ff9a8, type: 2}
     Speed: 1
@@ -365,6 +368,7 @@ MonoBehaviour:
     - rid: 6745857324881018930
     - rid: 6745857446944964671
     - rid: 6745857446944964672
+    - rid: 986220581176737884
   GlobalLinks: []
   references:
     version: 2
@@ -464,6 +468,8 @@ MonoBehaviour:
           _frequency: 1
           _repeatInterval: 0.1
           _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
         _syncWithEffect: 1
     - rid: 986220470650273862
       type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
@@ -526,6 +532,8 @@ MonoBehaviour:
           _frequency: 1
           _repeatInterval: 0.1
           _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
         _syncWithEffect: 1
     - rid: 986220470650273863
       type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
@@ -588,6 +596,8 @@ MonoBehaviour:
           _frequency: 1
           _repeatInterval: 0.1
           _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
         _syncWithEffect: 1
     - rid: 986220470650273864
       type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
@@ -650,7 +660,29 @@ MonoBehaviour:
           _frequency: 1
           _repeatInterval: 0.1
           _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
         _syncWithEffect: 1
+    - rid: 986220581176737881
+      type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.006269592
+        End: 0.14420061
+    - rid: 986220581176737882
+      type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.79999995
+    - rid: 986220581176737883
+      type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.79999995
+    - rid: 986220581176737884
+      type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.59999996
     - rid: 6745857324881018921
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -709,12 +741,12 @@ MonoBehaviour:
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Start: 0
-        End: 0.17621031
+        End: 0.19123507
     - rid: 7723411149892091968
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Start: 0
-        End: 1
+        End: 0.87999994
     - rid: 7723411238959710317
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:

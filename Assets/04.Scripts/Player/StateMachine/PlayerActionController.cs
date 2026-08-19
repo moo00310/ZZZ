@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
@@ -15,7 +16,8 @@ namespace ZZZ.Player.StateMachine
     [RequireComponent(typeof(PlayerResources))]
     [MovedFrom(true, "ZZZ.Player.StateMachine", "Assembly-CSharp", "PlayerStateMachine")]
     public class PlayerActionController : MonoBehaviour, IConfigSignals, ILiveMonitor,
-        IInputMonitor, IPlayerInputTarget, IHittable, IHitSource
+        IInputMonitor, IPlayerInputTarget, IHittable, IHitSource,
+        IReactionTargetProvider, IParryWarningReceiver
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
@@ -49,6 +51,8 @@ namespace ZZZ.Player.StateMachine
         private InputBuffer        _input;
         private PlayerMotor        _motor;
         private bool               _isRunning;
+        private Transform          _incomingAttackSource;
+        private bool               _perfectDodgePending;
 
         // ── 입력 버퍼 facade (ConfigState/HUD/에디터 툴이 사용) ───────
         public bool       HasBufferedInput => _input.HasInput;
@@ -67,6 +71,12 @@ namespace ZZZ.Player.StateMachine
 
         public CombatTeam Team => CombatTeam.Player;
         public Transform HitTransform => transform;
+        public Transform ReactionTarget { get; private set; }
+        public bool PerfectDodgeCandidate =>
+            _perfectDodgePending && _dodge.IsDodging;
+        public event Action<HitContext> ParrySucceeded;
+        public event Action<Transform> PerfectDodgeSucceeded;
+        public event Action<HitContext> ParryWarningReceived;
 
         // ── 퍼펙트 회피 / 패링 윈도우 ──────────────────────────────
         // 적이 "공격 적중 직전" 이 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 회피 모션).
@@ -75,10 +85,14 @@ namespace ZZZ.Player.StateMachine
         private float _incomingAttackUntil = -1f;
         public bool           IncomingAttackActive => Time.time <= _incomingAttackUntil;
         public AttackStrength IncomingStrength { get; private set; }
-        public void OpenIncomingAttack(float window, AttackStrength strength = AttackStrength.Light)
+        public void OpenIncomingAttack(float window,
+            AttackStrength strength = AttackStrength.Light,
+            Transform source = null)
         {
             _incomingAttackUntil = Time.time + window;
             IncomingStrength     = strength;
+            _incomingAttackSource = source;
+            _perfectDodgePending = false;
         }
 
         private void Awake()
@@ -158,16 +172,79 @@ namespace ZZZ.Player.StateMachine
 
         public HitResult ReceiveHit(in HitContext context)
         {
+            if (CanPerfectDodge(context.Source))
+            {
+                if (context.Source != null)
+                    _incomingAttackSource = context.Source;
+                NotifyPerfectDodgeSucceeded();
+                return HitResult.Ignored;
+            }
+
             if (Invulnerable) return HitResult.Ignored;
 
             IncomingStrength = context.Definition != null
                 ? context.Definition.Strength
                 : AttackStrength.Light;
+            CloseIncomingAttack();
             Vector3 sourcePosition = context.Source != null
                 ? context.Source.position
                 : context.HitPoint;
-            TriggerHitFrom(sourcePosition);
+            ReactionTarget = context.Source;
+            bool parried = _hit.TriggerFrom(sourcePosition, transform);
+            ReactionTarget = null;
+            if (parried)
+                ParrySucceeded?.Invoke(context);
             return HitResult.Accepted;
+        }
+
+        public void ReceiveParryWarning(in HitContext context, float duration)
+        {
+            if (context.Definition == null) return;
+
+            OpenIncomingAttack(
+                duration, context.Definition.Strength, context.Source);
+            ParryWarningReceived?.Invoke(context);
+        }
+
+        public void ReceiveParryImpact(in HitContext context)
+        {
+            if (CanPerfectDodge(context.Source))
+            {
+                if (context.Source != null)
+                    _incomingAttackSource = context.Source;
+                NotifyPerfectDodgeSucceeded();
+                return;
+            }
+
+            CloseIncomingAttack();
+        }
+
+        internal void MarkPerfectDodgeCandidate()
+        {
+            _perfectDodgePending = true;
+        }
+
+        private void NotifyPerfectDodgeSucceeded()
+        {
+            Transform source = _incomingAttackSource;
+            CloseIncomingAttack();
+            PerfectDodgeSucceeded?.Invoke(source);
+        }
+
+        private void CloseIncomingAttack()
+        {
+            _incomingAttackUntil = -1f;
+            _incomingAttackSource = null;
+            _perfectDodgePending = false;
+        }
+
+        private bool CanPerfectDodge(Transform source)
+        {
+            if (!_dodge.IsDodging
+                || (!_perfectDodgePending && !IncomingAttackActive))
+                return false;
+            return _incomingAttackSource == null || source == null
+                || _incomingAttackSource == source;
         }
 
         // 패링 스탠스 강제 진입 facade (테스트 트리거가 호출 — 실제 플레이는 OnParry 입력으로 진입)

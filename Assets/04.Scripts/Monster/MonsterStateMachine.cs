@@ -15,6 +15,7 @@ namespace ZZZ.Monster
         private readonly MonsterActionController _actions;
         private readonly MonsterConditionContext _conditionContext;
         private readonly float _attackRangeSqr;
+        private readonly float _largeAngleAttackThreshold;
         private readonly float _decisionInterval;
         private readonly float _initialAttackDelay;
         private readonly float _attackCooldown;
@@ -23,6 +24,7 @@ namespace ZZZ.Monster
         private Transform _target;
         private float _decisionTime;
         private float _attackCooldownTime;
+        private bool _largeAngleAttackPlayed;
 
         public MonsterActionState CurrentState { get; private set; }
         public Transform Target => _target;
@@ -31,6 +33,7 @@ namespace ZZZ.Monster
             MonsterActionController actions,
             MonsterConditionContext conditionContext,
             float attackRange,
+            float largeAngleAttackThreshold,
             float decisionInterval,
             float initialAttackDelay,
             float attackCooldown)
@@ -38,6 +41,8 @@ namespace ZZZ.Monster
             _actions = actions;
             _conditionContext = conditionContext;
             _attackRangeSqr = attackRange * attackRange;
+            _largeAngleAttackThreshold = Mathf.Clamp(
+                largeAngleAttackThreshold, 0f, 180f);
             _decisionInterval = Mathf.Max(0.01f, decisionInterval);
             _initialAttackDelay = Mathf.Max(0f, initialAttackDelay);
             _attackCooldown = Mathf.Max(0f, attackCooldown);
@@ -87,8 +92,7 @@ namespace ZZZ.Monster
                     break;
 
                 case MonsterActionState.Attack:
-                    if (!ChangeState(MonsterActionState.WalkBack))
-                        ChangeState(MonsterActionState.Idle);
+                    ContinueAfterAttack();
                     break;
 
                 case MonsterActionState.WalkBack:
@@ -138,6 +142,40 @@ namespace ZZZ.Monster
             return toTarget.sqrMagnitude <= _attackRangeSqr;
         }
 
+        private void ContinueAfterAttack()
+        {
+            if (_target == null)
+            {
+                ChangeState(MonsterActionState.Idle);
+                return;
+            }
+
+            if (IsTargetAtLargeAngle())
+            {
+                if (!_largeAngleAttackPlayed)
+                {
+                    _largeAngleAttackPlayed = true;
+                    if (_actions.TryPlayLargeAngleAttack(_target)) return;
+                }
+
+                ChangeState(MonsterActionState.Idle);
+                return;
+            }
+
+            if (!ChangeState(MonsterActionState.WalkBack))
+                ChangeState(MonsterActionState.Idle);
+        }
+
+        private bool IsTargetAtLargeAngle()
+        {
+            Vector3 toTarget = _target.position - _actions.transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.0001f) return false;
+
+            return Vector3.Angle(_actions.transform.forward, toTarget)
+                > _largeAngleAttackThreshold;
+        }
+
         private bool ChangeState(
             MonsterActionState nextState,
             string section = null,
@@ -158,6 +196,8 @@ namespace ZZZ.Monster
 
             CurrentState = nextState;
             _hasCurrentState = true;
+            if (nextState == MonsterActionState.Attack)
+                _largeAngleAttackPlayed = false;
             if (nextState != MonsterActionState.Attack)
                 _conditionContext.ClearDecision();
             return true;

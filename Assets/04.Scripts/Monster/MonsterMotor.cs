@@ -12,6 +12,10 @@ namespace ZZZ.Monster
         [SerializeField] private Transform _bip001Bone;
 
         private Animator _animator;
+        private Transform _target;
+        private Transform _facingTarget;
+        private float _faceTurnSpeed;
+        private bool _faceEnabled;
 
         public Vector3 ViewForward => transform.forward;
         public bool UseCodeMovement { get; set; } = true;
@@ -25,10 +29,10 @@ namespace ZZZ.Monster
         public float BackMotionScale { get; set; } = 1f;
         public bool WarpWindowActive { get; set; }
         public bool FaceWindowActive { get; set; }
+        public float LocalTimeScale { get; set; } = 1f;
 
         public Vector3 MoveDirection => Vector3.zero;
         public MoveDir CurrentMoveDir => MoveDir.Neutral;
-        public ZZZ.Combat.EnemySensor EnemySensor => null;
 
         private void Awake()
         {
@@ -54,7 +58,11 @@ namespace ZZZ.Monster
             }
             transform.position += rootDelta;
 
-            if (AllowRotation && !KillRootRotation && !ExtractRootRotation)
+            if (!AllowRotation || KillRootRotation || ExtractRootRotation) return;
+
+            if (_faceEnabled && _facingTarget != null && FaceWindowActive)
+                RotateTowardTarget();
+            else
                 transform.rotation = _animator.deltaRotation * transform.rotation;
         }
 
@@ -76,11 +84,51 @@ namespace ZZZ.Monster
             transform.position += worldDelta;
         }
 
+        public Transform FindTarget()
+        {
+            return _target;
+        }
+
+        public void SetTarget(Transform target)
+        {
+            _target = target;
+            if (_faceEnabled)
+                _facingTarget = target;
+        }
+
         public void FlushRootRotation() { }
-        public void ClearWarpTarget() { }
+        public void ClearWarpTarget()
+        {
+            _facingTarget = null;
+            _faceEnabled = false;
+            WarpWindowActive = false;
+            FaceWindowActive = false;
+        }
+
         public void SetWarpTranslationTarget(Transform target, float stopDistance) { }
-        public void SetFacingTarget(Transform target, float faceTurnSpeed) { }
+
+        public void SetFacingTarget(Transform target, float faceTurnSpeed)
+        {
+            _facingTarget = target;
+            _faceEnabled = target != null;
+            _faceTurnSpeed = faceTurnSpeed;
+            FaceWindowActive = false;
+        }
+
         public void AddStartBoost(float speed, float duration) { }
+
+        private void RotateTowardTarget()
+        {
+            Vector3 toTarget = _facingTarget.position - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.0001f) return;
+
+            Quaternion targetRotation = Quaternion.LookRotation(toTarget);
+            transform.rotation = _faceTurnSpeed > 0f
+                ? Quaternion.RotateTowards(transform.rotation, targetRotation,
+                    _faceTurnSpeed * Time.deltaTime * LocalTimeScale)
+                : targetRotation;
+        }
 
         private void SuppressBip001HorizontalMotion()
         {

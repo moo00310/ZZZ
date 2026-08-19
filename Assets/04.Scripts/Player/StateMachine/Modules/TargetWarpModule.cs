@@ -17,8 +17,7 @@ namespace ZZZ
         public override void OnEnter(TrackClip tc, SectionContext c)
         {
             if (tc.MoveMode != MoveMode.RootMotion) return;
-            var sensor = c.Ctx.Mover.EnemySensor;
-            Transform target = sensor != null ? sensor.FindTarget() : null;
+            Transform target = c.Ctx.Mover.FindTarget();
             if (target != null)
                 c.Ctx.Mover.SetWarpTranslationTarget(target, StopDistance);
         }

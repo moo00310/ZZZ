@@ -18,7 +18,7 @@ MonoBehaviour:
   EntrySection: 
   Clips:
   - SectionName: Monster_Durahan_Ani_Hit_Stay
-    Clip: {fileID: 7400000, guid: 837efaa1b69a37e40b138bc5bb017f26, type: 2}
+    Clip: {fileID: 7400000, guid: 85db70ebba9d8fd4baf9ea9831375337, type: 2}
     Speed: 1
     MoveMode: 2
     Links: []

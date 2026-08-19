@@ -22,9 +22,296 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     Links: []
-    Notifies: []
-    Modules: []
+    Notifies:
+    - NormalizedTime: 0.07734807
+      _payload:
+        rid: 986220581176737866
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 1
+    - NormalizedTime: 0.20994475
+      _payload:
+        rid: 986220581176737863
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0.25414366
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    Modules:
+    - rid: 986220581176737858
+  - SectionName: Monster_Durahan_Ani_Attack_01_03
+    Clip: {fileID: 7400000, guid: d5ca6f44c02465148a94f39d6ed2fd99, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links: []
+    Notifies:
+    - NormalizedTime: 0.12785389
+      _payload:
+        rid: 986220581176737867
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 1
+    - NormalizedTime: 0.2648402
+      _payload:
+        rid: 986220581176737865
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0.30136988
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    Modules:
+    - rid: 986220581176737859
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 986220581176737858
+      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.19889502
+        TurnSpeed: 360
+        _smoothEntry: 1
+    - rid: 986220581176737859
+      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.16438356
+        TurnSpeed: 720
+        _smoothEntry: 1
+    - rid: 986220581176737863
+      type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _hit:
+          _damage: 10
+          _strength: 0
+          _targetMask:
+            serializedVersion: 2
+            m_Bits: 4294967295
+          _includeTriggers: 1
+          _origin: 1
+          _originTracking: 0
+          _socket: Weapon_03
+          _effectKey: 
+          _positionOffset: {x: 0, y: 0, z: 0}
+          _eulerOffset: {x: 0, y: -90, z: 0}
+          _shape: 3
+          _radius: 0.5
+          _angle: 120
+          _boxSize: {x: 2, y: 2, z: 2}
+          _length: 1
+          _startRadius: 0
+          _endRadius: 5
+          _duration: 1
+          _radiusCurve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          _queryMode: 1
+          _frequency: 0
+          _repeatInterval: 0.2
+          _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
+        _syncWithEffect: 0
+    - rid: 986220581176737865
+      type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _hit:
+          _damage: 10
+          _strength: 1
+          _targetMask:
+            serializedVersion: 2
+            m_Bits: 4294967295
+          _includeTriggers: 1
+          _origin: 0
+          _originTracking: 0
+          _socket: 
+          _effectKey: 
+          _positionOffset: {x: 0, y: 0, z: 0}
+          _eulerOffset: {x: 0, y: 0, z: 0}
+          _shape: 0
+          _radius: 3
+          _angle: 120
+          _boxSize: {x: 2, y: 2, z: 2}
+          _length: 4
+          _startRadius: 0
+          _endRadius: 5
+          _duration: 1
+          _radiusCurve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          _queryMode: 0
+          _frequency: 0
+          _repeatInterval: 0.2
+          _showGizmo: 1
+        _action: 0
+        _warningDuration: 0.3
+        _syncWithEffect: 0
+    - rid: 986220581176737866
+      type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _hit:
+          _damage: 0
+          _strength: 0
+          _targetMask:
+            serializedVersion: 2
+            m_Bits: 4294967295
+          _includeTriggers: 1
+          _origin: 0
+          _originTracking: 0
+          _socket: 
+          _effectKey: 
+          _positionOffset: {x: 0, y: 0, z: 0}
+          _eulerOffset: {x: 0, y: 0, z: 0}
+          _shape: 0
+          _radius: 4
+          _angle: 120
+          _boxSize: {x: 2, y: 2, z: 2}
+          _length: 4
+          _startRadius: 0
+          _endRadius: 5
+          _duration: 1
+          _radiusCurve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          _queryMode: 0
+          _frequency: 0
+          _repeatInterval: 0.2
+          _showGizmo: 1
+        _action: 1
+        _warningDuration: 0.45
+        _syncWithEffect: 0
+    - rid: 986220581176737867
+      type: {class: HitNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _hit:
+          _damage: 0
+          _strength: 1
+          _targetMask:
+            serializedVersion: 2
+            m_Bits: 4294967295
+          _includeTriggers: 1
+          _origin: 0
+          _originTracking: 0
+          _socket: 
+          _effectKey: 
+          _positionOffset: {x: 0, y: 0, z: 0}
+          _eulerOffset: {x: 0, y: 0, z: 0}
+          _shape: 0
+          _radius: 4
+          _angle: 120
+          _boxSize: {x: 2, y: 2, z: 2}
+          _length: 4
+          _startRadius: 0
+          _endRadius: 5
+          _duration: 1
+          _radiusCurve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          _queryMode: 0
+          _frequency: 0
+          _repeatInterval: 0.2
+          _showGizmo: 1
+        _action: 1
+        _warningDuration: 0.45
+        _syncWithEffect: 0

@@ -9,15 +9,20 @@ namespace ZZZ.Monster
 {
     [RequireComponent(typeof(MonsterMotor))]
     [RequireComponent(typeof(HitTarget))]
+    [RequireComponent(typeof(CharacterAnimatorBridge))]
     [MovedFrom(true, "ZZZ.Monster", "Assembly-CSharp", "MonsterStateMachine")]
     public class MonsterActionController : MonoBehaviour, IConfigSignals,
-        ILiveMonitor, IHitSource
+        ILiveMonitor, IHitSource, IHitLagTarget
     {
         [Header("State Configs")]
         [SerializeField] private AnimationConfig _idleConfig;
         [SerializeField] private AnimationConfig _hitConfig;
         [SerializeField] private AnimationConfig _attackConfig;
         [SerializeField] private AnimationConfig _walkBackConfig;
+
+        [Header("Attack Sections")]
+        [SerializeField] private string _largeAngleAttackSection =
+            "Monster_Durahan_Ani_Attack_01_03";
 
         [Header("Hit Sections")]
         [SerializeField] private string _hitFrontSection = "Hit_Front";
@@ -32,8 +37,10 @@ namespace ZZZ.Monster
 
         private ConfigState _configState;
         private MonsterMotor _motor;
+        private CharacterAnimatorBridge _animatorBridge;
         private HitTarget _hitTarget;
         private float _nextHitStunTime;
+        private float _hitLagSpeed = 1f;
 
         public event Action<string> HitRequested;
 
@@ -43,6 +50,7 @@ namespace ZZZ.Monster
         public bool Invulnerable { get; set; }
         public bool ParryActive { get; set; }
         public CombatTeam Team => CombatTeam.Enemy;
+        public float HitLagSpeed => _hitLagSpeed;
         public void ConsumeInput() { }
 
         public AnimationConfig CurrentConfig => _configState?.CurrentConfig;
@@ -54,10 +62,11 @@ namespace ZZZ.Monster
         private void Awake()
         {
             _motor = GetComponent<MonsterMotor>();
+            _animatorBridge = GetComponent<CharacterAnimatorBridge>();
             var context = new ConfigContext
             {
                 Mover = _motor,
-                Animator = GetComponent<IAnimatorBridge>(),
+                Animator = _animatorBridge,
                 Transform = transform,
                 GameObject = gameObject,
             };
@@ -84,7 +93,14 @@ namespace ZZZ.Monster
         private void Update()
         {
             _configState.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
-            _configState.Update();
+            _configState.Update(_hitLagSpeed);
+        }
+
+        public void SetHitLagSpeed(float speed)
+        {
+            _hitLagSpeed = Mathf.Max(0f, speed);
+            _animatorBridge.ApplySpeedMultiplier(_hitLagSpeed);
+            _motor.LocalTimeScale = _hitLagSpeed;
         }
 
         public bool TryPlayIdle()
@@ -94,9 +110,25 @@ namespace ZZZ.Monster
 
         public bool TryPlayAttack(Transform target)
         {
-            if (target != null)
-                _motor.FaceToward(target.position - transform.position);
+            _motor.SetTarget(target);
             return TryPlay(_attackConfig);
+        }
+
+        public bool TryPlayLargeAngleAttack(Transform target)
+        {
+            if (_attackConfig == null
+                || _attackConfig.IndexOfSection(_largeAngleAttackSection) < 0)
+                return false;
+
+            _motor.SetTarget(target);
+            return TryPlay(_attackConfig, _largeAngleAttackSection);
+        }
+
+        public void SetTarget(Transform target)
+        {
+            if (_motor == null)
+                _motor = GetComponent<MonsterMotor>();
+            _motor.SetTarget(target);
         }
 
         public bool TryPlayWalkBack()

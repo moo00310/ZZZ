@@ -20,15 +20,33 @@ namespace ZZZ
 
         private Animator  _animator;
         private Coroutine _shakeRoutine;
+        private float _playbackSpeed = 1f;
+        private float _speedMultiplier = 1f;
 
         private void Awake()
         {
             _animator = GetComponent<Animator>();
-            ApplyAnimatorSpeed();
+            RefreshAnimatorSpeed();
         }
 
         // 비주얼 재생 속도 — config의 Speed와 로직 타임라인을 일치시킨다.
-        public void ApplyAnimatorSpeed(float speed = 1f) => _animator.speed = speed;
+        public void ApplyAnimatorSpeed(float speed = 1f)
+        {
+            _playbackSpeed = Mathf.Max(0f, speed);
+            RefreshAnimatorSpeed();
+        }
+
+        public void ApplySpeedMultiplier(float multiplier)
+        {
+            _speedMultiplier = Mathf.Max(0f, multiplier);
+            RefreshAnimatorSpeed();
+        }
+
+        private void RefreshAnimatorSpeed()
+        {
+            if (_animator != null)
+                _animator.speed = _playbackSpeed * _speedMultiplier;
+        }
 
         // 클립을 layer 0에 CrossFade. crossFade는 "초" 단위(고정 시간)라 config의 BlendDuration(초)과 단위가 일치.
         // fixedTimeOffset(초) = 대상 클립을 그 지점부터 재생 (중간 프레임 진입). 0 = 처음부터.

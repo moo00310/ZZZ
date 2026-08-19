@@ -1525,7 +1525,7 @@ MonoBehaviour:
     _reinterruptThreshold: 0.3
     _entryBlend: 0.03
   _inputBufferWindow: 0.25
-  _showHitGizmos: 1
+  _showHitGizmos: 0
   _hitGizmoDuration: 1
 --- !u!114 &3724266460484320341
 MonoBehaviour:
@@ -1590,6 +1590,7 @@ MonoBehaviour:
   _visible: 1
   _origin: {x: 12, y: 12}
   _width: 400
+  _successDisplayDuration: 1.5
 --- !u!1 &1457782752490627230
 GameObject:
   m_ObjectHideFlags: 0

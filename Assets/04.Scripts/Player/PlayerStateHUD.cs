@@ -25,15 +25,30 @@ namespace ZZZ.Player
         [SerializeField] private bool    _visible   = true;
         [SerializeField] private Vector2 _origin    = new Vector2(12f, 12f);
         [SerializeField] private float   _width     = 260f;
+        [SerializeField, Min(0f)] private float _successDisplayDuration = 1.5f;
 
         private GUIStyle _header, _label;
         private bool     _stylesReady;
+        private float    _perfectDodgeSuccessUntil = -1f;
+        private int      _perfectDodgeSuccessCount;
 
         private void Awake()
         {
             if (_actionController == null)
                 _actionController = GetComponentInParent<PlayerActionController>();
             if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
+        }
+
+        private void OnEnable()
+        {
+            if (_actionController != null)
+                _actionController.PerfectDodgeSucceeded += OnPerfectDodgeSucceeded;
+        }
+
+        private void OnDisable()
+        {
+            if (_actionController != null)
+                _actionController.PerfectDodgeSucceeded -= OnPerfectDodgeSucceeded;
         }
 
         private void Update()
@@ -50,7 +65,7 @@ namespace ZZZ.Player
             float lineH = 18f;
             float pad   = 8f;
             // 줄 수에 맞춰 박스 높이 동적 계산
-            int lines = 14;
+            int lines = 15;
             var rect  = new Rect(_origin.x, _origin.y, _width, lines * lineH + pad * 2f);
             GUI.Box(rect, GUIContent.none);
 
@@ -73,6 +88,20 @@ namespace ZZZ.Player
 
                 LabelColored("I-Frame", _actionController.Invulnerable ? "INVULN" : "-",
                     _actionController.Invulnerable ? Color.yellow : Color.grey);
+
+                bool dodgeSucceeded = Time.unscaledTime
+                    <= _perfectDodgeSuccessUntil;
+                string dodgeState = dodgeSucceeded
+                    ? $"SUCCESS  x{_perfectDodgeSuccessCount}"
+                    : _actionController.PerfectDodgeCandidate
+                        ? "CANDIDATE"
+                        : $"-  (x{_perfectDodgeSuccessCount})";
+                Color dodgeColor = dodgeSucceeded
+                    ? new Color(0.3f, 1f, 0.45f)
+                    : _actionController.PerfectDodgeCandidate
+                        ? Color.yellow
+                        : Color.grey;
+                LabelColored("Perfect Dodge", dodgeState, dodgeColor);
 
                 LabelColored("Parry", _actionController.ParryActive ? "ACTIVE" : "-",
                     _actionController.ParryActive
@@ -99,6 +128,13 @@ namespace ZZZ.Player
             }
 
             GUILayout.EndArea();
+        }
+
+        private void OnPerfectDodgeSucceeded(Transform source)
+        {
+            _perfectDodgeSuccessCount++;
+            _perfectDodgeSuccessUntil =
+                Time.unscaledTime + _successDisplayDuration;
         }
 
         // ── 그리기 헬퍼 ────────────────────────────────────────────

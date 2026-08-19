@@ -74,7 +74,6 @@ namespace ZZZ.Player
 
         public float CurrentSpeed => new Vector3(_cc.velocity.x, 0f, _cc.velocity.z).magnitude;
         public Vector3 MoveDirection => _moveDirection;
-        public ZZZ.Combat.EnemySensor EnemySensor => _enemySensor;
         public bool IsRootMotionActive => !UseCodeMovement && _animator != null;
         public float LastRootDelta { get; private set; }
 
@@ -195,6 +194,11 @@ namespace ZZZ.Player
         {
             worldDelta.y = 0f;
             _pendingMovement += worldDelta;
+        }
+
+        public Transform FindTarget()
+        {
+            return _enemySensor != null ? _enemySensor.FindTarget() : null;
         }
 
         public void FlushRootRotation()

@@ -164,6 +164,8 @@ namespace ZZZ.Editor.AnimationTool
                     ? moveDir.Direction : AdditionalMoveDirection.Forward;
                 float stopDistance = m is TargetWarpModule warp ? warp.StopDistance : 0f;
                 float turnSpeed = m is FaceTargetModule face ? face.TurnSpeed : 0f;
+                bool smoothEntry = m is FaceTargetModule smoothFace
+                    && smoothFace.SmoothEntry;
                 float boostSpeed = m is StartBoostModule boost ? boost.Speed : 0f;
                 float boostDuration = m is StartBoostModule boostTime ? boostTime.Duration : 0f;
                 float backScale = m is BackMotionScaleModule back ? back.Scale : 0f;
@@ -183,7 +185,13 @@ namespace ZZZ.Editor.AnimationTool
                 else if (m is TargetWarpModule)
                     stopDistance = EditorGUILayout.FloatField("   Stop Distance", stopDistance);
                 else if (m is FaceTargetModule)
+                {
                     turnSpeed = EditorGUILayout.FloatField("   Turn Speed (°/s)", turnSpeed);
+                    smoothEntry = EditorGUILayout.Toggle(
+                        new GUIContent("   Smooth Entry",
+                            "진입 즉시 스냅하지 않고 Window 동안 Turn Speed로 회전합니다."),
+                        smoothEntry);
+                }
                 else if (m is StartBoostModule)
                 {
                     boostSpeed = EditorGUILayout.FloatField("   Speed", boostSpeed);
@@ -217,7 +225,10 @@ namespace ZZZ.Editor.AnimationTool
                     else if (m is TargetWarpModule targetWarp)
                         targetWarp.StopDistance = Mathf.Max(0f, stopDistance);
                     else if (m is FaceTargetModule faceTarget)
+                    {
                         faceTarget.TurnSpeed = Mathf.Max(0f, turnSpeed);
+                        faceTarget.SmoothEntry = smoothEntry;
+                    }
                     else if (m is StartBoostModule startBoost)
                     {
                         startBoost.Speed = Mathf.Max(0f, boostSpeed);
@@ -767,16 +778,38 @@ namespace ZZZ.Editor.AnimationTool
                 eName = EditorGUILayout.TextField("Event Name", notify.EventName);
 
             HitData hit = notify.Hit != null ? new HitData(notify.Hit) : null;
+            HitNotifyAction hitAction = notify.Payload is HitNotifyPayload actionPayload
+                ? actionPayload.Action
+                : HitNotifyAction.Damage;
+            float warningDuration = notify.Payload is HitNotifyPayload warningPayload
+                ? warningPayload.WarningDuration
+                : 0.3f;
             bool syncHitFromHitNotify = notify.Payload is HitNotifyPayload currentHit
                 && currentHit.SyncWithEffect;
             if (type == NotifyType.Hit)
             {
                 hit ??= new HitData();
-                syncHitFromHitNotify = EditorGUILayout.Toggle(
-                    new GUIContent("Sync With Effect",
-                        "Effect Key의 실제 실행 인스턴스에 Hit을 붙입니다. Effect가 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
-                    syncHitFromHitNotify);
-                DrawHitData(hit, syncHitFromHitNotify);
+                hitAction = (HitNotifyAction)EditorGUILayout.EnumPopup(
+                    new GUIContent("Action",
+                        "Damage는 피격을 적용하고, Parry Warning은 오버랩 범위 안의 플레이어에게만 패링 예고를 전달합니다."),
+                    hitAction);
+                if (hitAction == HitNotifyAction.ParryWarning)
+                {
+                    warningDuration = EditorGUILayout.FloatField(
+                        new GUIContent("Warning Duration",
+                            "예고를 받은 플레이어의 퍼펙트 회피 인정 시간(초)입니다."),
+                        warningDuration);
+                    syncHitFromHitNotify = false;
+                }
+                else
+                {
+                    syncHitFromHitNotify = EditorGUILayout.Toggle(
+                        new GUIContent("Sync With Effect",
+                            "Effect Key의 실제 실행 인스턴스에 Hit을 붙입니다. Effect가 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
+                        syncHitFromHitNotify);
+                }
+                DrawHitData(hit, syncHitFromHitNotify,
+                    hitAction == HitNotifyAction.Damage);
                 if (syncHitFromHitNotify && string.IsNullOrEmpty(hit.EffectKey))
                     EditorGUILayout.HelpBox(
                         "Effect Key를 지정하고 Composite Effect Entry의 Binding Key와 동일하게 맞춰야 합니다.",
@@ -871,7 +904,11 @@ namespace ZZZ.Editor.AnimationTool
                 notify.EventName = eName;
                 notify.Hit = hit;
                 if (notify.Payload is HitNotifyPayload editedHit)
+                {
                     editedHit.SyncWithEffect = syncHitFromHitNotify;
+                    editedHit.Action = hitAction;
+                    editedHit.WarningDuration = warningDuration;
+                }
                 notify.EndNormalizedTime = endT; notify.Locked = locked;
                 notify.TransitionMode = transitionMode;
                 notify.NextSection = nextSection;
@@ -906,7 +943,8 @@ namespace ZZZ.Editor.AnimationTool
             GUI.backgroundColor = Color.white;
         }
 
-        private void DrawHitData(HitData hit, bool effectOriginOnly = false)
+        private void DrawHitData(HitData hit, bool effectOriginOnly = false,
+            bool showDamage = true)
         {
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("Hit Payload", EditorStyles.boldLabel);
@@ -915,7 +953,8 @@ namespace ZZZ.Editor.AnimationTool
                     "Config Tool 상단 Hit Gizmos가 켜져 있을 때 이 Hit의 판정 기즈모를 표시합니다."),
                 hit.ShowGizmo);
 
-            hit.Damage = EditorGUILayout.FloatField("Damage", hit.Damage);
+            if (showDamage)
+                hit.Damage = EditorGUILayout.FloatField("Damage", hit.Damage);
             hit.Strength = (AttackStrength)EditorGUILayout.EnumPopup(
                 "Strength", hit.Strength);
             hit.TargetMask = EditorGUILayout.MaskField(
