@@ -109,7 +109,7 @@ namespace ZZZ.Player.StateMachine.States
             PlayActive(blend, startOffset);
         }
 
-        public void Update()
+        public void Update(float localTimeScale = 1f)
         {
             if (_config == null) return;
             if (_active < 0 || _active >= _config.Clips.Count) return;
@@ -119,11 +119,12 @@ namespace ZZZ.Player.StateMachine.States
             // 섹션 진입 후 경과 시간으로 nt를 직접 계산한다 — 섹션 타임라인의 0점을 코드가 소유하기 위해서다.
             // Animator 상태 시간은 같은 섹션 재진입(A→B→A) 시 0이 아닌 이전 지점에서 이어지고, EntryOffset
             // (중간 진입)도 통제하기 어렵다. _clipTime은 진입 시 0(또는 offset)으로 리셋되므로 항상 섹션 기준이다.
+            float deltaTime = Time.deltaTime * Mathf.Max(0f, localTimeScale);
             float previousNtRaw = SectionNormalizedTime(tc);
-            _clipTime += Time.deltaTime;
+            _clipTime += deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 
-            FireNotifies(tc, ntRaw);
+            FireNotifies(tc, ntRaw, deltaTime);
             Ctx.Mover.AllowRotation = true;
             Ctx.Mover.WarpWindowActive = false;
             Ctx.Mover.FaceWindowActive = false;
@@ -373,7 +374,7 @@ namespace ZZZ.Player.StateMachine.States
                 mods[i]?.Tick(tc, ntRaw, _sc);
         }
 
-        private void FireNotifies(TrackClip tc, float ntRaw)
+        private void FireNotifies(TrackClip tc, float ntRaw, float deltaTime)
         {
             if (_notifyFired == null) return;
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
@@ -387,7 +388,9 @@ namespace ZZZ.Player.StateMachine.States
                     _notifyFired[i] = true;
                     if (notify.Payload is HitNotifyPayload hitPayload)
                     {
-                        if (hitPayload.SyncWithEffect)
+                        bool parryWarning = hitPayload.Action
+                            == HitNotifyAction.ParryWarning;
+                        if (!parryWarning && hitPayload.SyncWithEffect)
                         {
                             _hitSyncPending[i] = !TryAttachSynchronizedHit(
                                 tc, notify, hitPayload.Hit);
@@ -398,8 +401,15 @@ namespace ZZZ.Player.StateMachine.States
                             _showHitGizmos, _hitGizmoDuration);
                         if (notify.IsInterval
                             || hitPayload.Hit.Origin == HitOrigin.Effect)
-                            _hitActive[i] = HitService.Begin(
-                                hitPayload.Hit, hitContext);
+                            _hitActive[i] = parryWarning
+                                ? HitService.BeginParryWarning(
+                                    hitPayload.Hit, hitContext,
+                                    hitPayload.WarningDuration)
+                                : HitService.Begin(hitPayload.Hit, hitContext);
+                        else if (parryWarning)
+                            HitService.ExecuteParryWarning(
+                                hitPayload.Hit, hitContext,
+                                hitPayload.WarningDuration);
                         else
                             HitService.Execute(hitPayload.Hit, hitContext);
                         continue;
@@ -424,7 +434,7 @@ namespace ZZZ.Player.StateMachine.States
                         ? Mathf.InverseLerp(
                             notify.NormalizedTime, notify.EndNormalizedTime, p)
                         : 1f;
-                    _hitActive[i].Tick(Time.deltaTime, progress);
+                    _hitActive[i].Tick(deltaTime, progress);
                     if (!notify.IsInterval && _hitActive[i].HasSampled)
                     {
                         _hitActive[i].Stop();

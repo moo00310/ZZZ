@@ -249,8 +249,9 @@ Animator가 Transform을 자동 이동하지 않고, 컨트롤러가 최종 적�
 애니 원본만으로는 적을 정확히 못 때리므로, 루트모션 위에 두 가지 보정을 얹는다.
 
 ### 타겟 워프 & 조준 — `TargetWarpModule`과 `FaceTargetModule`은 독립
-RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`)을 찾아 적용한다.
-적이 없으면 둘 다 무동작 → 원본 모션 그대로 (적 유무 분기 불필요).
+RootMotion 섹션 진입 시 각 모듈이 `IConfigMover.FindTarget()`으로 현재 전투 타겟을 받아 적용한다.
+플레이어는 `EnemySensor`의 전방 적을, 몬스터는 `TargetProvider`에서 전달받은 타겟을 반환한다.
+타겟이 없으면 둘 다 무동작 → 원본 모션 그대로 (타겟 유무 분기 불필요).
 
 **이동 워프 (`TargetWarpModule`)** — 루트모션 수평 이동을 적 방향으로 재조준 (회전과 무관, 이동만).
 - `StopDistance`로 타겟 앞에서 멈춤(관통 방지)
@@ -260,6 +261,7 @@ RootMotion 섹션 진입 시 각 모듈이 전방 적(`EnemySensor.FindTarget()`
 **타겟 조준 (`FaceTargetModule`)** — 모듈 윈도우 동안 타겟을 향해 회전한다.
 - `Start=End=0`이면 진입 1회 스냅 / 넓히면 그 구간 내내 락온
 - `TurnSpeed` 0 = 즉시, >0 = 각속도 제한 회전
+- `Smooth Entry`를 켜면 진입 스냅을 생략하고 첫 프레임부터 `TurnSpeed`로 부드럽게 회전
 - `FaceInputModule`이 함께 있으면 입력 방향 조준이 진입 스냅보다 우선
 
 ### 턴 회전 (`SectionTurnModule`) — 턴 애니로 캐릭터를 실제 회전
@@ -341,13 +343,16 @@ ConfigRegistry.FindWithSection("Evade_" + suffix)  — 섹션 이름 규약으�
     │  · 재진입 가드: 이미 회피 중 + 진행도 < _dodgeReinterrupt 면 무시 (연타 프리즈 방지)
     ▼
 ConfigState.InterruptWith(cfg, section, _dodgeBlend)
-    └── IFrameModule이 회피 시작~중반 무적 부여 → 이 사이 피격은 무시(회피 성공)
+    └── IFrameModule이 회피 시작~중반 무적 부여 → 이 사이 일반 피격은 무시
+        └── 경고를 보낸 공격의 실제 Hit Notify 시점에 회피 후보면 PerfectDodgeSucceeded 발행 + 전역 히트랙
 ```
 
 ### 퍼펙트 회피 윈도우
-적이 "공격 적중 직전" `OpenIncomingAttack(window)`로 창을 열어두면, 그 사이 회피 = 퍼펙트(좌/우 모션).
-현재는 `PlayerTestTriggers`의 `K` 키로 적 공격을 시뮬레이션한다(윈도우를 열고 끝에 `TriggerHit` 적중 — i-frame 중이면 자동 무시).
-실제 적 공격 시스템이 생기면 공격 액티브 직전에 `OpenIncomingAttack`를 호출하면 된다.
+몬스터 공격의 `Hit Notify(Action = ParryWarning)`가 공격 적중 전에 경고 범위를 검사하고 `OpenIncomingAttack(window)`을 연다.
+경고 윈도우 안에서 회피를 시작하면 이동 입력 유무와 관계없이 퍼펙트 회피 후보가 된다. 방향 입력이 있으면 전용 Left/Right 섹션을, 중립 입력이면 기존 Back 섹션을 선택하지만 아직 성공으로 확정하지 않는다. `HitService`는 경고를 받은 대상을 공격자별로 잠시 기억하고, 같은 공격자의 실제 데미지 Hit Notify가 실행되는 시점에 후보를 확인한다. 따라서 회피 이동으로 데미지 오버랩 자체를 벗어나도 실제 공격 타이밍에 `PerfectDodgeSucceeded`를 발행할 수 있다. 실제 데미지 오버랩이 닿은 경우에도 같은 경로로 한 번만 성공하며 공격을 무시한다. 일반 회피의 피격 무시는 기존 `IFrameModule` 구간만 사용한다. 씬의 `PlayerRuntime`이 성공 이벤트를 받아 `Success Hit Lag` 설정으로 히트랙을 요청한다. `Game Speed Curve`는 전체 `Time.timeScale`을, `Monster Speed Curve`는 경고 Hit을 보낸 몬스터의 애니메이션·Config 타임라인·AI 진행 배율을 추가로 제어한다. 각 Curve의 X축은 Duration의 정규화 진행도, Y축은 해당 시점에 적용할 실제 속도 배율이다. 처리한 경고는 즉시 소비해 같은 공격에서 연속 발동하지 않는다.
+`PlayerTestTriggers`의 K/L 입력은 경고·피격 반응을 단독 확인하는 보조 테스트 경로이며, 실제 전투에서는 몬스터 AnimationConfig의 경고/데미지 Hit Notify 쌍을 사용한다.
+
+성공 판정, 히트랙 곡선, HUD 진단 순서는 [CombatFeedbackArchitecture.md](CombatFeedbackArchitecture.md)를 참고한다.
 
 ### 문제와 해결
 
@@ -368,12 +373,13 @@ ConfigState.InterruptWith(cfg, section, _dodgeBlend)
     │
     ▼
 ParryTrigger.Trigger()  — 스탠스 섹션(Attack_ParryAid_Start)으로 강제 진입 (방향 분기 없음)
+    │  · 현재 섹션이 Hit_*이면 입력을 소비하고 진입하지 않음
     │  · 재진입 가드: 같은 스탠스 중 + 진행도 < _reinterrupt 면 무시
     ▼
 ParryModule (윈도우)  — 활성 구간 동안 Machine.ParryActive = true
     │
     ▼  (이 사이 적 공격이 닿으면)
-HitTrigger.Trigger()
+HitService → PlayerActionController.ReceiveHit() → HitTrigger.Trigger()
     ├── Invulnerable 이면 → 피격 무시 (회피 i-frame)
     ├── ParryActive 이고 TryDeflect() 성공 → 쳐냄(ParryAid_L/H) 진입  ← 패링 성공
     └── 둘 다 아니면 → 일반 피격 (Hit_L/H_Front/Back)
@@ -384,7 +390,9 @@ HitTrigger.Trigger()
 
 - **동작 요점** — 적 공격 강도(`IncomingStrength`)로 쳐냄 섹션 L/H를 고른다. 쳐냄 섹션 config가 없으면 `TryDeflect()`가 false를 반환해 **일반 피격으로 안전하게 폴백**한다(패링 모션 미제작 상태에서도 안 깨짐).
 - **장점** — 회피/피격과 판정 경로(`HitTrigger`)·진입 방식(push)·구간 모듈(`WindowModule`)을 **공유**해 코드 추가가 작다. 데이터(섹션 이름 규약 `Attack_ParryAid_*`)만으로 쳐냄·카운터를 잇는다.
-- **단점** — 현재 들어오는 공격은 테스트키(`K`)로 시뮬레이션이라, 실제 적 AI가 `OpenIncomingAttack(window, strength)`를 공격 액티브 직전에 호출하도록 배선해야 완성된다. 접두어 문자열 규약(`Attack_ParryAid_`)을 `ParryTrigger`/`HitTrigger`가 공유하므로 한 곳(`ParryTrigger.Prefix`)에서만 정의해 주입한다.
+- **성공 피드백** — `ParryAid_L/H`의 `FaceOppositeTargetModule`이 진입 시 플레이어 Look을 `-ReactionTarget.forward`로 맞춰 몬스터 Look과 반대 방향으로 정렬한다. 실제 Hit가 쳐냄으로 분기된 경우에만 `PlayerActionController.ParrySucceeded`를 원래 `HitContext`와 함께 발행한다. 씬의 `PlayerRuntime`이 성공 이벤트를 구독하고 패링/퍼펙트 회피별 Duration·Game Speed Curve·Monster Speed Curve를 소유한다. 각 곡선의 Y축은 실제 속도 배율이며 Monster Speed는 Game Speed에 곱해지는 공격 몬스터 전용 배율이다. Duration은 `realtimeSinceStartup`으로 재므로 Game Speed가 0이어도 정상 복구된다. 여러 요청이 겹치면 가장 긴 종료 시점을 유지하면서 새 곡선을 처음부터 적용한다.
+- **패링 예고** — 몬스터 공격 섹션에 `Hit Notify`를 두고 `Action = ParryWarning`으로 지정한다. 일반 Hit과 같은 오버랩 모양·원점·대상 레이어를 사용하지만 데미지는 적용하지 않고, 범위 안의 `IParryWarningReceiver`에게만 예고를 전달한다. 플레이어는 `ParryWarningReceived`를 발행하고 `Warning Duration`동안 퍼펙트 회피 윈도우를 연다. Animation Tool에서 이 Notify를 선택하면 경고 오버랩 범위를 Scene View에서 같이 편집할 수 있다. Durahan의 `Attack_01_01`, `Attack_01_03`은 Hit보다 앞선 시점에 반경 4m 경고 Overlap과 0.45초 입력 윈도우를 사용한다.
+- **문자열 규약** — 쳐냄 섹션 접두어(`Attack_ParryAid_`)는 `ParryTrigger.Prefix` 한 곳에서 정의해 `HitTrigger`에 주입한다.
 
 ---
 
@@ -493,12 +501,13 @@ PlayerInputRouter
 | `MonsterFsm` | — | Idle/Attack/WalkBack/Hit의 상위 행동 FSM. 타깃 거리·쿨다운으로 상태 전이를 판단하고, 공격 중에는 `ContinueCombo` Decision을 버퍼에 기록한다 |
 | `MonsterActionController` | `IConfigSignals` · `ILiveMonitor` | `ConfigState`를 조립하고 FSM이 선택한 Idle/Attack/WalkBack/Hit Config를 실행한다. 거리·페이즈 같은 행동 판단은 갖지 않는다 |
 | `MonsterConditionContext` | `IMonsterDecisionContext` | FSM의 짧은 Decision 버퍼를 Config Link에 제공한다. `AIDecisionCondition`이 조건을 확인하고 링크 발동 시 소비한다 |
-| `MonsterMotor` | `IConfigMover` | `Animator.deltaPosition/deltaRotation`을 실제 Transform에 적용하고 `Bip001`의 중복 수평 이동을 제거한다 |
+| `MonsterMotor` | `IConfigMover` | `Animator.deltaPosition/deltaRotation`을 실제 Transform에 적용하고 `Bip001`의 중복 수평 이동을 제거한다. `TargetProvider`에서 전달된 타겟을 공용 모듈에 제공하고 조준 윈도우 회전을 적용한다 |
 | `ConfigContext` (공용) | — (구상 클래스) | 몬스터 컴포넌트(Mover/Animator/Transform/GO)를 묶어 `ConfigState`에 주입. `Awake`에서 직접 채움 — 전용 컨텍스트 클래스 없음 |
 
 - **CharacterAnimatorBridge·HitTarget 그대로 재사용** — `MonsterActionController`는 `IAnimatorBridge`로 같은 `CharacterAnimatorBridge`를 받는다(흔들림 State 이름만 인스펙터에서 Durahan용으로 설정). 입력이 없으므로 `IInputMonitor`는 구현하지 않아 라이브 모니터가 입력 행을 자동 생략한다.
 - **경직(poise) A안 — 히트 쿨다운** : 인터럽트 직후 `_hitStunCooldown`(기본 0.3s) 동안은 Hit 모션을 재시작하지 않는다(무한 경직 락 방지). 데미지(HP)는 매 히트 적용되고 '모션 리셋'만 throttle. 후속으로 C안(Hit config 구간별 슈퍼아머 윈도우) 확장 가능.
 - **상위 판단과 클립 내부 흐름의 경계** — 공격 시작·피격·행동 완료 후 복귀는 `MonsterFsm`이 결정한다. Attack01→02 같은 콤보와 캔슬 가능 프레임은 Config의 Link가 소유하고, FSM은 `MonsterDecision`만 버퍼에 기록한다. `AIDecisionCondition`은 해당 신호가 링크 윈도우에 들어왔을 때 전이하고 즉시 소비한다.
+- **큰 각도 후속 공격** — 01-01 종료 시 타겟 각도가 `_largeAngleAttackThreshold`를 넘으면 WalkBack 대신 Attack Config의 01-03 섹션을 한 번 재생한다. 01-03 종료 후 각도가 정리됐으면 WalkBack으로, 여전히 크면 반복하지 않고 Idle로 복귀한다.
 - **강제 인터럽트** — 피격처럼 애니메이션 윈도우를 기다리면 안 되는 전이는 FSM이 `MonsterActionController.TryPlayHit`으로 즉시 Config를 교체한다. 일반 콤보는 Config Link가 먼저 평가되고 FSM은 최종 섹션 완료 뒤에만 다음 상위 상태로 이동한다.
 
 ---

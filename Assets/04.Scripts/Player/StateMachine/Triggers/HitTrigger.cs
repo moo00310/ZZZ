@@ -36,21 +36,21 @@ namespace ZZZ.Player.StateMachine
         }
 
         // 충돌 검출에서 호출 — 공격자 위치로 Front/Back 판정 후 진입.
-        public void TriggerFrom(Vector3 attackerPos, Transform self)
+        public bool TriggerFrom(Vector3 attackerPos, Transform self)
         {
             Vector3 to = attackerPos - self.position;
             bool back = Vector3.Dot(self.forward, to) < 0f;   // 등 뒤에서 맞음
-            Trigger(back ? "Back" : "Front");
+            return Trigger(back ? "Back" : "Front");
         }
 
         //   direction : 반응 방향("Front"/"Back") → 섹션 이름에 사용
-        public void Trigger(string direction = "Back")
+        public bool Trigger(string direction = "Back")
         {
-            if (_controller.Invulnerable) return;   // 회피 i-frame 중이면 피격 무시
+            if (_controller.Invulnerable) return false;   // 회피 i-frame 중이면 피격 무시
 
             // 패링 활성 중이면 피격 대신 쳐냄(deflect)으로 분기 — 적 공격 강도로 L/H 결정.
             // 카운터 follow-up은 ParryAid_L/H config의 Link(Attack=Normal → Counter)가 처리한다.
-            if (_controller.ParryActive && TryDeflect()) return;
+            if (_controller.ParryActive && TryDeflect()) return true;
 
             // 등록된 config 중 이번 피격 섹션(L/H 둘 다 같은 config에 있음)을 가진 것을 찾는다.
             AnimationConfig hitConfig = _registry.FindWithSection($"Hit_L_{direction}")
@@ -58,14 +58,14 @@ namespace ZZZ.Player.StateMachine
             if (hitConfig == null)
             {
                 Debug.LogWarning($"[Hit] 'Hit_*_{direction}' 섹션을 가진 config가 없음 — PlayerActionController 인스펙터 'Configs' 리스트 확인", _controller);
-                return;
+                return false;
             }
 
             bool inHit = _state.CurrentConfig == hitConfig;
 
             // A. 재진입 가드: 피격 반응이 충분히 진행되기 전엔 새 피격 무시
             if (inHit && _state.CurrentNormalizedTime < _reinterruptThreshold)
-                return;
+                return false;
 
             // 새 피격(걷기 등에서 진입)이면 콤보 리셋, 연속타면 누적
             if (!inHit) _comboHitCount = 0;
@@ -73,6 +73,7 @@ namespace ZZZ.Player.StateMachine
 
             string strength = (_comboHitCount % 2 == 1) ? "L" : "H";   // 홀수타=L, 짝수타=H 교대 → 연출 풍부
             _state.InterruptWith(hitConfig, $"Hit_{strength}_{direction}", _entryBlend);
+            return false;
         }
 
         // 패링 성공 — 적 공격 강도로 ParryAid_L/H 진입. 섹션 config가 없으면 false(일반 피격으로 폴백).

@@ -21,24 +21,78 @@ MonoBehaviour:
     Clip: {fileID: 7400000, guid: 59c3a028446371648afc7088146c3107, type: 2}
     Speed: 1
     MoveMode: 2
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Monster_Durahan_Ani_Walk_B_Loop
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 986220581176737855
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 986220581176737856
   - SectionName: Monster_Durahan_Ani_Walk_B_Loop
     Clip: {fileID: 7400000, guid: cf274868502c4cd4ba56637b679c4701, type: 2}
     Speed: 1
     MoveMode: 2
-    Links: []
+    Links:
+    - TargetConfig: {fileID: 0}
+      TargetSection: Monster_Durahan_Ani_Walk_B_End
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 986220581176737858
+      Timing: 0
+      WindowStart: 0.5945946
+      WindowEnd: 0.6306306
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 986220581176737860
   - SectionName: Monster_Durahan_Ani_Walk_B_End
     Clip: {fileID: 7400000, guid: f0745c8f8ebcc8c40ba993842be9655d, type: 2}
     Speed: 1
     MoveMode: 2
     Links: []
     Notifies: []
-    Modules: []
+    Modules:
+    - rid: 986220581176737861
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 986220581176737855
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 0
+        RequireHeld: 0
+    - rid: 986220581176737856
+      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+        TurnSpeed: 200
+        _smoothEntry: 1
+    - rid: 986220581176737858
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 986220581176737860
+      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+        TurnSpeed: 200
+        _smoothEntry: 1
+    - rid: 986220581176737861
+      type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 0.32846716
+        TurnSpeed: 200
+        _smoothEntry: 1

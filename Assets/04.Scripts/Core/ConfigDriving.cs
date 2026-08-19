@@ -25,7 +25,7 @@ namespace ZZZ
 
         Vector3 MoveDirection  { get; }   // 카메라 기준 입력 방향(몬스터는 0)
         MoveDir CurrentMoveDir { get; }   // 현재 이동 방향(절대 enum)
-        ZZZ.Combat.EnemySensor EnemySensor { get; }   // 워프/조준 타겟 탐색기(없으면 null)
+        Transform FindTarget();   // 워프/조준에 사용할 현재 타겟 획득(없으면 null)
 
         void FlushRootRotation();   // 섹션 턴의 누적 회전량 리셋
         void FaceToward(Vector3 worldDir);   // 즉시/즉회전으로 worldDir을 향함
@@ -61,6 +61,12 @@ namespace ZZZ
         bool Invulnerable { get; set; }
         bool ParryActive  { get; set; }
         void ConsumeInput();
+    }
+
+    // 피격 반응처럼 현재 이벤트를 일으킨 정확한 상대가 필요한 진입 모듈이 선택적으로 사용한다.
+    public interface IReactionTargetProvider
+    {
+        Transform ReactionTarget { get; }
     }
 
     // 에디터/HUD 라이브 모니터가 읽는 런타임 상태 표면 — 플레이어/몬스터 머신이 공통 구현.

@@ -5,8 +5,24 @@ namespace ZZZ.Combat
 {
     public static class HitService
     {
+        private const float PARRY_WARNING_GRACE = 0.15f;
         private static readonly Collider[] s_hits = new Collider[64];
         private static readonly RaycastHit[] s_sweepHits = new RaycastHit[64];
+        private static readonly List<PendingParryWarning> s_parryWarnings =
+            new List<PendingParryWarning>();
+
+        private sealed class PendingParryWarning
+        {
+            public Transform Source;
+            public IParryWarningReceiver Receiver;
+            public float ExpiresAt;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetState()
+        {
+            s_parryWarnings.Clear();
+        }
 
         public static void Execute(HitData definition, HitExecutionContext context)
         {
@@ -14,11 +30,30 @@ namespace ZZZ.Combat
             handle?.Stop();
         }
 
+        public static void ExecuteParryWarning(HitData definition,
+            HitExecutionContext context, float duration)
+        {
+            HitHandle handle = BeginParryWarning(definition, context, duration);
+            handle?.Stop();
+        }
+
         public static HitHandle Begin(HitData definition, HitExecutionContext context)
         {
             if (definition == null || context.Source == null) return null;
 
-            var handle = new HitHandle(definition, context);
+            var handle = new HitHandle(definition, context, false, 0f);
+            handle.Tick(0f, 0f);
+            ResolveParryWarnings(definition, context);
+            return handle;
+        }
+
+        public static HitHandle BeginParryWarning(HitData definition,
+            HitExecutionContext context, float duration)
+        {
+            if (definition == null || context.Source == null) return null;
+
+            var handle = new HitHandle(
+                definition, context, true, Mathf.Max(0f, duration));
             handle.Tick(0f, 0f);
             return handle;
         }
@@ -152,7 +187,18 @@ namespace ZZZ.Combat
                 : rotation * Vector3.forward;
             var hitContext = new HitContext(
                 definition, handle.Source, handle.SourceTeam, hitPoint, direction);
-            if (target.ReceiveHit(in hitContext) == HitResult.Accepted)
+            if (handle.IsParryWarning)
+            {
+                if (target is IParryWarningReceiver warningReceiver)
+                {
+                    warningReceiver.ReceiveParryWarning(
+                        in hitContext, handle.WarningDuration);
+                    RegisterParryWarning(
+                        handle.Source, warningReceiver, handle.WarningDuration);
+                    handle.MarkStruck(target);
+                }
+            }
+            else if (target.ReceiveHit(in hitContext) == HitResult.Accepted)
                 handle.MarkStruck(target);
         }
 
@@ -196,6 +242,70 @@ namespace ZZZ.Combat
             if (handle.SourceTeam != CombatTeam.Neutral
                 && target.Team == handle.SourceTeam) return false;
             return !handle.HasStruck(target);
+        }
+
+        private static void RegisterParryWarning(Transform source,
+            IParryWarningReceiver receiver, float duration)
+        {
+            float expiresAt = Time.time + duration + PARRY_WARNING_GRACE;
+            for (int i = 0; i < s_parryWarnings.Count; i++)
+            {
+                PendingParryWarning pending = s_parryWarnings[i];
+                if (pending.Source != source
+                    || !ReferenceEquals(pending.Receiver, receiver)) continue;
+
+                pending.ExpiresAt = Mathf.Max(pending.ExpiresAt, expiresAt);
+                return;
+            }
+
+            s_parryWarnings.Add(new PendingParryWarning
+            {
+                Source = source,
+                Receiver = receiver,
+                ExpiresAt = expiresAt,
+            });
+        }
+
+        private static void ResolveParryWarnings(
+            HitData definition, HitExecutionContext context)
+        {
+            float now = Time.time;
+            for (int i = s_parryWarnings.Count - 1; i >= 0; i--)
+            {
+                PendingParryWarning pending = s_parryWarnings[i];
+                if (!IsReceiverAlive(pending.Receiver)
+                    || pending.Source == null
+                    || now > pending.ExpiresAt)
+                {
+                    s_parryWarnings.RemoveAt(i);
+                    continue;
+                }
+                if (pending.Source != context.Source) continue;
+
+                Transform targetTransform = pending.Receiver is IHittable hittable
+                    ? hittable.HitTransform
+                    : null;
+                Vector3 hitPoint = targetTransform != null
+                    ? targetTransform.position
+                    : context.Source.position;
+                Vector3 direction = hitPoint - context.Source.position;
+                if (direction.sqrMagnitude > 0.0001f)
+                    direction.Normalize();
+                else
+                    direction = context.Source.forward;
+
+                var hitContext = new HitContext(
+                    definition, context.Source, ResolveTeam(context.Source),
+                    hitPoint, direction);
+                pending.Receiver.ReceiveParryImpact(in hitContext);
+                s_parryWarnings.RemoveAt(i);
+            }
+        }
+
+        private static bool IsReceiverAlive(IParryWarningReceiver receiver)
+        {
+            if (receiver == null) return false;
+            return !(receiver is Object receiverObject) || receiverObject != null;
         }
 
         private static Transform FindRecursive(Transform root, string targetName)
@@ -403,6 +513,8 @@ namespace ZZZ.Combat
         private Vector3 _snapshotCenter;
         private Quaternion _snapshotRotation;
         private readonly HitExecutionContext _context;
+        private readonly bool _isParryWarning;
+        private readonly float _warningDuration;
 
         internal HitData Definition { get; }
         internal Transform Source { get; }
@@ -415,11 +527,16 @@ namespace ZZZ.Combat
         internal float DebugDuration => _context.DebugDuration;
         public bool HasSampled => _hasSampled;
         internal bool HasAcceptedHit { get; private set; }
+        internal bool IsParryWarning => _isParryWarning;
+        internal float WarningDuration => _warningDuration;
 
-        internal HitHandle(HitData definition, HitExecutionContext context)
+        internal HitHandle(HitData definition, HitExecutionContext context,
+            bool isParryWarning, float warningDuration)
         {
             Definition = definition;
             _context = context;
+            _isParryWarning = isParryWarning;
+            _warningDuration = warningDuration;
             Source = context.Source;
             SourceTeam = HitService.ResolveTeam(context.Source);
             PreviousRadius = 0f;

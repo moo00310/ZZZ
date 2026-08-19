@@ -37,6 +37,12 @@ namespace ZZZ.Player.StateMachine
 
         public void Trigger()
         {
+            if (IsHitReaction(_state.ActiveSection))
+            {
+                _input.Consume();
+                return;
+            }
+
             string section = _prefix + "Start";   // Attack_ParryAid_ + Start
             var cfg = _registry.FindWithSection(section);
             if (cfg == null)
@@ -55,6 +61,12 @@ namespace ZZZ.Player.StateMachine
 
             _input.Consume();
             _state.InterruptWith(cfg, section, _blend);
+        }
+
+        private static bool IsHitReaction(string section)
+        {
+            return !string.IsNullOrEmpty(section)
+                && section.StartsWith("Hit_", System.StringComparison.Ordinal);
         }
     }
 }

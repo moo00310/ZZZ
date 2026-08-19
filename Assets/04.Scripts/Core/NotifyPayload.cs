@@ -4,6 +4,12 @@ using ZZZ.Effects;
 
 namespace ZZZ
 {
+    public enum HitNotifyAction
+    {
+        Damage,
+        ParryWarning
+    }
+
     [Serializable]
     public abstract class NotifyPayload
     {
@@ -51,6 +57,8 @@ namespace ZZZ
     public sealed class HitNotifyPayload : NotifyPayload
     {
         [SerializeField] private HitData _hit = new HitData();
+        [SerializeField] private HitNotifyAction _action;
+        [SerializeField, Min(0f)] private float _warningDuration = 0.3f;
         [SerializeField] private bool _syncWithEffect;
 
         public override NotifyType Type => NotifyType.Hit;
@@ -63,6 +71,16 @@ namespace ZZZ
         {
             get => _syncWithEffect;
             set => _syncWithEffect = value;
+        }
+        public HitNotifyAction Action
+        {
+            get => _action;
+            set => _action = value;
+        }
+        public float WarningDuration
+        {
+            get => _warningDuration;
+            set => _warningDuration = Mathf.Max(0f, value);
         }
 
         public HitNotifyPayload()

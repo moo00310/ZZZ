@@ -341,7 +341,11 @@ namespace ZZZ.Editor.AnimationTool
                 case HitNotifyPayload hitPayload:
                     clone.Hit = source.Hit != null ? new HitData(source.Hit) : null;
                     if (clone.Payload is HitNotifyPayload clonedHit)
+                    {
                         clonedHit.SyncWithEffect = hitPayload.SyncWithEffect;
+                        clonedHit.Action = hitPayload.Action;
+                        clonedHit.WarningDuration = hitPayload.WarningDuration;
+                    }
                     break;
                 case EffectNotifyPayload:
                     clone.Effect = source.Effect;

@@ -24,6 +24,11 @@ namespace ZZZ.Player.StateMachine
         private InputBuffer        _input;
         private PlayerResources    _resources;   // 대쉬 충전/쿨 게이트 (null이면 게이트 없음)
 
+        internal bool IsDodging => _state != null
+            && !string.IsNullOrEmpty(_state.ActiveSection)
+            && _state.ActiveSection.StartsWith(
+                _prefix, System.StringComparison.Ordinal);
+
         public void Init(PlayerActionController controller, ConfigState state,
             ConfigRegistry registry,
             InputBuffer input, PlayerResources resources)
@@ -46,7 +51,8 @@ namespace ZZZ.Player.StateMachine
                 return;
             }
 
-            string section = _prefix + Suffix();
+            string suffix = Suffix(out bool perfectDodgeCandidate);
+            string section = _prefix + suffix;
             var cfg = _registry.FindWithSection(section);
             if (cfg == null)
             {
@@ -61,14 +67,17 @@ namespace ZZZ.Player.StateMachine
             _input.Consume();
             _resources?.NotifyDash();   // 충전 1 소비
             _state.InterruptWith(cfg, section, _blend);
+            if (perfectDodgeCandidate)
+                _controller.MarkPerfectDodgeCandidate();
         }
 
         // 회피 섹션 선택:
         //   무입력(Neutral)     → Back  (제자리 백스텝, 회전 없음)
         //   방향(W/A/S/D) 일반  → Front (진입 스냅으로 입력 방향 재조준 후 전진 — Back 입력도 그쪽으로 돌아 전진)
         //   방향 + 퍼펙트 타이밍 → Left/Right (좌우 회피 모션 — 입력 좌=Left, 그 외=Right)
-        private string Suffix()
+        private string Suffix(out bool perfectDodgeCandidate)
         {
+            perfectDodgeCandidate = _controller.IncomingAttackActive;
             MoveDir d = _state.CurrentMoveDir;
 
             // 입력이 없을 때만 제자리 백스텝 — 직전이 Back이면 Back_02로 교대(단조로움 방지).
@@ -77,8 +86,10 @@ namespace ZZZ.Player.StateMachine
 
             // 방향 입력은 뒤(↓)를 포함해 모두 입력 방향으로 재조준 후 전진 회피.
             // → 카메라 뒤를 보던 중 ↓ 입력 시 그쪽으로 돌아 전진한다(백스텝으로 빠지지 않음).
-            if (_controller.IncomingAttackActive)          // 적 공격 윈도우 안 → 퍼펙트
+            if (perfectDodgeCandidate)          // 적 공격 윈도우 안 → 퍼펙트
+            {
                 return d == MoveDir.Left ? "Left" : "Right";
+            }
 
             return "Front";
         }
