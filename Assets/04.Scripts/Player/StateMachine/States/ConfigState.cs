@@ -314,6 +314,10 @@ namespace ZZZ.Player.StateMachine.States
             Ctx.Mover.AddStartBoost(0f, 0f);
             // 섹션 기능은 모듈만 소유한다. 위 기본값 초기화 후 OnEnter 순서대로 필요한 기능을 켠다.
             _sc.FacedInputThisEnter = false;
+            _sc.EntryForward = Ctx.Transform != null
+                ? Ctx.Transform.forward
+                : Vector3.forward;
+            _sc.EntryMoveDirection = Ctx.Mover.MoveDirection;
             _sc.PreviousNormalizedTime = SectionNormalizedTime(tc);
             for (int i = 0; i < tc.Modules.Count; i++)
                 tc.Modules[i]?.OnEnter(tc, _sc);

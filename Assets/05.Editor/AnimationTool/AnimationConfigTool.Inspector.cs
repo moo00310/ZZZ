@@ -164,6 +164,8 @@ namespace ZZZ.Editor.AnimationTool
                 float distance = m is AdditionalMovementModule move ? move.Distance : 0f;
                 AdditionalMoveDirection moveDirection = m is AdditionalMovementModule moveDir
                     ? moveDir.Direction : AdditionalMoveDirection.Forward;
+                bool keepInitialDirection = m is AdditionalMovementModule initialMove
+                    && initialMove.KeepInitialDirection;
                 float stopDistance = m is TargetWarpModule warp ? warp.StopDistance : 0f;
                 float turnSpeed = m is FaceTargetModule face ? face.TurnSpeed : 0f;
                 bool smoothEntry = m is FaceTargetModule smoothFace
@@ -183,6 +185,10 @@ namespace ZZZ.Editor.AnimationTool
                     moveDirection = (AdditionalMoveDirection)EditorGUILayout.EnumPopup(
                         new GUIContent("   Direction", "Forward/Backward는 캐릭터 기준, MoveInput은 현재 입력 방향"),
                         moveDirection);
+                    keepInitialDirection = EditorGUILayout.Toggle(
+                        new GUIContent("   시작 방향 유지",
+                            "체크하면 섹션 진입 순간의 이동 방향을 유지합니다. 섹션 턴 중에도 이동 궤적이 함께 회전하지 않습니다."),
+                        keepInitialDirection);
                 }
                 else if (m is TargetWarpModule)
                     stopDistance = EditorGUILayout.FloatField("   Stop Distance", stopDistance);
@@ -223,6 +229,7 @@ namespace ZZZ.Editor.AnimationTool
                     {
                         movement.Distance = distance;
                         movement.Direction = moveDirection;
+                        movement.KeepInitialDirection = keepInitialDirection;
                     }
                     else if (m is TargetWarpModule targetWarp)
                         targetWarp.StopDistance = Mathf.Max(0f, stopDistance);

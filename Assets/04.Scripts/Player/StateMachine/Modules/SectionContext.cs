@@ -11,6 +11,8 @@ namespace ZZZ.Player.StateMachine
         // 진입 스크래치 — MovementSetup이 입력 방향으로 회전했는지. Warp가 SnapRotation 생략 판단에 쓴다(추후 이전).
         public bool FacedInputThisEnter;
         public Vector3 EntryViewForward;
+        public Vector3 EntryForward;
+        public Vector3 EntryMoveDirection;
 
         // 현재 Tick 직전의 raw normalizedTime. 모듈이 프레임률과 무관한 구간 총량을 계산할 때 사용한다.
         public float PreviousNormalizedTime;

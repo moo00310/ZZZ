@@ -125,7 +125,7 @@ namespace ZZZ
         Parry     // 패링 (push 트리거)
     }
 
-    // 적 공격의 강도 — 패링 시 어떤 쳐냄 반응(ParryAid_L/H)을 재생할지 결정한다.
+    // 적 공격의 강도 — 일반 피격 반응과 패링 쳐냄(ParryAid_L/H)을 결정한다.
     // 적 공격 시스템이 OpenIncomingAttack에 실어 보낸다 (예고 시점에 선언).
     public enum AttackStrength
     {
