@@ -20,7 +20,7 @@
     │     Attack_Normal_EnhanceTrigger / ConfigRegistry / EnemySensor
     │   · 무적(Invulnerable)·패링(ParryActive)·들어오는 공격 윈도우 보유 + facade 노출
     │   ├── InputBuffer        입력 버퍼 (Normal / Dodge …)
-    │   ├── HitTrigger         피격 트리거 (재진입 가드 + L/H 승격 + 패링 시 쳐냄 분기)
+    │   ├── HitTrigger         피격 트리거 (재진입 가드 + 강도/방향 반응 + 패링 시 쳐냄 분기)
     │   ├── DodgeTrigger       회피 트리거 (push, 방향→섹션 선택)
     │   ├── ParryTrigger       패링 트리거 (push, 스탠스 단일 진입)
     │   ├── Attack_Normal_EnhanceTrigger  강화공격 (방향 우선 → 거리 분기 폴백)
@@ -244,6 +244,8 @@ Animator가 Transform을 자동 이동하지 않고, 컨트롤러가 최종 적�
 | 회전 입력 | 일반 루트 회전은 `deltaRotation`, 섹션 턴은 `Root` 또는 `Bip001`의 프레임 회전 변화량을 사용한다 |
 | 회전 소유권 | 루트 회전 제거 → 섹션 턴 → 타깃 조준 → 일반 루트 회전/입력 회전 순으로 결정한다 |
 
+`AdditionalMovementModule`의 `시작 방향 유지`를 켜면 섹션 진입 순간의 Forward/Backward 또는 이동 입력 방향을 저장해 사용한다. 섹션 턴과 추가 이동 구간이 겹쳐도 이동 궤적이 캐릭터 회전을 따라 휘거나 상쇄되지 않는다. 기존 에셋은 체크가 꺼진 상태로 이전 동작을 유지한다.
+
 `MoveMode.None`에서는 Animator 루트 델타를 버리므로 제자리 클립이 실수로 이동하지 않는다.
 `SmoothLoopSpeedModule`과 Bip001 기반 이동 추출/회전 카운터는 제거했고, 루프와 CrossFade 델타는 Animator 평가값을 신뢰한다.
 
@@ -387,7 +389,9 @@ ParryModule (윈도우)  — 활성 구간 동안 Machine.ParryActive = true
 HitService → PlayerActionController.ReceiveHit() → HitTrigger.Trigger()
     ├── Invulnerable 이면 → 피격 무시 (회피 i-frame)
     ├── ParryActive 이고 TryDeflect() 성공 → 쳐냄(ParryAid_L/H) 진입  ← 패링 성공
-    └── 둘 다 아니면 → 일반 피격 (Hit_L/H_Front/Back)
+    └── 둘 다 아니면 → 공격 강도별 일반 피격
+            · Light → Hit_L_Front/Back
+            · Heavy → HitFly_Front/Back
             │
             ▼
         쳐냄 ParryAid_L/H config의 Link(Attack=Normal → Counter)가 카운터 follow-up 처리
@@ -404,16 +408,18 @@ HitService → PlayerActionController.ReceiveHit() → HitTrigger.Trigger()
 ## 피격 (외부 이벤트 진입)
 
 ```
-충돌 검출 → PlayerActionController.TriggerHitFrom → HitTrigger.TriggerFrom(attackerPos)
+HitService → PlayerActionController.ReceiveHit → HitTrigger.TriggerFrom(attackerPos)
     │  공격자 위치로 Front/Back 판정 (또는 PlayerTestTriggers의 H=Back / J=Front)
     ▼
 HitTrigger.Trigger(direction)
     ├── Invulnerable(회피 i-frame)이면 무시
-    ├── ConfigRegistry.FindWithSection("Hit_L_{dir}" ?? "Hit_H_{dir}") 로 hit config 검색
-    ├── 재진입 가드 : 진행도 < _hitReinterruptThreshold 면 새 피격 무시 (연타 stunlock 방지)
-    └── escalation  : 연속타 카운트로 강도 교대 (홀수타=L / 짝수타=H)
+    ├── Light : ConfigRegistry.FindWithSection("Hit_L_{dir}")
+    ├── Heavy : ConfigRegistry.FindWithSection("HitFly_{dir}")
+    │            └── 섹션이 없으면 기존 "Hit_H_{dir}"로 폴백
+    ├── 재진입 가드 : 진행도 < _hitReinterruptThreshold 면 새 피격 무시
+    │                  └── Heavy HitFly는 일반 피격을 덮어쓰며, 이미 HitFly 중일 때만 가드
     ▼
-ConfigState.InterruptWith(hitConfig, "Hit_{L|H}_{Front|Back}", _hitEntryBlend)
+ConfigState.InterruptWith(hitConfig, reactionSection, _hitEntryBlend)
     ├── layer 0     : Hit 반응 클립 재생
     └── layer 1     : Notify(OnHitShake) → additive 흔들림 + weight 페이드
             │
@@ -425,7 +431,7 @@ ConfigState.InterruptWith(hitConfig, "Hit_{L|H}_{Front|Back}", _hitEntryBlend)
 
 - **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`CharacterAnimatorBridge.ShakeRoutine`).
   - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `CharacterAnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절 *(→ SendMessage는 캐릭터별 강타입 이벤트 릴레이로 교체 예정, [TODO.md](TODO.md))*
-- **같은 약한 움찔거림만 반복돼 단조로움** → escalation: 연속타 카운트로 약(L) ↔ 강(H) 반응을 교대 재생
+- **공격 강도와 피격 모션 불일치** → 연속타 L/H 교대를 제거하고 `HitData.Strength`를 직접 사용한다. Burnice는 Light에서 `Hit_L`, Heavy에서 `HitFly`를 재생한다.
 - **연타 stunlock(보조 가드)** → 반응이 충분히 진행되기 전(`_hitReinterruptThreshold`)엔 새 피격을 무시
 
 ---
