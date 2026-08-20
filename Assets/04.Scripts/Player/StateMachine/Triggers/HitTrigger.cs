@@ -6,7 +6,7 @@ namespace ZZZ.Player.StateMachine
 {
     // 피격 반응 트리거 — 외부 이벤트(충돌/적 공격)로 Hit config에 강제 진입한다.
     //   A. 재진입 가드 — 이미 피격 중이고 진행도가 임계값 미만이면 무시(연타 stunlock/프리즈 방지).
-    //   escalation — 연속타 카운트로 강도 승격: 홀수타=L, 짝수타=H 교대.
+    //   반응 선택 — 공격 강도와 공격자 방향으로 피격 섹션을 결정한다.
     // 설정은 이 객체가 직접 들고, 런타임 의존은 Init으로 주입한다.
     // _parryPrefix(쳐냄 섹션 접두어)는 ParryTrigger와 한 곳에서만 정의하려고 Init으로 받는다.
     [System.Serializable]
@@ -22,9 +22,6 @@ namespace ZZZ.Player.StateMachine
         private ConfigState        _state;
         private ConfigRegistry     _registry;
         private string             _parryPrefix;  // 쳐냄 섹션 접두어 (Attack_ParryAid_ → +L/H) — ParryTrigger와 공유
-
-        // 연속 피격 카운트 — hit이 아닌 상태에서 새로 맞으면 0으로 리셋.
-        private int _comboHitCount;
 
         public void Init(PlayerActionController controller, ConfigState state,
             ConfigRegistry registry, string parryPrefix)
@@ -52,29 +49,51 @@ namespace ZZZ.Player.StateMachine
             // 카운터 follow-up은 ParryAid_L/H config의 Link(Attack=Normal → Counter)가 처리한다.
             if (_controller.ParryActive && TryDeflect()) return true;
 
-            // 등록된 config 중 이번 피격 섹션(L/H 둘 다 같은 config에 있음)을 가진 것을 찾는다.
-            AnimationConfig hitConfig = _registry.FindWithSection($"Hit_L_{direction}")
-                                     ?? _registry.FindWithSection($"Hit_H_{direction}");
+            string section = ResolveHitSection(direction, out AnimationConfig hitConfig);
             if (hitConfig == null)
             {
-                Debug.LogWarning($"[Hit] 'Hit_*_{direction}' 섹션을 가진 config가 없음 — PlayerActionController 인스펙터 'Configs' 리스트 확인", _controller);
+                Debug.LogWarning(
+                    $"[Hit] '{section}' 또는 대체 피격 섹션을 가진 config가 없음 — "
+                    + "PlayerActionController 인스펙터 'Configs' 리스트 확인",
+                    _controller);
                 return false;
             }
 
             bool inHit = _state.CurrentConfig == hitConfig;
 
             // A. 재진입 가드: 피격 반응이 충분히 진행되기 전엔 새 피격 무시
-            if (inHit && _state.CurrentNormalizedTime < _reinterruptThreshold)
+            bool enteringHitFly = IsHitFlySection(section);
+            bool alreadyInHitFly = IsHitFlySection(_state.ActiveSection);
+            if (inHit && _state.CurrentNormalizedTime < _reinterruptThreshold
+                && (!enteringHitFly || alreadyInHitFly))
                 return false;
 
-            // 새 피격(걷기 등에서 진입)이면 콤보 리셋, 연속타면 누적
-            if (!inHit) _comboHitCount = 0;
-            _comboHitCount++;
-
-            string strength = (_comboHitCount % 2 == 1) ? "L" : "H";   // 홀수타=L, 짝수타=H 교대 → 연출 풍부
-            _state.InterruptWith(hitConfig, $"Hit_{strength}_{direction}", _entryBlend);
+            _state.InterruptWith(hitConfig, section, _entryBlend);
             return false;
         }
+
+        private string ResolveHitSection(
+            string direction, out AnimationConfig hitConfig)
+        {
+            bool heavy = _controller.IncomingStrength == AttackStrength.Heavy;
+            string section = heavy
+                ? $"HitFly_{direction}"
+                : $"Hit_L_{direction}";
+            hitConfig = _registry.FindWithSection(section);
+            if (hitConfig != null) return section;
+
+            // HitFly가 없는 캐릭터도 기존 피격 Config로 계속 동작하게 한다.
+            section = $"Hit_H_{direction}";
+            hitConfig = _registry.FindWithSection(section);
+            if (hitConfig != null) return section;
+
+            section = $"Hit_L_{direction}";
+            hitConfig = _registry.FindWithSection(section);
+            return section;
+        }
+
+        private static bool IsHitFlySection(string section) =>
+            !string.IsNullOrEmpty(section) && section.StartsWith("HitFly_");
 
         // 패링 성공 — 적 공격 강도로 ParryAid_L/H 진입. 섹션 config가 없으면 false(일반 피격으로 폴백).
         private bool TryDeflect()
@@ -88,7 +107,6 @@ namespace ZZZ.Player.StateMachine
                 return false;
             }
 
-            _comboHitCount = 0;   // 쳐냄은 피격 콤보가 아니므로 리셋
             _state.InterruptWith(parryConfig, section, _entryBlend);
             return true;
         }

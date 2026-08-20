@@ -17,6 +17,13 @@ namespace ZZZ
     {
         public float Distance = 1f;
         public AdditionalMoveDirection Direction = AdditionalMoveDirection.Forward;
+        [SerializeField] private bool _keepInitialDirection;
+
+        public bool KeepInitialDirection
+        {
+            get => _keepInitialDirection;
+            set => _keepInitialDirection = value;
+        }
 
         public override void Tick(TrackClip tc, float nt, SectionContext c)
         {
@@ -36,14 +43,20 @@ namespace ZZZ
 
         private Vector3 ResolveDirection(SectionContext c)
         {
+            Vector3 forward = _keepInitialDirection
+                && c.EntryForward.sqrMagnitude > 0.0001f
+                ? c.EntryForward
+                : c.Ctx.Transform.forward;
             switch (Direction)
             {
                 case AdditionalMoveDirection.Backward:
-                    return -c.Ctx.Transform.forward;
+                    return -forward;
                 case AdditionalMoveDirection.MoveInput:
-                    return c.Ctx.Mover.MoveDirection;
+                    return _keepInitialDirection
+                        ? c.EntryMoveDirection
+                        : c.Ctx.Mover.MoveDirection;
                 default:
-                    return c.Ctx.Transform.forward;
+                    return forward;
             }
         }
 
@@ -67,6 +80,8 @@ namespace ZZZ
 
         public override string MenuName => "추가 이동";
         public override string DisplayName =>
-            $"추가 이동  {Distance:F2}m · {Direction} · {Start:F2}~{End:F2}";
+            $"추가 이동  {Distance:F2}m · {Direction}"
+            + (_keepInitialDirection ? " · 시작 방향 유지" : "")
+            + $" · {Start:F2}~{End:F2}";
     }
 }

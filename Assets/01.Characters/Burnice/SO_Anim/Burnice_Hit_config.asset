@@ -165,6 +165,82 @@ MonoBehaviour:
       Locked: 0
     Modules:
     - rid: 6745857324881018934
+  - SectionName: HitFly_Front
+    Clip: {fileID: 7400000, guid: 7b6eb9693de39664398aec28781aaddb, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 7723411238959710299
+      Timing: 2
+      WindowStart: 0
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.02
+      EntryOffset: 0
+      Condition:
+        rid: 7723411238959710300
+      Timing: 0
+      WindowStart: 0.20746888
+      WindowEnd: 1
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220386215526478
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018935
+  - SectionName: HitFly_Back
+    Clip: {fileID: 7400000, guid: 1a782e5aeadba9649b6ed0588a1143f3, type: 2}
+    Speed: 1
+    MoveMode: 2
+    Links:
+    - TargetConfig: {fileID: 11400000, guid: dd9177746c67e8d4f9e232d5caeb3f4b, type: 2}
+      TargetSection: Walk_Start
+      BlendDuration: 0.02
+      EntryOffset: 0
+      Condition:
+        rid: 7723411238959710301
+      Timing: 0
+      WindowStart: 0.1992032
+      WindowEnd: 1
+    - TargetConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+      TargetSection: Idle1
+      BlendDuration: 0.01
+      EntryOffset: 0
+      Condition:
+        rid: 7723411238959710302
+      Timing: 2
+      WindowStart: 0.4
+      WindowEnd: 0.85
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220386215526479
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    Modules:
+    - rid: 6745857324881018936
+    - rid: 986220614518046786
+    - rid: 986220614518046787
   GlobalLinks: []
   references:
     version: 2
@@ -185,6 +261,30 @@ MonoBehaviour:
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
         _eventName: OnHitShake
+    - rid: 986220386215526478
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
+    - rid: 986220386215526479
+      type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: OnHitShake
+    - rid: 986220614518046786
+      type: {class: SectionTurnModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.03986711
+        End: 0.08637874
+        _sourceAxis: 0
+        _rotationScale: 1.5
+        _targetAngle: 180
+    - rid: 986220614518046787
+      type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.016611295
+        End: 0.13289036
+        Distance: 4
+        Direction: 0
+        _keepInitialDirection: 1
     - rid: 6745857324881018931
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -201,6 +301,16 @@ MonoBehaviour:
         Start: 0
         End: 1
     - rid: 6745857324881018934
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018935
+      type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0
+        End: 1
+    - rid: 6745857324881018936
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Start: 0
@@ -248,6 +358,30 @@ MonoBehaviour:
         Direction: 2
         RequireHeld: 0
     - rid: 7723411238959710298
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710299
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 1
+        RequireHeld: 0
+    - rid: 7723411238959710300
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710301
+      type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Attack: 0
+        Direction: 2
+        RequireHeld: 0
+    - rid: 7723411238959710302
       type: {class: InputCondition, ns: ZZZ, asm: Assembly-CSharp}
       data:
         Attack: 0
