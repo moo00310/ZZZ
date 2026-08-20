@@ -171,6 +171,11 @@ Layer 1 (Additive)
 `Notify.NormalizedTime`, `Notify.EndNormalizedTime`(구간 이펙트), 모듈 `Start`~`End`)은
 `.asset`에 **normalizedTime(0~1)** 으로 저장된다. 반면 에디터 툴(`AnimationConfigTool`)은 이걸 **정수 프레임**으로 변환해 표시·편집한다.
 
+Notify의 **발동 시점**은 이 규칙을 따르지만 payload 내부의 자체 지속시간은 해당 시스템 단위를 사용한다.
+예를 들어 Camera Shake는 툴에서 프레임으로 입력해 초로 변환하고, Camera Shot의 Blend/Move/Hold 시간은
+클립 밖에서도 계속될 수 있으므로 초 단위로 직접 저장한다. 툴 상단 시간 표시는 전체 config 누적 시간이 아니라
+현재 섹션의 `로컬 시간 / 클립 재생 길이`다.
+
 ```
 저장(.asset)        normalizedTime (0~1)   ← 견고
 에디터 입력/표시     정수 프레임 (예: 21/68f) ← 직관

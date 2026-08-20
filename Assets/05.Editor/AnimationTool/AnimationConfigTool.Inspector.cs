@@ -10,6 +10,8 @@ namespace ZZZ.Editor.AnimationTool
 {
     public partial class AnimationConfigTool
     {
+        private bool _editCameraShotEndPose;
+
         // ── 우측 인스펙터 ────────────────────────────────────────
         private void DrawInspector(Rect area)
         {
@@ -644,6 +646,30 @@ namespace ZZZ.Editor.AnimationTool
             return Mathf.Clamp01((float)Mathf.Clamp(f, 0, frames) / frames);
         }
 
+        private static float DurationFrameField(string label, string tooltip,
+            TrackClip owner, float seconds)
+        {
+            float frameRate = 30f;
+            if (owner?.Clip != null && owner.Clip.frameRate > 0f)
+            {
+                float playbackSpeed = Mathf.Max(0.01f, Mathf.Abs(owner.Speed));
+                frameRate = owner.Clip.frameRate * playbackSpeed;
+            }
+
+            int frames = Mathf.Max(0, Mathf.RoundToInt(seconds * frameRate));
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(
+                new GUIContent(label, tooltip),
+                GUILayout.Width(EditorGUIUtility.labelWidth));
+            frames = Mathf.Max(0, EditorGUILayout.IntField(
+                frames, GUILayout.Width(44)));
+            GUILayout.Label(
+                $"@ {frameRate:0.##} fps", EditorStyles.miniLabel,
+                GUILayout.Width(80));
+            EditorGUILayout.EndHorizontal();
+            return frames / frameRate;
+        }
+
         // DoneThreshold(config 전역) 프레임 표시용 기준 클립 — Entry 섹션, 없으면 첫 클립.
         private TrackClip ReferenceClip()
         {
@@ -773,9 +799,100 @@ namespace ZZZ.Editor.AnimationTool
             // Lock 중에도 Time 필드로는 값을 미세 조정할 수 있게 둔다 — 막는 건 '드래그 이동'뿐.
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
             string eName = notify.EventName;
-            if (type == NotifyType.Camera || type == NotifyType.Sound
-                || type == NotifyType.Custom)
+            if (type == NotifyType.Sound || type == NotifyType.Custom)
                 eName = EditorGUILayout.TextField("Event Name", notify.EventName);
+
+            CameraNotifyPayload cameraPayload =
+                notify.Payload as CameraNotifyPayload;
+            CameraNotifyMode cameraMode =
+                cameraPayload?.Mode ?? CameraNotifyMode.Shake;
+            float cameraDuration = cameraPayload?.Duration ?? 0.12f;
+            float cameraPositionAmplitude =
+                cameraPayload?.PositionAmplitude ?? 0.04f;
+            float cameraRotationAmplitude =
+                cameraPayload?.RotationAmplitude ?? 0.6f;
+            float cameraFrequency = cameraPayload?.Frequency ?? 30f;
+            AnimationCurve cameraEnvelope = cameraPayload?.Envelope
+                ?? new AnimationCurve(
+                    new Keyframe(0f, 1f),
+                    new Keyframe(0.35f, 0.45f),
+                    new Keyframe(1f, 0f));
+            Vector3 shotPosition = cameraPayload?.ShotPosition
+                ?? new Vector3(0f, 1.5f, -3.5f);
+            Vector3 shotEulerAngles = cameraPayload?.ShotEulerAngles
+                ?? Vector3.zero;
+            float shotFieldOfView = cameraPayload?.ShotFieldOfView ?? 60f;
+            Vector3 shotEndPosition = cameraPayload?.ShotEndPosition
+                ?? new Vector3(0f, 1.5f, -3.5f);
+            Vector3 shotEndEulerAngles = cameraPayload?.ShotEndEulerAngles
+                ?? Vector3.zero;
+            float shotEndFieldOfView =
+                cameraPayload?.ShotEndFieldOfView ?? 60f;
+            float shotBlendIn = cameraPayload?.ShotBlendIn ?? 0.08f;
+            float shotMoveDuration =
+                cameraPayload?.ShotMoveDuration ?? 0.2f;
+            float shotHold = cameraPayload?.ShotHold ?? 0.08f;
+            float shotBlendOut = cameraPayload?.ShotBlendOut ?? 0.2f;
+            bool shotReturnBehindTarget =
+                cameraPayload?.ShotReturnBehindTarget ?? true;
+            AnimationCurve shotBlendCurve = cameraPayload?.ShotBlendCurve
+                ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            AnimationCurve shotMoveCurve = cameraPayload?.ShotMoveCurve
+                ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            if (type == NotifyType.Camera)
+            {
+                cameraMode = (CameraNotifyMode)EditorGUILayout.EnumPopup(
+                    "Camera Mode", cameraMode);
+                if (cameraMode == CameraNotifyMode.Shake)
+                {
+                    cameraDuration = DurationFrameField(
+                        "Duration (f)", "카메라 셰이크 지속 프레임",
+                        tc, cameraDuration);
+                    cameraPositionAmplitude = EditorGUILayout.FloatField(
+                        new GUIContent("Position Amplitude", "카메라 위치 흔들림 크기(월드 단위)"),
+                        cameraPositionAmplitude);
+                    cameraRotationAmplitude = EditorGUILayout.FloatField(
+                        new GUIContent("Rotation Amplitude", "카메라 회전 흔들림 크기(도)"),
+                        cameraRotationAmplitude);
+                    cameraFrequency = EditorGUILayout.FloatField(
+                        new GUIContent("Frequency", "초당 노이즈 진행 속도"),
+                        cameraFrequency);
+                    cameraEnvelope = EditorGUILayout.CurveField(
+                        new GUIContent("Envelope", "셰이크 세기가 시간에 따라 줄어드는 형태"),
+                        cameraEnvelope);
+                }
+                else
+                {
+                    shotBlendIn = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        new GUIContent("Blend In (s)",
+                            "현재 TPS 카메라에서 Start 포즈까지 전환하는 시간입니다."),
+                        shotBlendIn));
+                    shotMoveDuration = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        new GUIContent("Move Duration (s)",
+                            "Start 포즈에서 End 포즈까지 이동하는 시간입니다."),
+                        shotMoveDuration));
+                    shotHold = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        new GUIContent("End Hold (s)",
+                            "End 포즈에서 정지해 있는 시간입니다."),
+                        shotHold));
+                    shotBlendOut = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        new GUIContent("Blend Out (s)",
+                            "End 포즈에서 TPS 카메라로 복귀하는 시간입니다. 클립 길이와 무관하게 계속됩니다."),
+                        shotBlendOut));
+                    shotReturnBehindTarget = EditorGUILayout.Toggle(
+                        new GUIContent("Return Behind Target",
+                            "Blend Out 시작 시 복귀 목표를 현재 캐릭터 뒤쪽 TPS 구도로 맞춥니다."),
+                        shotReturnBehindTarget);
+                    shotFieldOfView = EditorGUILayout.Slider(
+                        "Start FOV", shotFieldOfView, 1f, 179f);
+                    shotEndFieldOfView = EditorGUILayout.Slider(
+                        "End FOV", shotEndFieldOfView, 1f, 179f);
+                    shotMoveCurve = EditorGUILayout.CurveField(
+                        "Move Curve", shotMoveCurve);
+                    shotBlendCurve = EditorGUILayout.CurveField(
+                        "Blend Curve", shotBlendCurve);
+                }
+            }
 
             HitData hit = notify.Hit != null ? new HitData(notify.Hit) : null;
             HitNotifyAction hitAction = notify.Payload is HitNotifyPayload actionPayload
@@ -902,6 +1019,29 @@ namespace ZZZ.Editor.AnimationTool
                 Undo.RecordObject(_config, "Edit Notify");
                 notify.Type = type; notify.NormalizedTime = normT;
                 notify.EventName = eName;
+                if (notify.Payload is CameraNotifyPayload editedCamera)
+                {
+                    editedCamera.Mode = cameraMode;
+                    editedCamera.Duration = cameraDuration;
+                    editedCamera.PositionAmplitude = cameraPositionAmplitude;
+                    editedCamera.RotationAmplitude = cameraRotationAmplitude;
+                    editedCamera.Frequency = cameraFrequency;
+                    editedCamera.Envelope = cameraEnvelope;
+                    editedCamera.ShotPosition = shotPosition;
+                    editedCamera.ShotEulerAngles = shotEulerAngles;
+                    editedCamera.ShotFieldOfView = shotFieldOfView;
+                    editedCamera.ShotEndPosition = shotEndPosition;
+                    editedCamera.ShotEndEulerAngles = shotEndEulerAngles;
+                    editedCamera.ShotEndFieldOfView = shotEndFieldOfView;
+                    editedCamera.ShotBlendIn = shotBlendIn;
+                    editedCamera.ShotMoveDuration = shotMoveDuration;
+                    editedCamera.ShotHold = shotHold;
+                    editedCamera.ShotBlendOut = shotBlendOut;
+                    editedCamera.ShotReturnBehindTarget =
+                        shotReturnBehindTarget;
+                    editedCamera.ShotBlendCurve = shotBlendCurve;
+                    editedCamera.ShotMoveCurve = shotMoveCurve;
+                }
                 notify.Hit = hit;
                 if (notify.Payload is HitNotifyPayload editedHit)
                 {
@@ -923,6 +1063,10 @@ namespace ZZZ.Editor.AnimationTool
             }
 
             // Effect 타입이면 조합(Composite) 편집 + 씬 프리뷰를 여기서 인라인으로 (별도 탭 없음)
+            if (notify.Payload is CameraNotifyPayload shotPayload
+                && shotPayload.Mode == CameraNotifyMode.Shot)
+                DrawCameraShotTools(shotPayload);
+
             if (notify.Type == NotifyType.Effect)
             {
                 DrawSeparator();
@@ -941,6 +1085,112 @@ namespace ZZZ.Editor.AnimationTool
                 Repaint();
             }
             GUI.backgroundColor = Color.white;
+        }
+
+        private void DrawCameraShotTools(CameraNotifyPayload payload)
+        {
+            EditorGUILayout.Space(3f);
+            if (_target == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Target을 지정하면 Scene View 구도를 캡처할 수 있습니다.",
+                    MessageType.Info);
+                return;
+            }
+
+            _editCameraShotEndPose = GUILayout.Toolbar(
+                _editCameraShotEndPose ? 1 : 0,
+                new[] { "Edit Start Pose", "Edit End Pose" }) == 1;
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Capture Start"))
+                CaptureCameraShotFromSceneView(payload, false);
+            if (GUILayout.Button("View Start"))
+                MoveSceneViewToCameraShot(payload, false);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Capture End"))
+                CaptureCameraShotFromSceneView(payload, true);
+            if (GUILayout.Button("View End"))
+                MoveSceneViewToCameraShot(payload, true);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox(
+                "Start와 End 구도를 각각 캡처하세요. Scene View의 파란 Start와 "
+                + "청록 End 카메라를 확인하고, 선택한 포즈의 핸들로 직접 수정할 수 있습니다.",
+                MessageType.None);
+        }
+
+        private void CaptureCameraShotFromSceneView(
+            CameraNotifyPayload payload, bool endPose)
+        {
+            SceneView sceneView = SceneView.lastActiveSceneView;
+            if (sceneView == null || sceneView.camera == null || _target == null)
+                return;
+
+            Transform anchor = _target.transform;
+            Transform sceneCamera = sceneView.camera.transform;
+            Undo.RecordObject(_config, "Capture Camera Shot");
+            Vector3 localPosition =
+                anchor.InverseTransformPoint(sceneCamera.position);
+            Vector3 localEulerAngles =
+                (Quaternion.Inverse(anchor.rotation) * sceneCamera.rotation)
+                .eulerAngles;
+            if (endPose)
+            {
+                payload.ShotEndPosition = localPosition;
+                payload.ShotEndEulerAngles = localEulerAngles;
+                payload.ShotEndFieldOfView = sceneView.camera.fieldOfView;
+            }
+            else
+            {
+                payload.ShotPosition = localPosition;
+                payload.ShotEulerAngles = localEulerAngles;
+                payload.ShotFieldOfView = sceneView.camera.fieldOfView;
+            }
+
+            _editCameraShotEndPose = endPose;
+            MarkCameraShotChanged();
+        }
+
+        private void MoveSceneViewToCameraShot(
+            CameraNotifyPayload payload, bool endPose)
+        {
+            SceneView sceneView = SceneView.lastActiveSceneView;
+            if (sceneView == null || _target == null) return;
+
+            Transform anchor = _target.transform;
+            Vector3 localPosition = endPose
+                ? payload.ShotEndPosition
+                : payload.ShotPosition;
+            Vector3 localEulerAngles = endPose
+                ? payload.ShotEndEulerAngles
+                : payload.ShotEulerAngles;
+            float fieldOfView = endPose
+                ? payload.ShotEndFieldOfView
+                : payload.ShotFieldOfView;
+            Vector3 position = anchor.TransformPoint(localPosition);
+            Quaternion rotation = anchor.rotation
+                * Quaternion.Euler(localEulerAngles);
+            MoveSceneViewToCameraPose(
+                sceneView, position, rotation, fieldOfView);
+            _editCameraShotEndPose = endPose;
+        }
+
+        private static void MoveSceneViewToCameraPose(SceneView sceneView,
+            Vector3 position, Quaternion rotation, float fieldOfView)
+        {
+            sceneView.cameraSettings.fieldOfView = fieldOfView;
+            float distance = Mathf.Max(0.1f, sceneView.cameraDistance);
+            Vector3 pivot = position + rotation * Vector3.forward * distance;
+            sceneView.LookAtDirect(pivot, rotation, sceneView.size);
+            sceneView.Repaint();
+        }
+
+        private void MarkCameraShotChanged()
+        {
+            EditorUtility.SetDirty(_config);
+            Repaint();
+            SceneView.RepaintAll();
         }
 
         private void DrawHitData(HitData hit, bool effectOriginOnly = false,
@@ -1193,13 +1443,18 @@ namespace ZZZ.Editor.AnimationTool
 
         private void OnSceneGUI(SceneView sceneView)
         {
-            if (!_showHitPreviewGizmos || _target == null || _config == null) return;
+            if (_target == null || _config == null) return;
             if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return;
 
             TrackClip clip = _config.Clips[_notifyClipIdx];
             if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
 
             TrackNotify notify = clip.Notifies[_selectedNotify];
+            if (notify?.Payload is CameraNotifyPayload cameraPayload
+                && cameraPayload.Mode == CameraNotifyMode.Shot)
+                DrawCameraShotHandles(cameraPayload);
+
+            if (!_showHitPreviewGizmos) return;
             HitData hit = notify?.Payload is HitNotifyPayload
                 || notify?.Payload is EffectNotifyPayload
                 ? notify.Hit
@@ -1214,6 +1469,71 @@ namespace ZZZ.Editor.AnimationTool
             DrawHitShape(hit, center, rotation, HitPreviewProgress(clip, notify));
             DrawHitLabel(hit, center);
             DrawHitHandles(hit, origin, center, rotation);
+        }
+
+        private void DrawCameraShotHandles(CameraNotifyPayload payload)
+        {
+            Transform anchor = _target.transform;
+            Vector3 startPosition = anchor.TransformPoint(payload.ShotPosition);
+            Quaternion startRotation = anchor.rotation
+                * Quaternion.Euler(payload.ShotEulerAngles);
+            Vector3 endPosition = anchor.TransformPoint(payload.ShotEndPosition);
+            Quaternion endRotation = anchor.rotation
+                * Quaternion.Euler(payload.ShotEndEulerAngles);
+
+            DrawCameraShotMarker(
+                startPosition, startRotation,
+                new Color(0.2f, 0.55f, 1f), "Shot Start");
+            DrawCameraShotMarker(
+                endPosition, endRotation,
+                new Color(0.1f, 1f, 0.85f), "Shot End");
+            using (new Handles.DrawingScope(new Color(0.2f, 0.85f, 1f, 0.8f)))
+                Handles.DrawDottedLine(startPosition, endPosition, 4f);
+
+            Vector3 position = _editCameraShotEndPose
+                ? endPosition
+                : startPosition;
+            Quaternion rotation = _editCameraShotEndPose
+                ? endRotation
+                : startRotation;
+
+            EditorGUI.BeginChangeCheck();
+            Vector3 newPosition = Handles.PositionHandle(position, rotation);
+            Quaternion newRotation = Handles.RotationHandle(rotation, position);
+            if (!EditorGUI.EndChangeCheck()) return;
+
+            Undo.RecordObject(_config, "Edit Camera Shot Pose");
+            Vector3 localPosition = anchor.InverseTransformPoint(newPosition);
+            Vector3 localEulerAngles =
+                (Quaternion.Inverse(anchor.rotation) * newRotation).eulerAngles;
+            if (_editCameraShotEndPose)
+            {
+                payload.ShotEndPosition = localPosition;
+                payload.ShotEndEulerAngles = localEulerAngles;
+            }
+            else
+            {
+                payload.ShotPosition = localPosition;
+                payload.ShotEulerAngles = localEulerAngles;
+            }
+            MarkCameraShotChanged();
+        }
+
+        private static void DrawCameraShotMarker(Vector3 position,
+            Quaternion rotation, Color color, string label)
+        {
+            float size = HandleUtility.GetHandleSize(position) * 0.15f;
+
+            using (new Handles.DrawingScope(
+                color,
+                Matrix4x4.TRS(position, rotation, Vector3.one)))
+            {
+                Handles.DrawWireCube(
+                    Vector3.zero, new Vector3(size * 1.6f, size, size * 0.8f));
+                Handles.DrawLine(
+                    Vector3.zero, Vector3.forward * size * 2.5f);
+            }
+            Handles.Label(position + Vector3.up * size, label);
         }
 
         private Transform ResolveHitPreviewOrigin(TrackNotify notify)

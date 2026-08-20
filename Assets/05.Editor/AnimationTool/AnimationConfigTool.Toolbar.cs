@@ -90,10 +90,15 @@ namespace ZZZ.Editor.AnimationTool
             {
                 GUILayout.Label($"▶ {(_comboActiveClip >= 0 && _comboActiveClip < _config?.Clips.Count ? SectionLabel(_comboActiveClip) : "-")}",
                     GUILayout.Width(150));
-                GUILayout.Label(CurrentFrameLabel(), EditorStyles.boldLabel, GUILayout.Width(64));
+                GUILayout.Label(
+                    $"{CurrentClipTimeLabel()}   {CurrentFrameLabel()}",
+                    EditorStyles.boldLabel, GUILayout.Width(170));
             }
             else
-                GUILayout.Label($"{_trackTime:F2}s / {GetTotalDuration():F2}s   {CurrentFrameLabel()}",
+                GUILayout.Label(
+                    new GUIContent(
+                        $"{CurrentClipTimeLabel()}   {CurrentFrameLabel()}",
+                        "현재 플레이헤드가 위치한 섹션의 로컬 시간 / 클립 재생 길이"),
                     GUILayout.Width(170));
 
             GUILayout.Label("Speed", GUILayout.Width(38));
@@ -172,6 +177,46 @@ namespace ZZZ.Editor.AnimationTool
         {
             System.Array.Clear(_heldInput, 0, _heldInput.Length);
             if (ci != ComboInput.None) _heldInput[(int)ci] = true;
+        }
+
+        private string CurrentClipTimeLabel()
+        {
+            if (_config == null || _config.Clips.Count == 0)
+                return "0.00s / 0.00s";
+
+            if (_comboMode)
+            {
+                if (_comboActiveClip < 0
+                    || _comboActiveClip >= _config.Clips.Count)
+                    return "0.00s / 0.00s";
+
+                TrackClip clip = _config.Clips[_comboActiveClip];
+                if (clip.Clip == null) return "0.00s / 0.00s";
+                float speed = Mathf.Max(0.01f, clip.Speed);
+                float duration = clip.Clip.length / speed;
+                float sourceTime = clip.IsLooping
+                    ? Mathf.Repeat(_comboClipTime, clip.Clip.length)
+                    : Mathf.Clamp(_comboClipTime, 0f, clip.Clip.length);
+                return $"{sourceTime / speed:F2}s / {duration:F2}s";
+            }
+
+            float clipStart = 0f;
+            for (int i = 0; i < _config.Clips.Count; i++)
+            {
+                TrackClip clip = _config.Clips[i];
+                if (clip.Clip == null) continue;
+                float duration = clip.Clip.length
+                    / Mathf.Max(0.01f, clip.Speed);
+                if (_trackTime <= clipStart + duration
+                    || i == _config.Clips.Count - 1)
+                {
+                    float localTime = Mathf.Clamp(
+                        _trackTime - clipStart, 0f, duration);
+                    return $"{localTime:F2}s / {duration:F2}s";
+                }
+                clipStart += duration;
+            }
+            return "0.00s / 0.00s";
         }
 
         // 현재 playhead가 올라간 클립의 로컬 프레임 표시 ("21/68f"). 콤보/순차 모드 모두 지원.

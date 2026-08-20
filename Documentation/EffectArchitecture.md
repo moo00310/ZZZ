@@ -35,6 +35,11 @@
 > AnimationConfig/Notify는 "무엇을 언제"만 알고, "어떻게 풀에서 꺼내 재생하느냐"는 이펙트 시스템이 소유한다.
 > 덕분에 애니메이션 쪽 코드는 이펙트 구현이 바뀌어도 (`Instantiate` → 풀링 전환처럼) `DispatchNotify` 한 줄만 바뀐다.
 
+화면 공간 연출도 같은 경계를 사용한다. `AttackWarningCrossEffect`는 몬스터 머리의 월드 위치를 화면 좌표로
+투영해 UI Ray를 그리지만, 재생·소켓 추종·반납은 일반 이펙트와 동일하게
+`CompositeEffect → EffectService → EffectPool`을 거친다. 구체적인 경고 및 판정 연동은
+[CombatFeedbackArchitecture.md](CombatFeedbackArchitecture.md#몬스터-공격-경고-이펙트)를 참고한다.
+
 ---
 
 ## 설계 원칙 — 실행은 조합 단위, 풀링은 프리팹 단위

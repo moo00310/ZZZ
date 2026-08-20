@@ -10015,7 +10015,7 @@ MonoBehaviour:
   _hitFrontSection: Hit_Stay
   _hitBackSection: Hit_Stay
   _hitStunCooldown: 0.05
-  _showHitGizmos: 1
+  _showHitGizmos: 0
   _hitGizmoDuration: 0.1
 --- !u!114 &919132148190397885
 MonoBehaviour:

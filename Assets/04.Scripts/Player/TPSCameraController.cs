@@ -3,7 +3,8 @@ using UnityEngine.InputSystem;
 
 namespace ZZZ.Player
 {
-    public class TPSCameraController : MonoBehaviour
+    [RequireComponent(typeof(Camera))]
+    public class TPSCameraController : MonoBehaviour, ICameraFeedbackReceiver
     {
         [Header("Target")]
         [SerializeField] private Transform _target;
@@ -30,14 +31,56 @@ namespace ZZZ.Player
         private float _yaw;
         private float _pitch = 20f;
         private Vector3 _currentFollowPos;
+        private Camera _camera;
+        private float _defaultFieldOfView;
+        private float _shakeElapsed;
+        private float _shakeDuration;
+        private float _shakePositionAmplitude;
+        private float _shakeRotationAmplitude;
+        private float _shakeFrequency;
+        private float _shakeNoiseSeed;
+        private AnimationCurve _activeShakeEnvelope;
+        private bool _shakeActive;
+        private Transform _shotAnchor;
+        private Vector3 _shotStartLocalPosition;
+        private Quaternion _shotStartLocalRotation;
+        private float _shotStartFieldOfView;
+        private Vector3 _shotEndLocalPosition;
+        private Quaternion _shotEndLocalRotation;
+        private float _shotEndFieldOfView;
+        private float _shotBlendIn;
+        private float _shotMoveDuration;
+        private float _shotHold;
+        private float _shotBlendOut;
+        private bool _shotReturnBehindTarget;
+        private bool _shotReturnHeadingAligned;
+        private float _shotElapsed;
+        private AnimationCurve _shotBlendCurve;
+        private AnimationCurve _shotMoveCurve;
+        private bool _shotActive;
 
         private void Awake()
         {
+            _camera = GetComponent<Camera>();
+            _defaultFieldOfView = _camera.fieldOfView;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible   = false;
 
             if (_target != null)
                 _currentFollowPos = _target.position;
+        }
+
+        private void OnEnable()
+        {
+            CameraFeedbackService.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            CameraFeedbackService.Unregister(this);
+            _shakeActive = false;
+            _shotActive = false;
+            if (_camera != null) _camera.fieldOfView = _defaultFieldOfView;
         }
 
         public void SetTarget(Transform target, bool snap = false)
@@ -64,31 +107,205 @@ namespace ZZZ.Player
 
         private void UpdatePosition()
         {
-            // 타겟 위치 스무스 추적
             _currentFollowPos = Vector3.Lerp(
                 _currentFollowPos,
                 _target.position,
                 _followSpeed * Time.deltaTime
             );
 
-            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, 0f);
-            Vector3 desiredOffset = rotation * Vector3.back * _distance;
+            AlignShotReturnHeading();
 
-            // 충돌 처리: 타겟에서 카메라 방향으로 SphereCast
-            float finalDistance = _distance;
+            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            EvaluateCameraShake(
+                out Vector3 positionShake,
+                out Vector3 rotationShake);
+
+            Vector3 followPosition = _currentFollowPos;
+            float desiredDistance = Mathf.Max(_minDistance, _distance);
+            Vector3 desiredOffset = rotation * Vector3.back * desiredDistance;
+
+            float finalDistance = desiredDistance;
             if (Physics.SphereCast(
-                    _currentFollowPos,
+                    followPosition,
                     _collisionRadius,
                     desiredOffset.normalized,
                     out RaycastHit hit,
-                    _distance,
+                    desiredDistance,
                     _collisionMask))
             {
-                finalDistance = Mathf.Clamp(hit.distance - _collisionRadius, _minDistance, _distance);
+                finalDistance = Mathf.Clamp(
+                    hit.distance - _collisionRadius,
+                    _minDistance,
+                    desiredDistance);
             }
 
-            transform.position = _currentFollowPos + rotation * Vector3.back * finalDistance;
-            transform.rotation = rotation;
+            Vector3 cameraPosition = followPosition
+                + rotation * Vector3.back * finalDistance;
+            Quaternion cameraRotation = rotation;
+            float fieldOfView = _defaultFieldOfView;
+            EvaluateCameraShot(
+                ref cameraPosition, ref cameraRotation, ref fieldOfView);
+
+            transform.position = cameraPosition + cameraRotation * positionShake;
+            transform.rotation = cameraRotation * Quaternion.Euler(rotationShake);
+            _camera.fieldOfView = fieldOfView;
+        }
+
+        public void PlayCameraShake(CameraShakeRequest request)
+        {
+            if (request.Duration <= 0f
+                || request.PositionAmplitude <= 0f
+                    && request.RotationAmplitude <= 0f)
+                return;
+
+            _shakeElapsed = 0f;
+            _shakeDuration = request.Duration;
+            _shakePositionAmplitude = request.PositionAmplitude;
+            _shakeRotationAmplitude = request.RotationAmplitude;
+            _shakeFrequency = request.Frequency;
+            _activeShakeEnvelope = request.Envelope;
+            _shakeNoiseSeed += 13.37f;
+            _shakeActive = true;
+        }
+
+        public void PlayCameraShot(CameraShotRequest request)
+        {
+            float totalDuration = request.BlendIn + request.MoveDuration
+                + request.Hold + request.BlendOut;
+            if (request.Anchor == null || totalDuration <= 0f) return;
+
+            _shotAnchor = request.Anchor;
+            _shotStartLocalPosition = request.StartLocalPosition;
+            _shotStartLocalRotation = request.StartLocalRotation;
+            _shotStartFieldOfView = request.StartFieldOfView;
+            _shotEndLocalPosition = request.EndLocalPosition;
+            _shotEndLocalRotation = request.EndLocalRotation;
+            _shotEndFieldOfView = request.EndFieldOfView;
+            _shotBlendIn = request.BlendIn;
+            _shotMoveDuration = request.MoveDuration;
+            _shotHold = request.Hold;
+            _shotBlendOut = request.BlendOut;
+            _shotReturnBehindTarget = request.ReturnBehindTarget;
+            _shotReturnHeadingAligned = false;
+            _shotBlendCurve = request.BlendCurve;
+            _shotMoveCurve = request.MoveCurve;
+            _shotElapsed = 0f;
+            _shotActive = true;
+        }
+
+        private void AlignShotReturnHeading()
+        {
+            if (!_shotActive || !_shotReturnBehindTarget
+                || _shotReturnHeadingAligned || _target == null)
+                return;
+
+            float blendOutStart =
+                _shotBlendIn + _shotMoveDuration + _shotHold;
+            if (_shotElapsed + Time.unscaledDeltaTime < blendOutStart) return;
+
+            _yaw = _target.eulerAngles.y;
+            _shotReturnHeadingAligned = true;
+        }
+
+        private void EvaluateCameraShot(ref Vector3 position,
+            ref Quaternion rotation, ref float fieldOfView)
+        {
+            if (!_shotActive || _shotAnchor == null)
+            {
+                _shotActive = false;
+                return;
+            }
+
+            _shotElapsed += Time.unscaledDeltaTime;
+            float totalDuration = _shotBlendIn + _shotMoveDuration
+                + _shotHold + _shotBlendOut;
+            if (_shotElapsed >= totalDuration)
+            {
+                _shotActive = false;
+                return;
+            }
+
+            float weight = EvaluateShotWeight(_shotElapsed);
+            float moveWeight = EvaluateShotMoveWeight(_shotElapsed);
+            Vector3 localPosition = Vector3.Lerp(
+                _shotStartLocalPosition, _shotEndLocalPosition, moveWeight);
+            Quaternion localRotation = Quaternion.Slerp(
+                _shotStartLocalRotation, _shotEndLocalRotation, moveWeight);
+            float shotFieldOfView = Mathf.Lerp(
+                _shotStartFieldOfView, _shotEndFieldOfView, moveWeight);
+            Vector3 shotPosition = _shotAnchor.TransformPoint(localPosition);
+            Quaternion shotRotation = _shotAnchor.rotation * localRotation;
+            position = Vector3.Lerp(position, shotPosition, weight);
+            rotation = Quaternion.Slerp(rotation, shotRotation, weight);
+            fieldOfView = Mathf.Lerp(
+                _defaultFieldOfView, shotFieldOfView, weight);
+        }
+
+        private float EvaluateShotWeight(float elapsed)
+        {
+            if (_shotBlendIn > 0f && elapsed < _shotBlendIn)
+                return EvaluateShotCurve(elapsed / _shotBlendIn);
+
+            float blendOutStart =
+                _shotBlendIn + _shotMoveDuration + _shotHold;
+            if (elapsed <= blendOutStart) return 1f;
+            if (_shotBlendOut <= 0f) return 0f;
+            return 1f - EvaluateShotCurve(
+                (elapsed - blendOutStart) / _shotBlendOut);
+        }
+
+        private float EvaluateShotMoveWeight(float elapsed)
+        {
+            if (elapsed <= _shotBlendIn) return 0f;
+            if (_shotMoveDuration <= 0f) return 1f;
+
+            float normalizedTime = Mathf.Clamp01(
+                (elapsed - _shotBlendIn) / _shotMoveDuration);
+            return _shotMoveCurve != null
+                ? Mathf.Clamp01(_shotMoveCurve.Evaluate(normalizedTime))
+                : normalizedTime;
+        }
+
+        private float EvaluateShotCurve(float normalizedTime)
+        {
+            float time = Mathf.Clamp01(normalizedTime);
+            return _shotBlendCurve != null
+                ? Mathf.Clamp01(_shotBlendCurve.Evaluate(time))
+                : time;
+        }
+
+        private void EvaluateCameraShake(
+            out Vector3 positionShake,
+            out Vector3 rotationShake)
+        {
+            positionShake = Vector3.zero;
+            rotationShake = Vector3.zero;
+            if (!_shakeActive) return;
+
+            _shakeElapsed += Time.unscaledDeltaTime;
+            float normalizedTime = Mathf.Clamp01(_shakeElapsed / _shakeDuration);
+            float shakeAmount = _activeShakeEnvelope != null
+                ? Mathf.Clamp01(_activeShakeEnvelope.Evaluate(normalizedTime))
+                : 1f - normalizedTime;
+            float noiseTime = _shakeElapsed * _shakeFrequency;
+            positionShake = new Vector3(
+                SampleNoise(noiseTime, 0f),
+                SampleNoise(noiseTime, 17f),
+                SampleNoise(noiseTime, 31f) * 0.5f)
+                * (_shakePositionAmplitude * shakeAmount);
+            rotationShake = new Vector3(
+                SampleNoise(noiseTime, 47f),
+                SampleNoise(noiseTime, 61f),
+                SampleNoise(noiseTime, 79f) * 0.5f)
+                * (_shakeRotationAmplitude * shakeAmount);
+
+            if (_shakeElapsed >= _shakeDuration) _shakeActive = false;
+        }
+
+        private float SampleNoise(float time, float channel)
+        {
+            return Mathf.PerlinNoise(time + _shakeNoiseSeed, channel + _shakeNoiseSeed)
+                * 2f - 1f;
         }
 
         // ESC로 커서 잠금 해제 (에디터 작업 편의용)

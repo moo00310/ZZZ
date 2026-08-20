@@ -543,6 +543,18 @@ namespace ZZZ.Player.StateMachine.States
                                 _showHitGizmos, _hitGizmoDuration),
                             true);
                     return null;
+                case CameraNotifyPayload cameraPayload:
+                    if (cameraPayload.Mode == CameraNotifyMode.Shot)
+                        CameraFeedbackService.PlayShot(
+                            cameraPayload.CreateShotRequest(Ctx.Transform));
+                    else
+                        CameraFeedbackService.PlayShake(
+                            cameraPayload.CreateShakeRequest());
+                    if (!string.IsNullOrEmpty(cameraPayload.EventName))
+                        Ctx.GameObject.SendMessage(
+                            cameraPayload.EventName,
+                            SendMessageOptions.DontRequireReceiver);
+                    return null;
                 case EventNotifyPayload eventPayload:
                     if (!string.IsNullOrEmpty(eventPayload.EventName))
                         Ctx.GameObject.SendMessage(

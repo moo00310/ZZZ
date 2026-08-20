@@ -353,6 +353,59 @@ namespace ZZZ.Editor.AnimationTool
                     clone.TransitionMode = source.TransitionMode;
                     clone.NextSection = source.NextSection;
                     break;
+                case CameraNotifyPayload cameraPayload:
+                    clone.EventName = source.EventName;
+                    if (clone.Payload is CameraNotifyPayload clonedCamera)
+                    {
+                        clonedCamera.Mode = cameraPayload.Mode;
+                        clonedCamera.Duration = cameraPayload.Duration;
+                        clonedCamera.PositionAmplitude = cameraPayload.PositionAmplitude;
+                        clonedCamera.RotationAmplitude = cameraPayload.RotationAmplitude;
+                        clonedCamera.Frequency = cameraPayload.Frequency;
+                        AnimationCurve envelope = cameraPayload.Envelope;
+                        clonedCamera.Envelope = envelope == null
+                            ? null
+                            : new AnimationCurve(envelope.keys)
+                            {
+                                preWrapMode = envelope.preWrapMode,
+                                postWrapMode = envelope.postWrapMode,
+                            };
+                        clonedCamera.ShotPosition = cameraPayload.ShotPosition;
+                        clonedCamera.ShotEulerAngles =
+                            cameraPayload.ShotEulerAngles;
+                        clonedCamera.ShotFieldOfView =
+                            cameraPayload.ShotFieldOfView;
+                        clonedCamera.ShotEndPosition =
+                            cameraPayload.ShotEndPosition;
+                        clonedCamera.ShotEndEulerAngles =
+                            cameraPayload.ShotEndEulerAngles;
+                        clonedCamera.ShotEndFieldOfView =
+                            cameraPayload.ShotEndFieldOfView;
+                        clonedCamera.ShotBlendIn = cameraPayload.ShotBlendIn;
+                        clonedCamera.ShotMoveDuration =
+                            cameraPayload.ShotMoveDuration;
+                        clonedCamera.ShotHold = cameraPayload.ShotHold;
+                        clonedCamera.ShotBlendOut = cameraPayload.ShotBlendOut;
+                        clonedCamera.ShotReturnBehindTarget =
+                            cameraPayload.ShotReturnBehindTarget;
+                        AnimationCurve shotCurve = cameraPayload.ShotBlendCurve;
+                        clonedCamera.ShotBlendCurve = shotCurve == null
+                            ? null
+                            : new AnimationCurve(shotCurve.keys)
+                            {
+                                preWrapMode = shotCurve.preWrapMode,
+                                postWrapMode = shotCurve.postWrapMode,
+                            };
+                        AnimationCurve moveCurve = cameraPayload.ShotMoveCurve;
+                        clonedCamera.ShotMoveCurve = moveCurve == null
+                            ? null
+                            : new AnimationCurve(moveCurve.keys)
+                            {
+                                preWrapMode = moveCurve.preWrapMode,
+                                postWrapMode = moveCurve.postWrapMode,
+                            };
+                    }
+                    break;
                 case EventNotifyPayload:
                     clone.EventName = source.EventName;
                     break;
