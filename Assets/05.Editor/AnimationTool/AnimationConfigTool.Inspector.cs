@@ -808,7 +808,6 @@ namespace ZZZ.Editor.AnimationTool
             string eName = notify.EventName;
             if (type == NotifyType.Sound || type == NotifyType.Custom)
                 eName = EditorGUILayout.TextField("Event Name", notify.EventName);
-
             CameraNotifyPayload cameraPayload =
                 notify.Payload as CameraNotifyPayload;
             CameraNotifyMode cameraMode =
@@ -1069,7 +1068,7 @@ namespace ZZZ.Editor.AnimationTool
                 if (typeChanged || bindingChanged) _fxDirty = true;
             }
 
-            // Effect 타입이면 조합(Composite) 편집 + 씬 프리뷰를 여기서 인라인으로 (별도 탭 없음)
+            // Effect와 Sound 타입은 각 Composite를 이 인스펙터에서 인라인 편집한다.
             if (notify.Payload is CameraNotifyPayload shotPayload
                 && shotPayload.Mode == CameraNotifyMode.Shot)
                 DrawCameraShotTools(shotPayload);
@@ -1078,6 +1077,11 @@ namespace ZZZ.Editor.AnimationTool
             {
                 DrawSeparator();
                 DrawEffectSection(tc, notify);
+            }
+            else if (notify.Type == NotifyType.Sound)
+            {
+                DrawSeparator();
+                DrawSoundSection(notify);
             }
 
             DrawSeparator();

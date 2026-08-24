@@ -12,8 +12,10 @@
 | 04.Scripts/Player/StateMachine | `ZZZ.Player.StateMachine` |
 | 04.Scripts/Player/StateMachine/States | `ZZZ.Player.StateMachine.States` |
 | 04.Scripts/Combat | `ZZZ.Combat` |
+| 04.Scripts/Audio | `ZZZ.Audio` |
 | 04.Scripts/Monster | `ZZZ.Monster` |
 | 05.Editor/AnimationTool | `ZZZ.Editor.AnimationTool` |
+| 05.Editor/Audio | `ZZZ.Editor.Audio` |
 
 > `Core/`의 공유 타입(`AnimationConfig` / `ConfigDriving` / `LinkCondition`)과 `Movement/`는 폴더와 무관하게 루트 `ZZZ`를 쓴다 — 플레이어·몬스터 공용이라 최상위 네임스페이스에 둔다.
 > `StateMachine` 하위(States/Triggers/Modules)는 전부 `ZZZ.Player.StateMachine`을 쓴다(폴더별로 더 쪼개지 않음).

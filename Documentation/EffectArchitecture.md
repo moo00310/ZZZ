@@ -5,7 +5,7 @@
 | 용어 | 의미 |
 |---|---|
 | Notify | 애니메이션 재생 중 특정 시점이나 구간에 실행되는 이벤트 |
-| CompositeEffect | 여러 이펙트 프리팹과 재생 설정을 묶은 에셋 |
+| CompositeEffect | 여러 VFX Entry를 묶은 재사용 시각 연출 SO |
 | Entry | CompositeEffect 안의 프리팹 한 항목 |
 
 ## 전체 구조도
@@ -16,9 +16,9 @@
     │   시점(point) Notify = 스폰만 / 구간(interval, End>Start) Notify = [Start,End] 유지
     ▼   ConfigState.DispatchNotify → EffectService.Play(composite, context, trackForStop)
 [ EffectService ]             ← static 런타임 진입점 (AnimConfig가 아는 유일한 이펙트 API)
-    │   · 조합의 Entry들을 순회 — StartDelay > 0 이면 EffectServiceRunner(코루틴 호스트)로 지연 재생
-    │   · 소켓 본 검색(FindSocket) → 배치(FollowSpawner / 스폰 위치 분리) → 파티클 재시작
-    │   · 구간 이펙트면 스폰된 인스턴스를 EffectHandle에 모아 반환(단발은 null·무할당)
+    │   · VFX Entry를 순회하고 각 StartDelay에 맞춰 실행
+    │   · 소켓 검색 → 배치 → 파티클 재시작
+    │   · 구간 이펙트면 스폰된 VFX 인스턴스를 EffectHandle에 모아 반환(단발은 null·무할당)
     ▼
 [ EffectPool ]                ← 프리팹 단위 풀 (Get / Release, MaxSize 초과분 파괴)
     │   같은 프리팹을 여러 조합이 써도 풀은 공유된다 (키 = 프리팹 GameObject)
@@ -48,7 +48,7 @@
 
 | 축 | 단위 | 이유 |
 |----|------|------|
-| **실행 (Play)** | `CompositeEffect` (SO) | 하나의 연출(예: 폭발)은 화염+연기+파편처럼 **여러 프리팹이 시차를 두고** 터진다. Notify가 이 묶음을 하나로 참조해야 편집·발동이 단순해진다 |
+| **실행 (Play)** | `CompositeEffect` (SO) | 하나의 시각 연출은 여러 VFX가 시차를 두고 실행된다. Effect Notify와 Profile은 이 완성된 묶음을 참조한다 |
 | **풀링 (Get/Release)** | 프리팹 (GameObject) | 같은 서브 이펙트(예: hit_spark)가 **서로 다른 조합**에서 다른 시차/오프셋으로 재사용된다. 풀을 조합 단위로 잡으면 같은 프리팹 인스턴스가 조합 수만큼 중복 생성된다 |
 
 ### 왜 개별 이펙트용 SO를 따로 두지 않았나
@@ -57,18 +57,19 @@
 그러나 **개별 이펙트마다 에셋을 만들어 관리하는 비용**이 실익보다 컸다 — 개별 이펙트의 설정(배치/풀링/반납)은
 대부분 "그 조합 안에서의" 값이지 프리팹의 고유 속성이 아니었기 때문이다. 그래서 `EffectDefinition`은 폐기하고,
 `CompositeEffectEntry`가 **프리팹을 직접 참조**하며 설정을 자체 보유한다. 단일 이펙트도 Entry 1개짜리
-조합으로 표현하므로 Notify 쪽엔 타입 분기가 없다.
+조합으로 표현하므로 Notify 쪽엔 타입 분기가 없다. 사운드는 시각 연출과 수명·재생 정책이 다르므로
+별도의 `CompositeSound` SO와 `AudioService`가 담당한다.
 
 > 트레이드오프 — Entry는 "그 조합 안에서의" 값(배치/시차/반납/노브)만 들고, 프리팹의 고유 속성인
 > **풀 설정(프리웜 수·상한)은 Entry에서 뺐다**. 풀은 프리팹당 하나뿐인데 Entry마다 풀 설정을 두면
 > "어느 Entry 값이 이기냐"가 모호했기 때문 — 지금은 프리팹의 [EffectPoolConfig](#풀-용량과-소유권-effectpoolconfig--effectownership)가
 > 프리팹 단위로 선언한다(단일 출처). 덕분에 에셋 수가 줄고 편집 동선이 조합 하나로 끝난다.
 
-### 시차(딜레이)의 두 층위
+### VFX 시차(딜레이)의 두 층위
 
 | 층위 | 저장 위치 | 편집 |
 |------|-----------|------|
-| **조합 내 프리팹 간 시차** | `CompositeEffectEntry.StartDelay` (SO) | EffectTool / Effect 탭 타임라인 드래그 |
+| **조합 내 VFX 간 시차** | `CompositeEffectEntry.StartDelay` (SO) | EffectTool / Effect 탭 타임라인 드래그 |
 | **프리팹 내부 서브파티클 시차** | 각 `ParticleSystem.main.startDelay` (프리팹 자체) | 타임라인 드래그가 프리팹에 직접 굽는다 |
 
 내부 시차를 자체 시퀀스 SO나 런타임 재생기(PlayableDirector 등)로 만들지 않은 이유:
@@ -79,7 +80,8 @@ Unity Timeline은 외부 Instantiate·인스턴스 리바인딩이 필요한 오
 
 ## 이펙트 조합 에셋 (CompositeEffect — SO)
 
-[CompositeEffect.cs](../Assets/04.Scripts/Effects/CompositeEffect.cs) — `List<CompositeEffectEntry>` 하나가 전부다.
+[CompositeEffect.cs](../Assets/04.Scripts/Effects/CompositeEffect.cs)는 VFX용
+`List<CompositeEffectEntry>`만 가진다. 사운드 데이터나 재생 책임은 포함하지 않는다.
 
 | Entry 필드 | 의미 |
 |------------|------|
@@ -128,8 +130,13 @@ Follower LateUpdate 현재 프레임의 보정된 소켓 포즈 복사
 
 ## 런타임 진입점 (EffectService)
 
-[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, context, trackForStop=false)`가 공개 API다.
+[EffectService.cs](../Assets/04.Scripts/Effects/EffectService.cs) — static 클래스. `Play(composite, context, trackForStop=false)`가 기본 공개 API다.
 `trackForStop=true`(구간 이펙트)면 스폰된 인스턴스를 모은 `EffectHandle`을 반환하고, 단발(point)은 무할당으로 `null`을 반환한다.
+
+실제 충돌 위치처럼 소켓 Transform이 없는 월드 지점에는
+`PlayAt(composite, position, rotation, ownerRoot)`을 사용한다. 월드 포즈는 요청 값으로 복사되므로
+Entry에 `StartDelay`가 있어도 이후 Hit 위치 변화에 끌려가지 않는다. 이 경로에서는 Socket과
+FollowSpawner를 사용하지 않고 월드에 분리하며, Entry의 Position/Euler Offset과 Scale은 그대로 적용한다.
 
 ```
 Play(composite, context, trackForStop)
@@ -174,8 +181,9 @@ PlayEntry(entry, spawner)
 
 ### ② 소유권 + 회수 — [EffectOwnership](../Assets/04.Scripts/Core/EffectOwnership.cs) (config 유도)
 
-"이 캐릭터가 어떤 이펙트를 쓰나"는 이미 캐릭터의 `AnimationConfig`(→ Effect Notify → CompositeEffect → Entry.Prefab)에
-있다. 그래서 **손으로 리스트를 만들지 않고 config에서 유도**한다(단일 진실원, 중복/drift 없음). state machine이:
+공격 연출 이펙트는 캐릭터의 `AnimationConfig`(→ Effect Notify → CompositeEffect → Entry.Prefab)에서
+유도하고, 피격 이펙트는 대상의 `HitFeedbackReceiver`가 참조하는 `HitFeedbackProfile`에서 유도한다.
+두 경로 모두 별도 프리팹 리스트를 만들지 않고 데이터 참조에서 소유권을 등록한다. state machine이:
 
 - **로드**(`Awake`) — `EffectOwnership.Register(this, 내 config들)` → distinct 프리팹마다
   `EffectService.RegisterOwner`(프리팹 `EffectPoolConfig`대로 프리웜 + owner 집합에 추가).
@@ -451,8 +459,8 @@ ParticleSystem이 소유한다. 텍스처를 개별 노브로 빼는 대신 [머
 
 ```
 Assets/04.Scripts/Effects/               런타임
-├── CompositeEffect.cs        조합 SO + Entry(프리팹 직접 참조 + 배치/반납 + 노브 3층: 머티리얼/파티클/셰이더) + ParticleParamOverride
-├── EffectService.cs          진입점 — Play / Prewarm / 소유권 등록 / 프리팹별 풀 관리 / 배치
+├── CompositeEffect.cs        조합 SO + VFX Entry 목록
+├── EffectService.cs          진입점 — VFX Entry 실행 + Prewarm/풀 관리/배치
 ├── EffectPool.cs             프리팹 단위 인스턴스 풀 (Get/Release + 프리워밍 + MaxSize + owner refcount/teardown)
 ├── EffectPoolConfig.cs       이펙트 프리팹 루트에 부착 — 풀 용량(PrewarmCount/MaxSize) 선언 (프리팹 속성)
 ├── EffectHandle.cs           구간 이펙트 정지 토큰 — 한 Play로 스폰된 인스턴스 묶음을 Stop
@@ -478,12 +486,25 @@ Assets/05.Editor/
 │   ├── EffectTool.Preview.cs     씬 Simulate 프리뷰
 │   └── EffectTool.Pool.cs        풀 개요
 ├── Effects/
-│   └── EffectEditorShared.cs     두 툴 공용 그리기/계산 헬퍼
+│   └── EffectEditorShared.cs     두 이펙트 툴 공용 그리기/계산 헬퍼
+├── Audio/
+│   ├── SoundTool.cs                  CompositeSound 목록/생성/편집 창
+│   ├── CompositeSoundEditor.cs       Project Inspector 편집
+│   └── CompositeSoundEditorShared.cs 두 편집기의 공용 SoundLayer UI
 └── AnimationTool/
-    └── AnimationConfigTool.EffectPreview.cs   Effect 탭 (애니 시간축 위 이펙트 편집/프리뷰)
+    ├── AnimationConfigTool.EffectPreview.cs   Effect Notify 인라인 편집/프리뷰
+    └── AnimationConfigTool.Sound.cs           Sound Notify 인라인 CompositeSound 편집
 ```
 
 ---
+
+## 사운드 합성과의 경계
+
+`CompositeEffect`는 시각 연출만 소유한다. 사운드는 별도의 `CompositeSound` SO가
+일반 직렬화된 `SoundLayer` 목록을 보유하고 `AudioService`를 통해 재생한다. 피격처럼 VFX와 SFX가 함께 필요한
+경우에는 `HitFeedbackProfile` 항목이 두 자산을 나란히 참조한다. `ZZZ/Sound Tool`에서
+프로젝트 전체 CompositeSound를 관리하고, Config Tool의 Sound Notify 인스펙터에서도 Effect와 같은 방식으로
+새 CompositeSound를 생성·연결하고 Sound Layer를 추가·삭제·편집할 수 있다.
 
 ## Entry 이펙트 모듈
 

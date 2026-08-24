@@ -6,9 +6,10 @@
 씬에는 공용 `PlayerRuntime`을 하나만 두고, 실제 조작 캐릭터는 `SquadController`가 생성하고 교체한다.
 
 ```text
-PlayerRuntime
+PlayerRuntime (scene root)
 ├── PlayerInput
 ├── PlayerInputRouter
+├── HitStopController
 └── SquadController
     ├── 활성 캐릭터의 PlayerActionController로 입력 전달
     └── 활성 캐릭터의 CameraPoint로 카메라 타깃 변경
@@ -21,13 +22,14 @@ PlayableCharacter 프리팹
 
 ## 책임 분리
 
-### PlayerRuntime
+### PlayerRuntime 오브젝트
 
 - `PlayerInput`: 입력 장치와 액션 맵을 한 번만 소유한다.
 - `PlayerInputRouter`: 입력을 현재 `IPlayerInputTarget`으로 전달한다.
+- `HitStopController`: 활성 캐릭터의 성공 이벤트를 구독하고 패링·퍼펙트 회피별 히트스톱을 요청한다.
 - `SquadController`: 캐릭터 명단, 활성 인덱스, 생성 및 교체를 관리한다.
 
-`PlayerRuntime`은 캐릭터 모델이나 전투 상태를 소유하지 않는다.
+`PlayerRuntime` 오브젝트는 캐릭터 모델이나 전투 상태를 소유하지 않는다.
 
 ### PlayableCharacter
 

@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+
+using ZZZ.Audio;
 using ZZZ.Effects;
 
 namespace ZZZ
@@ -393,7 +395,14 @@ namespace ZZZ
     [Serializable]
     public sealed class SoundNotifyPayload : EventNotifyPayload
     {
+        [SerializeField] private CompositeSound _sound;
+
         public override NotifyType Type => NotifyType.Sound;
+        public CompositeSound Sound
+        {
+            get => _sound;
+            set => _sound = value;
+        }
 
         public SoundNotifyPayload()
         {

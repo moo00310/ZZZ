@@ -198,8 +198,15 @@ namespace ZZZ.Combat
                     handle.MarkStruck(target);
                 }
             }
-            else if (target.ReceiveHit(in hitContext) == HitResult.Accepted)
+            else
+            {
+                HitResult result = target.ReceiveHit(in hitContext);
+                if (result == HitResult.Ignored) return;
+
                 handle.MarkStruck(target);
+                HitFeedbackService.Play(
+                    in hitContext, target.HitTransform, result);
+            }
         }
 
         public static bool IsInsideCone(Vector3 forward, Vector3 toTarget, float angle)

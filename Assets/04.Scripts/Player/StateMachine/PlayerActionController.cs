@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
+
 using ZZZ.Combat;
 using ZZZ.Effects;
 using ZZZ.Player.StateMachine.States;
@@ -107,6 +108,7 @@ namespace ZZZ.Player.StateMachine
             {
                 Mover      = _motor,
                 Animator   = animator,
+
                 Transform  = transform,
                 GameObject = gameObject,
             };
@@ -194,7 +196,7 @@ namespace ZZZ.Player.StateMachine
             ReactionTarget = null;
             if (parried)
                 ParrySucceeded?.Invoke(context);
-            return HitResult.Accepted;
+            return parried ? HitResult.Parried : HitResult.Accepted;
         }
 
         public void ReceiveParryWarning(in HitContext context, float duration)

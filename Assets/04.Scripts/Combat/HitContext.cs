@@ -6,6 +6,7 @@ namespace ZZZ.Combat
     public enum HitResult
     {
         Accepted,
+        Parried,
         Ignored
     }
 

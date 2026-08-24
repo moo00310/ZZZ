@@ -80,7 +80,7 @@ MonoBehaviour:
       EndNormalizedTime: 0
       _legacyTransitionMode: 0
       _legacyNextSection: 
-      Locked: 0
+      Locked: 1
     - NormalizedTime: 0
       _payload:
         rid: 986220614518046782
@@ -91,7 +91,18 @@ MonoBehaviour:
       EndNormalizedTime: 0
       _legacyTransitionMode: 0
       _legacyNextSection: 
-      Locked: 0
+      Locked: 1
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220697811157057
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 1
     Modules:
     - rid: 986220581176737868
     - rid: 986220581176737869
@@ -164,7 +175,29 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220626104811520
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220626104811521
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 986220581176737872
     - rid: 986220581176737877
@@ -305,6 +338,7 @@ MonoBehaviour:
         End: 0.4878049
         Distance: 2
         Direction: 1
+        _keepInitialDirection: 0
     - rid: 986220581176737869
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -322,6 +356,7 @@ MonoBehaviour:
         End: 0.5714286
         Distance: 0.1
         Direction: 0
+        _keepInitialDirection: 0
     - rid: 986220581176737872
       type: {class: FaceTargetModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -365,6 +400,7 @@ MonoBehaviour:
         End: 0.4013378
         Distance: 0.5
         Direction: 0
+        _keepInitialDirection: 0
     - rid: 986220604802465857
       type: {class: CameraNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -567,6 +603,213 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 986220626104811520
+      type: {class: CameraNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: Camera
+        _mode: 1
+        _duration: 0.12
+        _positionAmplitude: 0.04
+        _rotationAmplitude: 0.6
+        _frequency: 30
+        _envelope:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.35
+            value: 0.45
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        _shotPosition: {x: -1.0375627, y: 0.779195, z: -1.0055642}
+        _shotEulerAngles: {x: 5.879355, y: 15.493071, z: 0.082291976}
+        _shotFieldOfView: 60.000004
+        _shotEndPosition: {x: -1.18222, y: 0.8349606, z: -1.527428}
+        _shotEndEulerAngles: {x: 5.879341, y: 15.493, z: 0.08228451}
+        _shotEndFieldOfView: 60.000004
+        _shotBlendIn: 0.05
+        _shotMoveDuration: 1
+        _shotHold: 0.3
+        _shotBlendOut: 0.6
+        _shotPreserveReturnHeading: 0
+        _shotBlendCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        _shotMoveCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 986220626104811521
+      type: {class: CameraNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: Camera
+        _mode: 0
+        _duration: 0.41666666
+        _positionAmplitude: 1
+        _rotationAmplitude: 1.5
+        _frequency: 35
+        _envelope:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.35
+            value: 0.45
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        _shotPosition: {x: 0, y: 1.5, z: -3.5}
+        _shotEulerAngles: {x: 0, y: 0, z: 0}
+        _shotFieldOfView: 60
+        _shotEndPosition: {x: 0, y: 1.5, z: -3.5}
+        _shotEndEulerAngles: {x: 0, y: 0, z: 0}
+        _shotEndFieldOfView: 60
+        _shotBlendIn: 0.08
+        _shotMoveDuration: 0.2
+        _shotHold: 0.08
+        _shotBlendOut: 0.2
+        _shotPreserveReturnHeading: 0
+        _shotBlendCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        _shotMoveCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 986220697811157057
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _eventName: Sound
+        _sound: {fileID: 11400000, guid: 53215eedbf36a0a43a074f54f559c6e8, type: 2}
     - rid: 7723410972547481680
       type: {class: ParryModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using ZZZ.Combat;
 using ZZZ.Player.StateMachine;
 
@@ -7,17 +8,18 @@ namespace ZZZ.Player
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(SquadController))]
-    public sealed class PlayerRuntime : MonoBehaviour
+    [MovedFrom(true, "ZZZ.Player", "Assembly-CSharp", "PlayerRuntime")]
+    public sealed class HitStopController : MonoBehaviour
     {
         [Serializable]
-        private sealed class HitLagSettings
+        private sealed class HitStopSettings
         {
-            [Tooltip("히트랙이 선형으로 복구되는 실제 시간(초)입니다.")]
+            [Tooltip("히트스톱이 복구되는 실제 시간(초)입니다.")]
             [SerializeField, Min(0f)] private float _duration = 0.08f;
-            [Tooltip("X축은 히트랙 진행도, Y축은 실제 Time.timeScale 값입니다.")]
+            [Tooltip("X축은 히트스톱 진행도, Y축은 실제 Time.timeScale 값입니다.")]
             [SerializeField] private AnimationCurve _gameSpeedCurve =
                 AnimationCurve.Linear(0f, 0.1f, 1f, 1f);
-            [Tooltip("X축은 히트랙 진행도, Y축은 공격 몬스터의 실제 추가 속도 배율입니다.")]
+            [Tooltip("X축은 히트스톱 진행도, Y축은 공격 몬스터의 실제 추가 속도 배율입니다.")]
             [SerializeField] private AnimationCurve _monsterSpeedCurve =
                 AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
@@ -28,9 +30,9 @@ namespace ZZZ.Player
             }
         }
 
-        [Header("Success Hit Lag")]
-        [SerializeField] private HitLagSettings _parry = new HitLagSettings();
-        [SerializeField] private HitLagSettings _perfectDodge = new HitLagSettings();
+        [Header("Success Hit Stop")]
+        [SerializeField] private HitStopSettings _parry = new HitStopSettings();
+        [SerializeField] private HitStopSettings _perfectDodge = new HitStopSettings();
 
         private SquadController _squad;
         private PlayerActionController _activeActions;
