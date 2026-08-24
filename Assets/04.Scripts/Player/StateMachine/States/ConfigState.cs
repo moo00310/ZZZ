@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZZZ;
+using ZZZ.Audio;
 using ZZZ.Combat;
 using ZZZ.Effects;
 
@@ -557,6 +558,16 @@ namespace ZZZ.Player.StateMachine.States
                     if (!string.IsNullOrEmpty(cameraPayload.EventName))
                         Ctx.GameObject.SendMessage(
                             cameraPayload.EventName,
+                            SendMessageOptions.DontRequireReceiver);
+                    return null;
+                case SoundNotifyPayload soundPayload:
+                    if (soundPayload.Sound != null)
+                        AudioService.PlayAfterAnimation(
+                            soundPayload.Sound,
+                            SoundPlayContext.ForTransform(Ctx.Transform));
+                    if (!string.IsNullOrEmpty(soundPayload.EventName))
+                        Ctx.GameObject.SendMessage(
+                            soundPayload.EventName,
                             SendMessageOptions.DontRequireReceiver);
                     return null;
                 case EventNotifyPayload eventPayload:

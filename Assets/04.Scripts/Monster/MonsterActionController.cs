@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
+
 using ZZZ.Combat;
 using ZZZ.Player.StateMachine.States;
 
@@ -67,6 +68,7 @@ namespace ZZZ.Monster
             {
                 Mover = _motor,
                 Animator = _animatorBridge,
+
                 Transform = transform,
                 GameObject = gameObject,
             };

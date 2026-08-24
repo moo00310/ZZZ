@@ -356,7 +356,7 @@ ConfigState.InterruptWith(cfg, section, _dodgeBlend)
 
 ### 퍼펙트 회피 윈도우
 몬스터 공격의 `Hit Notify(Action = ParryWarning)`가 공격 적중 전에 경고 범위를 검사하고 `OpenIncomingAttack(window)`을 연다.
-경고 윈도우 안에서 회피를 시작하면 이동 입력 유무와 관계없이 퍼펙트 회피 후보가 된다. 방향 입력이 있으면 전용 Left/Right 섹션을, 중립 입력이면 기존 Back 섹션을 선택하지만 아직 성공으로 확정하지 않는다. `HitService`는 경고를 받은 대상을 공격자별로 잠시 기억하고, 같은 공격자의 실제 데미지 Hit Notify가 실행되는 시점에 후보를 확인한다. 따라서 회피 이동으로 데미지 오버랩 자체를 벗어나도 실제 공격 타이밍에 `PerfectDodgeSucceeded`를 발행할 수 있다. 실제 데미지 오버랩이 닿은 경우에도 같은 경로로 한 번만 성공하며 공격을 무시한다. 일반 회피의 피격 무시는 기존 `IFrameModule` 구간만 사용한다. 씬의 `PlayerRuntime`이 성공 이벤트를 받아 `Success Hit Lag` 설정으로 히트랙을 요청한다. `Game Speed Curve`는 전체 `Time.timeScale`을, `Monster Speed Curve`는 경고 Hit을 보낸 몬스터의 애니메이션·Config 타임라인·AI 진행 배율을 추가로 제어한다. 각 Curve의 X축은 Duration의 정규화 진행도, Y축은 해당 시점에 적용할 실제 속도 배율이다. 처리한 경고는 즉시 소비해 같은 공격에서 연속 발동하지 않는다.
+경고 윈도우 안에서 회피를 시작하면 이동 입력 유무와 관계없이 퍼펙트 회피 후보가 된다. 방향 입력이 있으면 전용 Left/Right 섹션을, 중립 입력이면 기존 Back 섹션을 선택하지만 아직 성공으로 확정하지 않는다. `HitService`는 경고를 받은 대상을 공격자별로 잠시 기억하고, 같은 공격자의 실제 데미지 Hit Notify가 실행되는 시점에 후보를 확인한다. 따라서 회피 이동으로 데미지 오버랩 자체를 벗어나도 실제 공격 타이밍에 `PerfectDodgeSucceeded`를 발행할 수 있다. 실제 데미지 오버랩이 닿은 경우에도 같은 경로로 한 번만 성공하며 공격을 무시한다. 일반 회피의 피격 무시는 기존 `IFrameModule` 구간만 사용한다. 씬의 `HitStopController`가 성공 이벤트를 받아 `Success Hit Stop` 설정으로 히트스톱을 요청한다. `Game Speed Curve`는 전체 `Time.timeScale`을, `Monster Speed Curve`는 경고 Hit을 보낸 몬스터의 애니메이션·Config 타임라인·AI 진행 배율을 추가로 제어한다. 각 Curve의 X축은 Duration의 정규화 진행도, Y축은 해당 시점에 적용할 실제 속도 배율이다. 처리한 경고는 즉시 소비해 같은 공격에서 연속 발동하지 않는다.
 `PlayerTestTriggers`의 K/L 입력은 경고·피격 반응을 단독 확인하는 보조 테스트 경로이며, 실제 전투에서는 몬스터 AnimationConfig의 경고/데미지 Hit Notify 쌍을 사용한다.
 
 성공 판정, 히트랙 곡선, HUD 진단 순서는 [CombatFeedbackArchitecture.md](CombatFeedbackArchitecture.md)를 참고한다.
@@ -399,7 +399,7 @@ HitService → PlayerActionController.ReceiveHit() → HitTrigger.Trigger()
 
 - **동작 요점** — 적 공격 강도(`IncomingStrength`)로 쳐냄 섹션 L/H를 고른다. 쳐냄 섹션 config가 없으면 `TryDeflect()`가 false를 반환해 **일반 피격으로 안전하게 폴백**한다(패링 모션 미제작 상태에서도 안 깨짐).
 - **장점** — 회피/피격과 판정 경로(`HitTrigger`)·진입 방식(push)·구간 모듈(`WindowModule`)을 **공유**해 코드 추가가 작다. 데이터(섹션 이름 규약 `Attack_ParryAid_*`)만으로 쳐냄·카운터를 잇는다.
-- **성공 피드백** — `ParryAid_L/H`의 `FaceOppositeTargetModule`이 진입 시 플레이어 Look을 `-ReactionTarget.forward`로 맞춰 몬스터 Look과 반대 방향으로 정렬한다. 실제 Hit가 쳐냄으로 분기된 경우에만 `PlayerActionController.ParrySucceeded`를 원래 `HitContext`와 함께 발행한다. 씬의 `PlayerRuntime`이 성공 이벤트를 구독하고 패링/퍼펙트 회피별 Duration·Game Speed Curve·Monster Speed Curve를 소유한다. 각 곡선의 Y축은 실제 속도 배율이며 Monster Speed는 Game Speed에 곱해지는 공격 몬스터 전용 배율이다. Duration은 `realtimeSinceStartup`으로 재므로 Game Speed가 0이어도 정상 복구된다. 여러 요청이 겹치면 가장 긴 종료 시점을 유지하면서 새 곡선을 처음부터 적용한다.
+- **성공 피드백** — `ParryAid_L/H`의 `FaceOppositeTargetModule`이 진입 시 플레이어 Look을 `-ReactionTarget.forward`로 맞춰 몬스터 Look과 반대 방향으로 정렬한다. 실제 Hit가 쳐냄으로 분기된 경우에만 `PlayerActionController.ParrySucceeded`를 원래 `HitContext`와 함께 발행하고 `HitResult.Parried`를 반환해 일반 피격 피드백을 막는다. 씬의 `HitStopController`가 성공 이벤트를 구독해 패링/퍼펙트 회피별 Duration·Game Speed Curve·Monster Speed Curve를 소유한다. 각 곡선의 Y축은 실제 속도 배율이며 Monster Speed는 Game Speed에 곱해지는 공격 몬스터 전용 배율이다. Duration은 `realtimeSinceStartup`으로 재므로 Game Speed가 0이어도 정상 복구된다. 여러 요청이 겹치면 가장 긴 종료 시점을 유지하면서 새 곡선을 처음부터 적용한다.
 - **패링 예고** — 몬스터 공격 섹션에 `Hit Notify`를 두고 `Action = ParryWarning`으로 지정한다. 일반 Hit과 같은 오버랩 모양·원점·대상 레이어를 사용하지만 데미지는 적용하지 않고, 범위 안의 `IParryWarningReceiver`에게만 예고를 전달한다. 플레이어는 `ParryWarningReceived`를 발행하고 `Warning Duration`동안 퍼펙트 회피 윈도우를 연다. Animation Tool에서 이 Notify를 선택하면 경고 오버랩 범위를 Scene View에서 같이 편집할 수 있다. Durahan의 `Attack_01_01`, `Attack_01_03`은 Hit보다 앞선 시점에 반경 4m 경고 Overlap과 0.45초 입력 윈도우를 사용한다.
 - **문자열 규약** — 쳐냄 섹션 접두어(`Attack_ParryAid_`)는 `ParryTrigger.Prefix` 한 곳에서 정의해 `HitTrigger`에 주입한다.
 
@@ -538,7 +538,15 @@ Assets/04.Scripts/
 │   ├── HitTarget.cs                 피격 대상(허수아비/몬스터) — HP 보유, OnDamaged 이벤트
 │   ├── IHittable.cs                 피격 가능 인터페이스
 │   ├── HitContext.cs                판정 컨텍스트 + 동적 원점 Resolver 계약
-│   └── HitService.cs                모양 쿼리·팀 필터·반복 판정 + HitHandle
+│   ├── HitService.cs                모양 쿼리·팀 필터·반복 판정 + HitHandle
+│   ├── HitFeedbackReceiver.cs       피격 대상의 결과·강도별 Composite 프로필 연결
+│   ├── HitFeedbackProfile.cs        HitResult + AttackStrength → VFX/SFX 매핑
+│   └── HitFeedbackService.cs        Hit 위치·방향의 Effect·Sound 재생 중계
+│
+├── Audio/
+│   ├── CompositeSound.cs            재사용 사운드 조합 SO
+│   ├── SoundLayer.cs                클립 변형·피치·3D 거리·지연을 담는 일반 직렬화 레이어
+│   └── AudioService.cs              레이어 조합 실행과 월드 사운드 voice 재사용
 │
 ├── Movement/
 │   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
@@ -593,7 +601,7 @@ Assets/04.Scripts/
 
 ### 플레이어 런타임과 캐릭터 교체
 
-`PlayerRuntime`은 `PlayerInput`, `PlayerInputRouter`, `SquadController`를 한 번만 소유한다.
+`PlayerRuntime` 오브젝트는 `PlayerInput`, `PlayerInputRouter`, `SquadController`, `HitStopController`를 하나씩 소유한다.
 `SquadController`는 등록된 `PlayableCharacter` 프리팹을 미리 생성하고, 활성 캐릭터 하나에만
 입력을 전달한다. 교체 시 이전 캐릭터의 월드 위치만 다음 캐릭터에 넘긴 뒤
 `PlayerActionController`와 `TPSCameraController`의 타깃을 함께 변경한다.
@@ -630,6 +638,7 @@ Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자�
 - **Combo 프리뷰** : 공격 입력은 단일 드롭다운으로 '눌러둠(held)' 선택 → Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
 - **라이브 모니터** : 플레이 중 `PlayerActionController`를 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
   (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)
+- **Sound 편집** : Sound Notify를 선택하면 Config Tool 인스펙터에서 `CompositeSound`를 생성·연결하고 `SoundLayer`를 인라인 편집. `ZZZ/Sound Tool`은 프로젝트 전체 Sound 자산 검색·관리용
 
 ---
 ## Hit Notify
@@ -648,8 +657,19 @@ Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플
 
 `TrackNotify`는 공통 타이밍과 잠금만 소유하고, `[SerializeReference] NotifyPayload`가 타입별 데이터를
 소유한다. `HitNotifyPayload`는 모양, 원점, 대상 레이어, 팀 판정, 데미지, 재타격 정책을 담은
-`HitData`를 인라인으로 저장한다. 플레이어와 몬스터의 `ConfigState`는 동일한 Payload와
+`HitData`를 인라인으로 저장한다. 공격자는 `HitData.Strength`만 전달하고, 실제 Accepted Hit의
+이펙트와 타격음은 피격 대상의 프로필에서 선택한다. 플레이어와 몬스터의 `ConfigState`는 동일한 Payload와
 `HitService`를 사용한다.
+
+### Sound Notify와 타격음의 경계
+
+`SoundNotifyPayload.Sound`는 애니메이션의 지정 프레임에 `CompositeSound`를 직접 재생한다.
+휘두름·발사처럼 적중하지 않아도 나야 하는 소리를 여기에 둔다. Config Tool에서 Sound Notify를 선택하면
+Effect Notify와 마찬가지로 SO를 새로 만들거나 연결하고 내부 Sound Layer를 바로 편집할 수 있다. 기존 `EventName`은 호환용으로 남아 있다.
+
+실제 충돌음은 Sound Notify가 아니라 피격 대상의 `HitFeedbackProfile`이
+`HitResult + AttackStrength`로 선택한 `CompositeSound`에 넣는다. 같은 Profile Entry의
+`CompositeEffect`도 함께 선택되므로 빗나가거나 무시된 Hit에서는 둘 다 재생되지 않는다.
 
 `HitOrigin.Effect`는 `CompositeEffectEntry.BindingKey`와 `HitData.EffectKey`를 같은 값으로 지정한다.
 캐릭터별 `EffectBindingScope`가 풀에서 실제 생성된 Entry Transform을 찾아 Hit 원점으로 연결하며,

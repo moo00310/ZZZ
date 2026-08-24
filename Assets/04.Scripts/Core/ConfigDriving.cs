@@ -1,5 +1,6 @@
 using UnityEngine;
 
+
 namespace ZZZ
 {
     // ConfigState(애니메이션 config 러너)가 캐릭터에 요구하는 추상 표면들.
@@ -50,6 +51,7 @@ namespace ZZZ
     {
         public IConfigMover    Mover      { get; set; }
         public IAnimatorBridge Animator   { get; set; }
+
         public Transform       Transform  { get; set; }
         public GameObject      GameObject { get; set; }   // Notify(SendMessage) 대상
     }

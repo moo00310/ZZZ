@@ -9,14 +9,52 @@
 | `Hit Notify(Action = ParryWarning)` | 데미지 없이 경고 오버랩을 검사하고 공격자별 경고 대상을 등록 |
 | `PlayerActionController` | 경고 윈도우, 회피 후보, 패링/퍼펙트 회피 성공 이벤트 관리 |
 | `HitService` | 실제 데미지 Hit 처리 및 경고 대상의 공격 시점 확정 |
-| `PlayerRuntime` | 활성 캐릭터의 성공 이벤트 구독 및 패링/회피별 히트랙 설정 소유 |
+| `HitFeedbackReceiver` | 피격 대상의 `HitFeedbackProfile` 제공 및 Composite의 이펙트 풀 소유권 관리 |
+| `HitFeedbackService` | HitResult와 공격 강도로 CompositeEffect·CompositeSound를 조회해 각각 재생 |
+| `AudioService` | `CompositeSound`의 Sound Layer를 실행하고 3D AudioSource voice를 재사용 |
+| `HitStopController` | 활성 캐릭터의 패링·퍼펙트 회피 성공 이벤트 구독 및 성공별 히트스톱 설정 소유 |
 | `HitStopService` | 전체 게임 속도와 공격 몬스터의 로컬 속도 곡선 재생·복구 |
 | `AttackWarningCrossEffect` | 몬스터 얼굴의 월드 위치를 화면 좌표로 바꿔 4방향 경고선을 UI로 재생 |
 | `CameraFeedbackService` | Camera Notify와 현재 카메라 수신자를 분리하는 공용 런타임 진입점 |
 | `TPSCameraController` | 기본 TPS 추적·충돌 위에 Shot을 합성하고 마지막에 Shake를 적용 |
 | `PlayerStateHUD` | 경고 수신, 회피 후보, 성공 여부와 누적 횟수 표시 |
 
-`PlayerActionController`는 성공 여부만 발행한다. 연출 수치와 재생 정책은 씬의 `PlayerRuntime`이 소유한다.
+`PlayerActionController`는 성공 여부만 발행한다. 패링·퍼펙트 회피별 히트스톱 수치와 재생 정책은 씬의
+`HitStopController`가 소유한다.
+
+## 일반 피격 이펙트와 타격음
+
+`HitService`는 판정 중심에서 피격 Collider의 `ClosestPoint`를 구해 `HitContext.HitPoint`로 전달한다.
+`Ignored`가 아닌 결과만 `HitFeedbackService`로 전달하므로 플레이어와 몬스터가 같은 경로를 사용하고,
+무적·퍼펙트 회피로 무시한 공격은 연출을 재생하지 않는다.
+
+```text
+HitService → IHittable.ReceiveHit
+    ├─ Ignored  → 연출 없음
+    ├─ Parried  ┐
+    └─ Accepted ┴→ HitFeedbackService
+                    └─ 대상 HitFeedbackReceiver
+                        └─ HitFeedbackProfile
+                           (HitResult + AttackStrength)
+                            ├─ CompositeEffect → EffectService
+                            │   └─ VFX Entries
+                            └─ CompositeSound → AudioService
+                                └─ Sound Modules
+```
+
+공격자는 `HitData.Strength`(`Light`/`Heavy`)과 판정 결과를 전달한다. 맞는 대상의
+`HitFeedbackReceiver`가 결과·강도 조합에 대응하는 `CompositeEffect`와 `CompositeSound`를 선택하므로,
+패링과 일반 피격 모두 같은 조회 경로를 사용한다. VFX의 표면 보정은 프로필이 아니라
+CompositeEffect Entry의 `PositionOffset`에 저장한다. CompositeSound는 별도로 실제 `HitPoint`에서
+재생되므로 VFX 표면 보정이 타격음 위치에 섞이지 않는다.
+
+피격 가능한 플레이어와 몬스터의 루트에는 `HitFeedbackReceiver`를 추가하고 대상에 맞는
+`HitFeedbackProfile` 하나를 연결한다. Profile Entry는 `HitResult`, `AttackStrength`,
+`CompositeEffect`, `CompositeSound`를 가진다.
+
+휘두름·발사처럼 적중 여부와 무관한 소리는 Animation Tool의 `Sound` Notify가 담당한다.
+Sound Notify는 `CompositeSound`를 직접 참조한다. 실제 충돌음은 `HitFeedbackProfile`이 선택한
+`CompositeSound`에 넣어 Hit가 빗나가거나 무시됐을 때 재생되지 않게 한다.
 
 ## 몬스터 공격 경고 이펙트
 
@@ -110,7 +148,7 @@ ParryWarning Hit Notify
       ├─ 데미지 오버랩이 닿음: 공격 무시 후 성공
       └─ 회피 이동으로 빗나감: 등록된 경고 대상으로 성공 확인
   → PerfectDodgeSucceeded(source)
-  → PlayerRuntime이 퍼펙트 회피 히트랙 요청
+  → HitStopController가 퍼펙트 회피 히트스톱 요청
 ```
 
 성공은 회피 입력 순간이 아니라 실제 공격 Notify 시점에 확정한다. 다만 짧은 i-frame이나 데미지 오버랩과 정확히 겹치도록 강제하지 않는다. 경고를 받았고 해당 공격 시점까지 회피 상태인지를 사용한다.
@@ -132,14 +170,14 @@ ParryModule 활성 중 Damage Hit 수신
   → HitTrigger.TryDeflect
   → ParryAid_L/H 진입
   → ParrySucceeded(HitContext)
-  → PlayerRuntime이 패링 히트랙 요청
+  → HitStopController가 패링 히트스톱 요청
 ```
 
 실제 Hit가 쳐냄으로 분기된 경우에만 성공 이벤트를 발행한다. `FaceOppositeTargetModule`은 성공 진입 시 플레이어 Look을 공격 몬스터 Look의 반대 방향으로 맞춘다.
 
-## 히트랙 곡선
+## 히트스톱 곡선
 
-`PlayerRuntime > Success Hit Lag`에서 패링과 퍼펙트 회피를 각각 설정한다.
+`HitStopController > Success Hit Stop`에서 패링과 퍼펙트 회피를 각각 설정한다.
 
 - `Duration`: 곡선 전체를 재생할 실제 시간
 - `Game Speed Curve`: X는 정규화 진행도, Y는 실제 `Time.timeScale`
@@ -164,6 +202,6 @@ Monster Speed는 Game Speed에 곱해진다. 예를 들어 같은 시점에 Game
 1. `Atk Window`가 없으면 경고 Notify 시점·원점·반경·Target Mask를 확인한다.
 2. `Atk Window`만 있고 Candidate가 없으면 회피 입력 처리와 회피 Config 진입을 확인한다.
 3. Candidate 이후 Success가 없으면 같은 공격자의 데미지 Hit Notify 실행 여부와 Warning Duration을 확인한다.
-4. Success는 보이지만 히트랙이 약하면 `PlayerRuntime`의 두 속도 곡선 시작 키를 확인한다.
+4. Success는 보이지만 히트스톱이 약하면 `HitStopController`의 두 속도 곡선 시작 키를 확인한다.
 
 Animation Tool에서 경고 Hit Notify를 선택하면 Scene View에 오버랩 범위를 표시할 수 있다. 런타임에서는 `MonsterActionController.Show Hit Gizmos`와 Game View의 Gizmos를 함께 켠다.

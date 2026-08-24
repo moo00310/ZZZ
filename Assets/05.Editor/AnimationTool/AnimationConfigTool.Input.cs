@@ -406,6 +406,11 @@ namespace ZZZ.Editor.AnimationTool
                             };
                     }
                     break;
+                case SoundNotifyPayload soundPayload:
+                    clone.EventName = source.EventName;
+                    if (clone.Payload is SoundNotifyPayload clonedSound)
+                        clonedSound.Sound = soundPayload.Sound;
+                    break;
                 case EventNotifyPayload:
                     clone.EventName = source.EventName;
                     break;

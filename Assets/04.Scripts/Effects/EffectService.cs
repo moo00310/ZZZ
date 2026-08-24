@@ -12,11 +12,16 @@ namespace ZZZ.Effects
         public EffectBindingScope Bindings { get; }
         public bool DebugDraw { get; }
         public float DebugDuration { get; }
+        public bool HasWorldPose { get; }
+        public Vector3 WorldPosition { get; }
+        public Quaternion WorldRotation { get; }
 
         public EffectPlayContext(
             Transform spawner, Transform characterRoot, HitData hit = null,
             EffectBindingScope bindings = null, bool debugDraw = false,
-            float debugDuration = 0.1f)
+            float debugDuration = 0.1f, bool hasWorldPose = false,
+            Vector3 worldPosition = default,
+            Quaternion worldRotation = default)
         {
             Spawner       = spawner;
             CharacterRoot = characterRoot;
@@ -24,6 +29,9 @@ namespace ZZZ.Effects
             Bindings      = bindings;
             DebugDraw     = debugDraw;
             DebugDuration = Mathf.Max(0f, debugDuration);
+            HasWorldPose  = hasWorldPose;
+            WorldPosition = worldPosition;
+            WorldRotation = hasWorldPose ? worldRotation : Quaternion.identity;
         }
 
         public static EffectPlayContext ForCharacter(
@@ -33,6 +41,12 @@ namespace ZZZ.Effects
             new EffectPlayContext(
                 characterRoot, characterRoot, hit, bindings,
                 debugDraw, debugDuration);
+
+        public static EffectPlayContext AtWorldPose(
+            Transform ownerRoot, Vector3 position, Quaternion rotation) =>
+            new EffectPlayContext(
+                ownerRoot, ownerRoot, hasWorldPose: true,
+                worldPosition: position, worldRotation: rotation);
     }
 
     public sealed class EffectBindingScope : IHitOriginResolver
@@ -185,6 +199,16 @@ namespace ZZZ.Effects
             return handle;
         }
 
+        public static EffectHandle PlayAt(
+            CompositeEffect composite, Vector3 position, Quaternion rotation,
+            Transform ownerRoot, bool trackForStop = false)
+        {
+            return Play(
+                composite,
+                EffectPlayContext.AtWorldPose(ownerRoot, position, rotation),
+                trackForStop);
+        }
+
         private static void PlayEntries(
             CompositeEffect composite, EffectPlayContext context, EffectHandle handle,
             bool afterAnimation)
@@ -232,8 +256,17 @@ namespace ZZZ.Effects
             EffectPool pool     = GetOrCreatePool(entry.Prefab);
             GameObject instance = pool.Get();
 
-            Transform anchor = FindSocket(context.Spawner, entry.Socket);
-            PlaceInstance(instance, entry, anchor, context.CharacterRoot);
+            if (context.HasWorldPose)
+            {
+                PlaceInstanceAtWorldPose(
+                    instance, entry,
+                    context.WorldPosition, context.WorldRotation);
+            }
+            else
+            {
+                Transform anchor = FindSocket(context.Spawner, entry.Socket);
+                PlaceInstance(instance, entry, anchor, context.CharacterRoot);
+            }
             BindCustomSimulationSpace(instance, context.CharacterRoot);
             BindEffectModules(instance, entry, context.CharacterRoot);
 
@@ -251,7 +284,9 @@ namespace ZZZ.Effects
                 : null;
             var entryContext = new EffectPlayContext(
                 context.Spawner, context.CharacterRoot, entryHit,
-                context.Bindings, context.DebugDraw, context.DebugDuration);
+                context.Bindings, context.DebugDraw, context.DebugDuration,
+                context.HasWorldPose, context.WorldPosition,
+                context.WorldRotation);
             handle.NotifyPlaybackStarted(entryContext, entry.BindingKey);
             RestartParticles(instance);
             return handle;
@@ -432,6 +467,20 @@ namespace ZZZ.Effects
                 t.rotation = spawnRot;
             }
             t.localScale = entry.Scale;
+        }
+
+        private static void PlaceInstanceAtWorldPose(
+            GameObject instance, CompositeEffectEntry entry,
+            Vector3 position, Quaternion rotation)
+        {
+            Transform transform = instance.transform;
+            var socketFollower = instance.GetComponent<EffectSocketFollower>();
+            if (socketFollower != null) socketFollower.Unbind();
+
+            transform.SetParent(null, true);
+            transform.position = position + rotation * entry.PositionOffset;
+            transform.rotation = rotation * Quaternion.Euler(entry.EulerOffset);
+            transform.localScale = entry.Scale;
         }
 
         private static bool HasModule<T>(CompositeEffectEntry entry)
