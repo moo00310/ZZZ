@@ -11,7 +11,7 @@
 | `HitService` | 실제 데미지 Hit 처리 및 경고 대상의 공격 시점 확정 |
 | `HitFeedbackReceiver` | 피격 대상의 `HitFeedbackProfile` 제공 및 Composite의 이펙트 풀 소유권 관리 |
 | `HitFeedbackService` | HitResult와 공격 강도로 CompositeEffect·CompositeSound를 조회해 각각 재생 |
-| `AudioService` | `CompositeSound`의 Sound Layer를 실행하고 3D AudioSource voice를 재사용 |
+| `AudioService` | `CompositeSound` 하나를 실행하고 3D AudioSource voice를 재사용 |
 | `HitStopController` | 활성 캐릭터의 패링·퍼펙트 회피 성공 이벤트 구독 및 성공별 히트스톱 설정 소유 |
 | `HitStopService` | 전체 게임 속도와 공격 몬스터의 로컬 속도 곡선 재생·복구 |
 | `AttackWarningCrossEffect` | 몬스터 얼굴의 월드 위치를 화면 좌표로 바꿔 4방향 경고선을 UI로 재생 |
@@ -39,7 +39,7 @@ HitService → IHittable.ReceiveHit
                             ├─ CompositeEffect → EffectService
                             │   └─ VFX Entries
                             └─ CompositeSound → AudioService
-                                └─ Sound Modules
+                                └─ Clip Variant + Playback Settings
 ```
 
 공격자는 `HitData.Strength`(`Light`/`Heavy`)과 판정 결과를 전달한다. 맞는 대상의

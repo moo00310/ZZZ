@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 using ZZZ.Audio;
 using ZZZ.Effects;
@@ -10,6 +11,12 @@ namespace ZZZ
     {
         Damage,
         ParryWarning
+    }
+
+    public enum ConfigEventType
+    {
+        None,
+        HitShake
     }
 
     public enum CameraNotifyMode
@@ -215,28 +222,7 @@ namespace ZZZ
     }
 
     [Serializable]
-    public abstract class EventNotifyPayload : NotifyPayload
-    {
-        [SerializeField] private string _eventName = "";
-
-        public string EventName
-        {
-            get => _eventName;
-            set => _eventName = value ?? "";
-        }
-
-        protected EventNotifyPayload()
-        {
-        }
-
-        protected EventNotifyPayload(string eventName)
-        {
-            _eventName = eventName ?? "";
-        }
-    }
-
-    [Serializable]
-    public sealed class CameraNotifyPayload : EventNotifyPayload
+    public sealed class CameraNotifyPayload : NotifyPayload
     {
         [SerializeField] private CameraNotifyMode _mode;
 
@@ -366,14 +352,6 @@ namespace ZZZ
             set => _shotMoveCurve = value;
         }
 
-        public CameraNotifyPayload()
-        {
-        }
-
-        public CameraNotifyPayload(string eventName) : base(eventName)
-        {
-        }
-
         public CameraShakeRequest CreateShakeRequest()
         {
             return new CameraShakeRequest(
@@ -393,7 +371,7 @@ namespace ZZZ
     }
 
     [Serializable]
-    public sealed class SoundNotifyPayload : EventNotifyPayload
+    public sealed class SoundNotifyPayload : NotifyPayload
     {
         [SerializeField] private CompositeSound _sound;
 
@@ -404,26 +382,53 @@ namespace ZZZ
             set => _sound = value;
         }
 
-        public SoundNotifyPayload()
-        {
-        }
-
-        public SoundNotifyPayload(string eventName) : base(eventName)
-        {
-        }
     }
 
     [Serializable]
-    public sealed class CustomNotifyPayload : EventNotifyPayload
+    public sealed class CustomNotifyPayload : NotifyPayload
     {
+        [SerializeField] private ConfigEventType _eventType;
+
+        [FormerlySerializedAs("_eventName")]
+        [SerializeField, HideInInspector]
+        private string _legacyEventName = "";
+
         public override NotifyType Type => NotifyType.Custom;
+        public ConfigEventType EventType
+        {
+            get
+            {
+                MigrateLegacyData();
+                return _eventType;
+            }
+            set
+            {
+                _eventType = value;
+                _legacyEventName = "";
+            }
+        }
 
         public CustomNotifyPayload()
         {
         }
 
-        public CustomNotifyPayload(string eventName) : base(eventName)
+        public CustomNotifyPayload(ConfigEventType eventType)
         {
+            _eventType = eventType;
         }
+
+        public bool MigrateLegacyData()
+        {
+            if (string.IsNullOrEmpty(_legacyEventName)) return false;
+
+            _eventType = string.Equals(
+                _legacyEventName, "OnHitShake",
+                StringComparison.Ordinal)
+                ? ConfigEventType.HitShake
+                : ConfigEventType.None;
+            _legacyEventName = "";
+            return true;
+        }
+
     }
 }

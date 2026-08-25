@@ -110,7 +110,6 @@ namespace ZZZ.Player.StateMachine
                 Animator   = animator,
 
                 Transform  = transform,
-                GameObject = gameObject,
             };
             _state = new ConfigState(
                 cfgCtx, this, condCtx, _startConfig,

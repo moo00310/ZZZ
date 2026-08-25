@@ -54,9 +54,9 @@ namespace ZZZ
             => _animator.CrossFadeInFixedTime(stateName, crossFade, 0, fixedTimeOffset);
 
         // ── Hit Shake (Additive) ──────────────────────────────────
-        // Hit config 클립의 Notify(EventName="OnHitShake")가 SendMessage로 호출한다.
+        // Hit config의 ConfigEventType.HitShake가 명시적으로 호출한다.
         // additive 레이어에 Hit_Shake를 재생하고 끝나면 weight를 0으로 페이드.
-        public void OnHitShake()
+        public void PlayHitShake()
         {
             if (string.IsNullOrEmpty(_hitShakeState)) return;   // 흔들림 State 미설정 → 생략
             if (_shakeRoutine != null) StopCoroutine(_shakeRoutine);

@@ -42,6 +42,7 @@ namespace ZZZ
     {
         void ApplyAnimatorSpeed(float speed = 1f);
         void Play(string stateName, float crossFade = 0.01f, float fixedTimeOffset = 0f);
+        void PlayHitShake();
     }
 
     // ConfigState가 접근하는 공유 컴포넌트 묶음 — 구상 데이터 홀더.
@@ -53,7 +54,6 @@ namespace ZZZ
         public IAnimatorBridge Animator   { get; set; }
 
         public Transform       Transform  { get; set; }
-        public GameObject      GameObject { get; set; }   // Notify(SendMessage) 대상
     }
 
     // ConfigState가 머신에 보내는 신호 — 무적/패링(섹션 진입 시 리셋, 모듈이 윈도우 동안 재설정),

@@ -805,9 +805,10 @@ namespace ZZZ.Editor.AnimationTool
                 notify.Locked);
             // Lock 중에도 Time 필드로는 값을 미세 조정할 수 있게 둔다 — 막는 건 '드래그 이동'뿐.
             float normT  = FrameField("Time (f)", "이 Notify가 발동하는 프레임", tc, notify.NormalizedTime);
-            string eName = notify.EventName;
-            if (type == NotifyType.Sound || type == NotifyType.Custom)
-                eName = EditorGUILayout.TextField("Event Name", notify.EventName);
+            ConfigEventType configEvent = notify.ConfigEvent;
+            if (type == NotifyType.Custom)
+                configEvent = (ConfigEventType)EditorGUILayout.EnumPopup(
+                    "Event Type", configEvent);
             CameraNotifyPayload cameraPayload =
                 notify.Payload as CameraNotifyPayload;
             CameraNotifyMode cameraMode =
@@ -1024,7 +1025,8 @@ namespace ZZZ.Editor.AnimationTool
                 bool typeChanged = type != notify.Type;
                 Undo.RecordObject(_config, "Edit Notify");
                 notify.Type = type; notify.NormalizedTime = normT;
-                notify.EventName = eName;
+                if (notify.Payload is CustomNotifyPayload editedCustom)
+                    editedCustom.EventType = configEvent;
                 if (notify.Payload is CameraNotifyPayload editedCamera)
                 {
                     editedCamera.Mode = cameraMode;

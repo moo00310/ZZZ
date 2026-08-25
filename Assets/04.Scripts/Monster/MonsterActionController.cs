@@ -70,7 +70,6 @@ namespace ZZZ.Monster
                 Animator = _animatorBridge,
 
                 Transform = transform,
-                GameObject = gameObject,
             };
 
             ConditionContext = new MonsterConditionContext();

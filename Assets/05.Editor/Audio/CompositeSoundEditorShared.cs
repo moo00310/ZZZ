@@ -10,39 +10,26 @@ namespace ZZZ.Editor.Audio
         private const string DEFAULT_ASSET_FOLDER =
             "Assets/02.Effects/Sounds";
 
-        public static void DrawLayers(SerializedProperty layers)
+        public static void DrawSound(SerializedObject serializedSound)
         {
-            if (layers == null) return;
+            if (serializedSound == null) return;
 
-            for (int i = 0; i < layers.arraySize; i++)
-            {
-                SerializedProperty layer =
-                    layers.GetArrayElementAtIndex(i);
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField(
-                    $"Layer {i + 1}", EditorStyles.miniBoldLabel);
-                if (GUILayout.Button(
-                        "Remove", EditorStyles.miniButton,
-                        GUILayout.Width(58f)))
-                {
-                    Undo.RecordObject(
-                        layers.serializedObject.targetObject,
-                        "Remove Sound Layer");
-                    layers.DeleteArrayElementAtIndex(i);
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.EndVertical();
-                    break;
-                }
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.PropertyField(
-                    layer, GUIContent.none, true);
-                EditorGUILayout.EndVertical();
-            }
-
-            if (GUILayout.Button(
-                    "+ Add Sound Layer", EditorStyles.miniButton))
-                AddLayer(layers);
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_clips"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_volume"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_pitchRange"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_spatialBlend"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_minimumDistance"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_maximumDistance"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_output"));
+            EditorGUILayout.PropertyField(
+                serializedSound.FindProperty("_positionOffset"));
         }
 
         public static CompositeSound CreateAsset(string defaultName)
@@ -52,17 +39,8 @@ namespace ZZZ.Editor.Audio
             string path = AssetDatabase.GenerateUniqueAssetPath(
                 $"{folder}/{defaultName}.asset");
             AssetDatabase.CreateAsset(sound, path);
-            AddDefaultLayer(sound);
             AssetDatabase.SaveAssets();
             return sound;
-        }
-
-        public static void AddDefaultLayer(CompositeSound sound)
-        {
-            if (sound == null) return;
-
-            var serializedSound = new SerializedObject(sound);
-            AddLayer(serializedSound.FindProperty("_layers"));
         }
 
         private static string ResolveCreationFolder()
@@ -87,38 +65,6 @@ namespace ZZZ.Editor.Audio
                 && AssetDatabase.IsValidFolder(folder)
                 ? folder
                 : "Assets";
-        }
-
-        private static void AddLayer(SerializedProperty layers)
-        {
-            if (layers == null) return;
-
-            Undo.RecordObject(
-                layers.serializedObject.targetObject,
-                "Add Sound Layer");
-            int index = layers.arraySize;
-            layers.arraySize++;
-            SerializedProperty layer =
-                layers.GetArrayElementAtIndex(index);
-            SetDefaults(layer);
-            layers.serializedObject.ApplyModifiedProperties();
-            EditorUtility.SetDirty(
-                layers.serializedObject.targetObject);
-        }
-
-        private static void SetDefaults(SerializedProperty layer)
-        {
-            layer.FindPropertyRelative("_startDelay").floatValue = 0f;
-            layer.FindPropertyRelative("_clips").ClearArray();
-            layer.FindPropertyRelative("_volume").floatValue = 1f;
-            layer.FindPropertyRelative("_pitchRange").vector2Value =
-                Vector2.one;
-            layer.FindPropertyRelative("_spatialBlend").floatValue = 1f;
-            layer.FindPropertyRelative("_minimumDistance").floatValue = 1f;
-            layer.FindPropertyRelative("_maximumDistance").floatValue = 25f;
-            layer.FindPropertyRelative("_output").objectReferenceValue = null;
-            layer.FindPropertyRelative("_positionOffset").vector3Value =
-                Vector3.zero;
         }
     }
 }

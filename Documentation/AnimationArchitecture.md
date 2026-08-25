@@ -141,7 +141,7 @@ Layer 0 (Base)
 │
 Layer 1 (Additive)
     └── Hit_Shake — 피격 흔들림을 additive로 덧씌움
-        ConfigState의 Notify(EventName="OnHitShake")가 SendMessage로 호출
+        ConfigState의 Custom Notify(ConfigEventType.HitShake)가 IAnimatorBridge.PlayHitShake()를 호출
 ```
 
 - 이동(Idle/Walk/Run)도 Blend Tree가 아니라 각 클립을 직접 `Play`로 전환한다.
@@ -421,7 +421,7 @@ HitTrigger.Trigger(direction)
     ▼
 ConfigState.InterruptWith(hitConfig, reactionSection, _hitEntryBlend)
     ├── layer 0     : Hit 반응 클립 재생
-    └── layer 1     : Notify(OnHitShake) → additive 흔들림 + weight 페이드
+    └── layer 1     : ConfigEventType.HitShake → additive 흔들림 + weight 페이드
             │
             ▼
         Hit config의 OnEnd Link → home(걷기)로 복귀
@@ -430,7 +430,7 @@ ConfigState.InterruptWith(hitConfig, reactionSection, _hitEntryBlend)
 ### 문제와 해결
 
 - **피격 흔들림을 반응 모션 "위에" 겹치기 (additive 레이어)** → 흔들림 클립으로 반응을 *덮어쓰면* 방향별 피격 포즈(Front/Back·L/H)가 사라진다. 그래서 별도 **additive 레이어(layer 1)** 에 `Hit_Shake`를 올려 base 반응(layer 0) **위에 더해** 재생 → 반응 포즈는 그대로 둔 채 흔들림만 얹힌다. 흔들림은 클립 길이만큼 유지한 뒤 레이어 weight를 0으로 페이드해 깔끔히 사라진다 (`CharacterAnimatorBridge.ShakeRoutine`).
-  - **데이터 ↔ 코드 분리** : config는 `Notify(EventName="OnHitShake")`로 "여기서 흔들림" 신호만 보내고, 실제 레이어/weight 제어는 `CharacterAnimatorBridge`가 담당 (SendMessage로 느슨하게 결합) → 흔들림 타이밍을 코드 수정 없이 에셋에서 조절 *(→ SendMessage는 캐릭터별 강타입 이벤트 릴레이로 교체 예정, [TODO.md](TODO.md))*
+  - **데이터 ↔ 코드 분리** : config는 `ConfigEventType.HitShake`로 "여기서 흔들림"을 선언하고, `ConfigState`가 `IAnimatorBridge.PlayHitShake()`를 명시적으로 호출한다. 실제 레이어/weight 제어는 `CharacterAnimatorBridge`가 담당하므로 문자열 탐색 없이 흔들림 타이밍을 에셋에서 조절한다.
 - **공격 강도와 피격 모션 불일치** → 연속타 L/H 교대를 제거하고 `HitData.Strength`를 직접 사용한다. Burnice는 Light에서 `Hit_L`, Heavy에서 `HitFly`를 재생한다.
 - **연타 stunlock(보조 가드)** → 반응이 충분히 진행되기 전(`_hitReinterruptThreshold`)엔 새 피격을 무시
 
@@ -544,9 +544,9 @@ Assets/04.Scripts/
 │   └── HitFeedbackService.cs        Hit 위치·방향의 Effect·Sound 재생 중계
 │
 ├── Audio/
-│   ├── CompositeSound.cs            재사용 사운드 조합 SO
-│   ├── SoundLayer.cs                클립 변형·피치·3D 거리·지연을 담는 일반 직렬화 레이어
-│   └── AudioService.cs              레이어 조합 실행과 월드 사운드 voice 재사용
+│   ├── CompositeSound.cs            의미 단위의 재사용 사운드 SO(클립 변형·피치·3D 설정)
+│   ├── SoundPlayContext.cs          Transform 또는 월드 포즈 재생 위치 컨텍스트
+│   └── AudioService.cs              단일 사운드 실행과 월드 AudioSource voice 재사용
 │
 ├── Movement/
 │   └── RootMotionTracker.cs         에디터 RootT 프리뷰용 프레임 델타 헬퍼
@@ -638,7 +638,7 @@ Controller, `Prefabs/Avatar_Female_Size02_Burnice.prefab`이다. 리소스 자�
 - **Combo 프리뷰** : 공격 입력은 단일 드롭다운으로 '눌러둠(held)' 선택 → Link 흐름을 그대로 재생 (CrossFade 블렌딩·루트모션 시뮬레이션)
 - **라이브 모니터** : 플레이 중 `PlayerActionController`를 추적해 현재 config/섹션/입력 버퍼/**Held**(눌린 키)를 실시간 표시
   (`CurrentConfig`/`CurrentSection`/`CurrentNormalizedTime`/`CurrentMoveDir`/`IsInputHeld` 등을 노출)
-- **Sound 편집** : Sound Notify를 선택하면 Config Tool 인스펙터에서 `CompositeSound`를 생성·연결하고 `SoundLayer`를 인라인 편집. `ZZZ/Sound Tool`은 프로젝트 전체 Sound 자산 검색·관리용
+- **Sound 편집** : Sound Notify를 선택하면 Config Tool 인스펙터에서 의미 단위의 `CompositeSound`를 생성·연결하고 재생 설정을 인라인 편집. `ZZZ/Sound Tool`은 프로젝트 전체 Sound 자산 검색·관리용
 
 ---
 ## Hit Notify
@@ -665,7 +665,9 @@ Notify의 첫 샘플은 Overlap으로 동작한다. `QueryMode`는 공간 샘플
 
 `SoundNotifyPayload.Sound`는 애니메이션의 지정 프레임에 `CompositeSound`를 직접 재생한다.
 휘두름·발사처럼 적중하지 않아도 나야 하는 소리를 여기에 둔다. Config Tool에서 Sound Notify를 선택하면
-Effect Notify와 마찬가지로 SO를 새로 만들거나 연결하고 내부 Sound Layer를 바로 편집할 수 있다. 기존 `EventName`은 호환용으로 남아 있다.
+Effect Notify와 마찬가지로 SO를 새로 만들거나 연결하고 클립 후보·피치·3D 거리·Mixer·위치 오프셋을 바로 편집할 수 있다.
+`CompositeSound` 하나는 발걸음·칼 소리·패링처럼 재사용할 하나의 의미만 맡는다. 서로 다른 소리나 별도 시점이
+필요하면 한 SO 안에 겹치지 않고 Sound Notify를 각각 추가해 독립적으로 배치한다.
 
 실제 충돌음은 Sound Notify가 아니라 피격 대상의 `HitFeedbackProfile`이
 `HitResult + AttackStrength`로 선택한 `CompositeSound`에 넣는다. 같은 Profile Entry의
@@ -688,7 +690,7 @@ Effect Notify와 마찬가지로 SO를 새로 만들거나 연결하고 내부 S
 
 아군 오사는 지원하지 않는다. Source와 같은 팀의 `IHittable`은 항상 판정 대상에서 제외한다.
 
-기존 `Type/EventName/Effect/Hit` 필드는 역직렬화 호환용으로 숨겨 두었다. Animation Tool에서 에셋을
+기존 `Type/EventName/Effect/Hit` 필드는 역직렬화 호환용으로 숨겨 두었다. 기존 `OnHitShake` 문자열은 `ConfigEventType.HitShake`로 변환된다. Animation Tool에서 에셋을
 열면 해당 Notify가 Payload로 변환되며, 전체 변환은
 `Tools/ZZZ/Migrate Animation Notify Payloads` 메뉴로 명시적으로 실행한다.
 

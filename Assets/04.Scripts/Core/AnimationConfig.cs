@@ -201,12 +201,15 @@ namespace ZZZ
             set => ChangePayloadType(value);
         }
 
-        public string EventName
+        public ConfigEventType ConfigEvent
         {
-            get => Payload is EventNotifyPayload payload ? payload.EventName : "";
+            get => Payload is CustomNotifyPayload payload
+                ? payload.EventType
+                : ConfigEventType.None;
             set
             {
-                if (Payload is EventNotifyPayload payload) payload.EventName = value;
+                if (Payload is CustomNotifyPayload payload)
+                    payload.EventType = value;
             }
         }
 
@@ -269,7 +272,8 @@ namespace ZZZ
 
             HitData legacyHit = _legacyHit != null ? _legacyHit.CreateDataCopy() : null;
             _payload = CreatePayload(
-                _legacyType, _legacyEventName, _legacyEffect, legacyHit,
+                _legacyType, LegacyConfigEvent(_legacyEventName),
+                _legacyEffect, legacyHit,
                 _legacyTransitionMode, _legacyNextSection);
             return true;
         }
@@ -277,6 +281,9 @@ namespace ZZZ
         public bool MigratePayload()
         {
             bool changed = EnsurePayload();
+            if (_payload is CustomNotifyPayload customPayload
+                && customPayload.MigrateLegacyData())
+                changed = true;
             bool hasLegacyData = _legacyType != default
                 || !string.IsNullOrEmpty(_legacyEventName)
                 || _legacyEffect != null
@@ -299,17 +306,26 @@ namespace ZZZ
             EnsurePayload();
             if (_payload.Type == type) return;
 
-            string eventName = EventName;
+            ConfigEventType configEvent = ConfigEvent;
             CompositeEffect effect = Effect;
             HitData hit = Hit;
             EffectTransitionMode transitionMode = TransitionMode;
             string nextSection = NextSection;
             _payload = CreatePayload(
-                type, eventName, effect, hit, transitionMode, nextSection);
+                type, configEvent, effect, hit, transitionMode, nextSection);
+        }
+
+        private static ConfigEventType LegacyConfigEvent(string eventName)
+        {
+            return string.Equals(
+                eventName, "OnHitShake", StringComparison.Ordinal)
+                ? ConfigEventType.HitShake
+                : ConfigEventType.None;
         }
 
         private static NotifyPayload CreatePayload(
-            NotifyType type, string eventName, CompositeEffect effect, HitData hit,
+            NotifyType type, ConfigEventType configEvent,
+            CompositeEffect effect, HitData hit,
             EffectTransitionMode transitionMode, string nextSection)
         {
             switch (type)
@@ -318,11 +334,11 @@ namespace ZZZ
                     return new EffectNotifyPayload(
                         effect, null, transitionMode, nextSection);
                 case NotifyType.Camera:
-                    return new CameraNotifyPayload(eventName);
+                    return new CameraNotifyPayload();
                 case NotifyType.Sound:
-                    return new SoundNotifyPayload(eventName);
+                    return new SoundNotifyPayload();
                 case NotifyType.Custom:
-                    return new CustomNotifyPayload(eventName);
+                    return new CustomNotifyPayload(configEvent);
                 case NotifyType.Hit:
                     return new HitNotifyPayload(hit);
                 default:
