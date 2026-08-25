@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -45,7 +44,7 @@ namespace ZZZ.Audio
             CompositeSound sound, SoundPlayContext context)
         {
             if (sound == null || !context.IsValid) return;
-            PlayLayers(sound, context);
+            sound.Play(in context);
         }
 
         public static void PlayAfterAnimation(
@@ -56,7 +55,7 @@ namespace ZZZ.Audio
             GetRunner().EnqueueLateUpdate(() =>
             {
                 if (!context.IsValid) return;
-                PlayLayers(sound, context);
+                sound.Play(in context);
             });
         }
 
@@ -70,41 +69,11 @@ namespace ZZZ.Audio
                     ownerRoot, position, rotation));
         }
 
-        private static void PlayLayers(
-            CompositeSound sound, SoundPlayContext context)
-        {
-            IReadOnlyList<SoundLayer> layers = sound.Layers;
-            if (layers == null) return;
-
-            for (int i = 0; i < layers.Count; i++)
-            {
-                SoundLayer layer = layers[i];
-                if (layer == null) continue;
-                PlayLayer(layer, context);
-            }
-        }
-
         public static void PlayAt(
             in AudioPlaybackRequest request, Vector3 position)
         {
             if (request.Clip == null) return;
             GetRunner().PlayAt(in request, position);
-        }
-
-        private static void PlayLayer(
-            SoundLayer layer, SoundPlayContext context)
-        {
-            if (layer.StartDelay <= 0f)
-            {
-                layer.Play(in context);
-                return;
-            }
-
-            GetRunner().Delay(layer.StartDelay, () =>
-            {
-                if (!context.IsValid) return;
-                layer.Play(in context);
-            });
         }
 
         private static AudioServiceRunner GetRunner()
@@ -152,17 +121,6 @@ namespace ZZZ.Audio
             source.Play();
         }
 
-        internal void Delay(float seconds, Action action)
-        {
-            if (action == null) return;
-            if (seconds <= 0f)
-            {
-                action();
-                return;
-            }
-            StartCoroutine(DelayRoutine(seconds, action));
-        }
-
         internal void EnqueueLateUpdate(Action action)
         {
             if (action != null) _lateUpdateActions.Enqueue(action);
@@ -172,12 +130,6 @@ namespace ZZZ.Audio
         {
             while (_lateUpdateActions.Count > 0)
                 _lateUpdateActions.Dequeue().Invoke();
-        }
-
-        private static IEnumerator DelayRoutine(float seconds, Action action)
-        {
-            yield return new WaitForSeconds(seconds);
-            action();
         }
 
         private Voice GetVoice()

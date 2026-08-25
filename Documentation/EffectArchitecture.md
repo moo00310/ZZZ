@@ -490,7 +490,7 @@ Assets/05.Editor/
 ├── Audio/
 │   ├── SoundTool.cs                  CompositeSound 목록/생성/편집 창
 │   ├── CompositeSoundEditor.cs       Project Inspector 편집
-│   └── CompositeSoundEditorShared.cs 두 편집기의 공용 SoundLayer UI
+│   └── CompositeSoundEditorShared.cs 두 편집기의 공용 CompositeSound 설정 UI
 └── AnimationTool/
     ├── AnimationConfigTool.EffectPreview.cs   Effect Notify 인라인 편집/프리뷰
     └── AnimationConfigTool.Sound.cs           Sound Notify 인라인 CompositeSound 편집
@@ -500,11 +500,13 @@ Assets/05.Editor/
 
 ## 사운드 합성과의 경계
 
-`CompositeEffect`는 시각 연출만 소유한다. 사운드는 별도의 `CompositeSound` SO가
-일반 직렬화된 `SoundLayer` 목록을 보유하고 `AudioService`를 통해 재생한다. 피격처럼 VFX와 SFX가 함께 필요한
-경우에는 `HitFeedbackProfile` 항목이 두 자산을 나란히 참조한다. `ZZZ/Sound Tool`에서
-프로젝트 전체 CompositeSound를 관리하고, Config Tool의 Sound Notify 인스펙터에서도 Effect와 같은 방식으로
-새 CompositeSound를 생성·연결하고 Sound Layer를 추가·삭제·편집할 수 있다.
+`CompositeEffect`는 시각 연출만 소유한다. 사운드는 별도의 `CompositeSound` SO가 담당하며,
+발걸음·칼 소리·패링처럼 재사용할 하나의 의미 단위마다 SO 하나를 만든다. 각 SO는 같은 의미의 클립 후보와
+볼륨·피치·3D 거리·Mixer·위치 오프셋을 직접 보유하고 `AudioService`를 통해 한 번 재생한다.
+피격처럼 VFX와 SFX가 함께 필요한 경우에는 `HitFeedbackProfile` 항목이 두 자산을 나란히 참조한다.
+`ZZZ/Sound Tool`에서 프로젝트 전체 `CompositeSound`를 관리하고, Config Tool의 Sound Notify 인스펙터에서도
+Effect와 같은 방식으로 새 CompositeSound를 생성·연결·편집한다. 여러 소리나 서로 다른 타이밍은 Sound Notify를
+여러 개 배치해 독립적으로 구성한다.
 
 ## Entry 이펙트 모듈
 
@@ -631,5 +633,4 @@ Binding을 만들지 않으므로 목적 섹션 전환 전에는 보이지 않�
 ## 남은 것 / 로드맵
 
 - **구간형(지속) 노티파이** — ✅ 구현됨. `TrackNotify.EndNormalizedTime`로 `[Start, End]` 구간 유지 → [구간 이펙트](#구간interval-이펙트--시점이-아니라-start-end) 참조. 남은 건 플레이 모드 실전 검증(트레일)
-- **`SendMessage` → 이벤트 릴레이** — Effect 외 Notify(`EventName`) 디스패치는 아직 SendMessage (리플렉션 할당) → 캐릭터별 이벤트 릴레이(강타입 `event Action<string>`, 인스턴스 스코프)로 교체 예정 ([TODO.md](TODO.md))
 - **Addressables 전환** — 모바일 대비, 스킬 VFX를 사용 직전 로드/종료 후 Release ([TODO.md](TODO.md) 모바일 절)

@@ -555,25 +555,17 @@ namespace ZZZ.Player.StateMachine.States
                     else
                         CameraFeedbackService.PlayShake(
                             cameraPayload.CreateShakeRequest());
-                    if (!string.IsNullOrEmpty(cameraPayload.EventName))
-                        Ctx.GameObject.SendMessage(
-                            cameraPayload.EventName,
-                            SendMessageOptions.DontRequireReceiver);
                     return null;
                 case SoundNotifyPayload soundPayload:
                     if (soundPayload.Sound != null)
                         AudioService.PlayAfterAnimation(
                             soundPayload.Sound,
                             SoundPlayContext.ForTransform(Ctx.Transform));
-                    if (!string.IsNullOrEmpty(soundPayload.EventName))
-                        Ctx.GameObject.SendMessage(
-                            soundPayload.EventName,
-                            SendMessageOptions.DontRequireReceiver);
                     return null;
-                case EventNotifyPayload eventPayload:
-                    if (!string.IsNullOrEmpty(eventPayload.EventName))
-                        Ctx.GameObject.SendMessage(
-                            eventPayload.EventName, SendMessageOptions.DontRequireReceiver);
+                case CustomNotifyPayload customPayload:
+                    if (customPayload.EventType
+                        == ConfigEventType.HitShake)
+                        Ctx.Animator.PlayHitShake();
                     return null;
                 default:
                     return null;

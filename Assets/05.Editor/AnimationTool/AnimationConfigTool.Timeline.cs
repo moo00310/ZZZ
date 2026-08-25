@@ -709,11 +709,13 @@ namespace ZZZ.Editor.AnimationTool
                 { alignment = TextAnchor.MiddleCenter, fontSize = 8,
                   normal = { textColor = new Color(0.1f, 0.1f, 0.1f) } });
 
-            if (_pxPerSec > 60f && !string.IsNullOrEmpty(notify.EventName))
+            ConfigEventType configEvent = notify.ConfigEvent;
+            if (_pxPerSec > 60f
+                && configEvent != ConfigEventType.None)
             {
-                string lbl = notify.EventName.Length > 8
-                    ? notify.EventName.Substring(0, 8) : notify.EventName;
-                GUI.Label(new Rect(mx + 3, my + 2, 60, 10), lbl,
+                string label = configEvent.ToString();
+                if (label.Length > 8) label = label.Substring(0, 8);
+                GUI.Label(new Rect(mx + 3, my + 2, 60, 10), label,
                     new GUIStyle(EditorStyles.miniLabel)
                     { normal = { textColor = col }, fontSize = 8 });
             }

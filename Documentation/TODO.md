@@ -101,10 +101,7 @@
 - [ ] 텍스처 압축(ASTC)·해상도 정리, 이펙트 파티클 수 예산 설정
 
 ### 5) GC / 런타임 메모리 (코드)
-- [ ] **`SendMessage` → 이벤트 릴레이** — `DispatchNotify`의 `default` 분기(`Ctx.GameObject.SendMessage(EventName, DontRequireReceiver)`, Camera/Sound/Custom 공용)를 **캐릭터별 이벤트 릴레이**(강타입 `event Action<string>`)로 교체. SendMessage 단점: 리플렉션 비용 / 오타 조용한 실패 / 타입 안전성 없음.
-  - 왜 릴레이(전역 버스 아님): Notify 연출은 대부분 그 캐릭터 자신이 반응(피격·사운드) → 인스턴스별 릴레이면 그 캐릭터를 직접 구독해 **인스턴스 구분·`Source` 필터 불필요**, 전역 정적 상태 없음(캐릭터와 함께 GC). 제약: 데이터는 공유 SO(`TrackNotify`)라 페이로드는 문자열 `EventName` 유지(**UnityEvent 불가**).
-  - 구현: 캐릭터에 릴레이 컴포넌트(`event Action<string> OnNotify`) → `ConfigState`가 `ConfigContext`의 릴레이 참조로 발행. 구독자(사운드/카메라/피격 핸들러)는 같은 캐릭터에서 `OnEnable`/`OnDisable`로 구독·해제. `ConfigContext.GameObject`(SendMessage 전용)를 **릴레이 참조로 교체** → 설정처 `MonsterActionController`/`PlayerActionController` 2곳 수정.
-  - 남는 숙제: 구독 리스너가 없으면 무동작 → 실제 연출 붙일 때 함께 구현. 한 이벤트를 여러 캐릭터/전역 시스템이 들어야 하면 그때 이벤트 버스·SO 이벤트 채널로 승격.
+- [x] **문자열 Notify 제거** — Camera/Sound는 전용 payload만 실행하고, Custom은 `ConfigEventType` enum으로 직렬화한다. `HitShake`는 `IAnimatorBridge.PlayHitShake()`를 명시적으로 호출하며 `SendMessage`와 `ConfigContext.GameObject`는 제거했다.
 
 ## 발견된 버그
 

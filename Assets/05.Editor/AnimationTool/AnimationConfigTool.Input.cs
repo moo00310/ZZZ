@@ -284,8 +284,15 @@ namespace ZZZ.Editor.AnimationTool
                         menu.AddItem(new GUIContent($"Add {nt} Notify"), false, () =>
                         {
                             Undo.RecordObject(_config, "Add Notify");
-                            _config.Clips[capI].Notifies.Add(new TrackNotify
-                            { Type = capType, NormalizedTime = capN, EventName = capType.ToString() });
+                            var notify = new TrackNotify
+                            {
+                                Type = capType,
+                                NormalizedTime = capN,
+                            };
+                            if (capType == NotifyType.Custom)
+                                notify.ConfigEvent =
+                                    ConfigEventType.HitShake;
+                            _config.Clips[capI].Notifies.Add(notify);
                             _selectedClip   = capI;
                             _selectedNotify = _config.Clips[capI].Notifies.Count - 1;
                             _notifyClipIdx  = capI;
@@ -354,7 +361,6 @@ namespace ZZZ.Editor.AnimationTool
                     clone.NextSection = source.NextSection;
                     break;
                 case CameraNotifyPayload cameraPayload:
-                    clone.EventName = source.EventName;
                     if (clone.Payload is CameraNotifyPayload clonedCamera)
                     {
                         clonedCamera.Mode = cameraPayload.Mode;
@@ -407,12 +413,11 @@ namespace ZZZ.Editor.AnimationTool
                     }
                     break;
                 case SoundNotifyPayload soundPayload:
-                    clone.EventName = source.EventName;
                     if (clone.Payload is SoundNotifyPayload clonedSound)
                         clonedSound.Sound = soundPayload.Sound;
                     break;
-                case EventNotifyPayload:
-                    clone.EventName = source.EventName;
+                case CustomNotifyPayload customPayload:
+                    clone.ConfigEvent = customPayload.EventType;
                     break;
             }
 

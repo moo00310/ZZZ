@@ -175,14 +175,11 @@ namespace ZZZ.Editor.Audio
                     AssetDatabase.GetAssetPath(_selectedSound),
                     EditorStyles.miniLabel);
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField(
-                    "Sound Layers", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox(
-                    "각 레이어는 하나의 사운드 재생 설정이며 Start Delay로 재생 시점을 조절합니다.",
+                    "하나의 의미 단위로 재사용하며 Clips 중 하나를 무작위로 재생합니다.",
                     MessageType.Info);
 
-                CompositeSoundEditorShared.DrawLayers(
-                    _soundObject.FindProperty("_layers"));
+                CompositeSoundEditorShared.DrawSound(_soundObject);
                 _soundObject.ApplyModifiedProperties();
             }
 

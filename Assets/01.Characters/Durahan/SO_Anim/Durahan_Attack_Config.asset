@@ -56,6 +56,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 0
+    - NormalizedTime: 0.07872928
+      _payload:
+        rid: 986220719636217921
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 986220581176737858
   - SectionName: Monster_Durahan_Ani_Attack_01_03
@@ -86,7 +97,7 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 1
-    - NormalizedTime: 0.2648402
+    - NormalizedTime: 0.26255703
       _payload:
         rid: 986220581176737865
       _legacyType: 0
@@ -94,6 +105,17 @@ MonoBehaviour:
       _legacyEffect: {fileID: 0}
       _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.30136988
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.05707759
+      _payload:
+        rid: 986220719636217920
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 0
@@ -355,3 +377,11 @@ MonoBehaviour:
           rid: -2
         _transitionMode: 0
         _nextSection: 
+    - rid: 986220719636217920
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 6fd2b95d8c6dd1645886f5c86d5340a7, type: 2}
+    - rid: 986220719636217921
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 6fd2b95d8c6dd1645886f5c86d5340a7, type: 2}

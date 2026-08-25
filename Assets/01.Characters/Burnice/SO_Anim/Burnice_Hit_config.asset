@@ -248,27 +248,33 @@ MonoBehaviour:
     - rid: 986220386215526474
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220386215526475
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220386215526476
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220386215526477
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220386215526478
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220386215526479
       type: {class: CustomNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
-        _eventName: OnHitShake
+        _eventType: 1
+        _legacyEventName: 
     - rid: 986220614518046786
       type: {class: SectionTurnModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
