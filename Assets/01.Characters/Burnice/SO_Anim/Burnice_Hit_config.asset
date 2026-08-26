@@ -52,6 +52,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220729359663167
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 1
     Modules:
     - rid: 6745857324881018931
   - SectionName: Hit_H_Back
@@ -81,6 +92,17 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220386215526475
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220729359663168
       _legacyType: 0
       _legacyEventName: 
       _legacyEffect: {fileID: 0}
@@ -126,6 +148,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220729359663169
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018933
   - SectionName: Hit_L_Back
@@ -155,6 +188,17 @@ MonoBehaviour:
     - NormalizedTime: 0.016628027
       _payload:
         rid: 986220386215526477
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.015934544
+      _payload:
+        rid: 986220729359663170
       _legacyType: 0
       _legacyEventName: 
       _legacyEffect: {fileID: 0}
@@ -200,6 +244,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220729359663171
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018935
   - SectionName: HitFly_Back
@@ -229,6 +284,17 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220386215526479
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220729359663172
       _legacyType: 0
       _legacyEventName: 
       _legacyEffect: {fileID: 0}
@@ -291,6 +357,30 @@ MonoBehaviour:
         Distance: 4
         Direction: 0
         _keepInitialDirection: 1
+    - rid: 986220729359663167
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
+    - rid: 986220729359663168
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
+    - rid: 986220729359663169
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
+    - rid: 986220729359663170
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
+    - rid: 986220729359663171
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
+    - rid: 986220729359663172
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1c20bdb6d68a9f141adfcac87603930d, type: 2}
     - rid: 6745857324881018931
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

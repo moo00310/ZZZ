@@ -414,7 +414,22 @@ namespace ZZZ.Editor.AnimationTool
                     break;
                 case SoundNotifyPayload soundPayload:
                     if (clone.Payload is SoundNotifyPayload clonedSound)
+                    {
                         clonedSound.Sound = soundPayload.Sound;
+                        clonedSound.Loop = soundPayload.Loop;
+                        clonedSound.NextSection = soundPayload.NextSection;
+                        SoundFadeModule fadeModule =
+                            soundPayload.FindModule<SoundFadeModule>();
+                        if (fadeModule != null)
+                            clonedSound.Modules.Add(new SoundFadeModule(
+                                fadeModule.FadeInDuration,
+                                fadeModule.FadeOutDuration));
+                        SoundDurationModule durationModule =
+                            soundPayload.FindModule<SoundDurationModule>();
+                        if (durationModule != null)
+                            clonedSound.Modules.Add(new SoundDurationModule(
+                                durationModule.Duration));
+                    }
                     break;
                 case CustomNotifyPayload customPayload:
                     clone.ConfigEvent = customPayload.EventType;

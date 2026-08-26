@@ -502,11 +502,29 @@ Assets/05.Editor/
 
 `CompositeEffect`는 시각 연출만 소유한다. 사운드는 별도의 `CompositeSound` SO가 담당하며,
 발걸음·칼 소리·패링처럼 재사용할 하나의 의미 단위마다 SO 하나를 만든다. 각 SO는 같은 의미의 클립 후보와
-볼륨·피치·3D 거리·Mixer·위치 오프셋을 직접 보유하고 `AudioService`를 통해 한 번 재생한다.
+볼륨·피치·3D 거리·Mixer·위치 오프셋을 직접 보유하고 `AudioService`를 통해 기본적으로 한 번 재생한다.
 피격처럼 VFX와 SFX가 함께 필요한 경우에는 `HitFeedbackProfile` 항목이 두 자산을 나란히 참조한다.
 `ZZZ/Sound Tool`에서 프로젝트 전체 `CompositeSound`를 관리하고, Config Tool의 Sound Notify 인스펙터에서도
 Effect와 같은 방식으로 새 CompositeSound를 생성·연결·편집한다. 여러 소리나 서로 다른 타이밍은 Sound Notify를
 여러 개 배치해 독립적으로 구성한다.
+
+Sound Notify의 `Loop`를 켜면 재생 핸들을 ConfigState가 소유해 현재 섹션 이탈 시 정지한다.
+`Carry Section`을 지정하면 실제 전이 목적지가 일치할 때 그 섹션으로 핸들을 넘기며, 대상 섹션의
+self-link 동안에는 재생과 Notify 발동 상태를 유지한다. 대상 섹션을 벗어나거나 다른 분기·인터럽트가
+발생하면 정지한다. 필요한 Notify에만 `SoundFadeModule`을 추가해 `Fade Out` 시간 동안 감쇠한 뒤
+정지하도록 만들 수 있다. 모듈의 `Fade In`은 Notify 발동 후 CompositeSound의 목표 볼륨까지 올라가는
+초 단위 시간이다. 모듈이 없으면 즉시 목표 볼륨으로 재생하고 섹션 이탈 시 즉시 정지한다.
+`SoundDurationModule`을 추가하면 재생 시작부터 지정한 총 길이가 지난 시점에 완전히 정지한다.
+Animation Tool에서는 길이를 현재 섹션의 프레임 단위로 편집하지만 실제 데이터는 초 단위로 저장하므로,
+Carry Section을 거친 뒤에도 타이머가 유지된다. `SoundFadeModule`이 함께 있으면 총 길이에서 Fade Out
+시간을 뺀 시점부터 감쇠를 시작해 지정 길이에 맞춰 끝나고, 없으면 지정 길이에 즉시 끊는다.
+Duration 모듈이 없는 사운드는 기존 섹션 수명주기를 따른다.
+캐릭터 Transform에서 시작한 루프 사운드는 재생 중에도 캐릭터 위치를 따라간다.
+따라서 화염방사처럼 시작 섹션에서 켜고 홀드 루프 섹션을 거쳐 릴리스 분기에서 끄는 수명을 데이터로 구성할 수 있다.
+
+`Preload Audio Data`가 꺼진 AudioClip은 첫 요청에서 `LoadAudioData`를 시작하고 로드가 끝난 뒤 재생한다.
+로드 실패 또는 5초 타임아웃과 64개 서비스 보이스 초과로 기존 음원이 교체되는 경우에는 Console 경고를 남긴다.
+루프 보이스는 일반 단발보다 높은 AudioSource 우선순위를 사용하며, 서비스 보이스 한도에서도 단발보다 먼저 보호한다.
 
 ## Entry 이펙트 모듈
 

@@ -23,10 +23,16 @@ namespace ZZZ.Audio
         [Tooltip("재생 기준점에서 사운드 발생 위치를 이동하는 로컬 오프셋입니다.")]
         [SerializeField] private Vector3 _positionOffset;
 
-        internal void Play(in SoundPlayContext context)
+        internal void Play(
+            in SoundPlayContext context, bool loop, AudioHandle handle,
+            float fadeInDuration, float fadeOutDuration, float duration)
         {
             AudioClip clip = SelectClip();
-            if (clip == null) return;
+            if (clip == null)
+            {
+                handle?.Stop();
+                return;
+            }
 
             float minimumPitch = Mathf.Clamp(
                 Mathf.Min(_pitchRange.x, _pitchRange.y), 0.01f, 3f);
@@ -41,7 +47,8 @@ namespace ZZZ.Audio
                 Mathf.Max(_minimumDistance, _maximumDistance),
                 _output);
             AudioService.PlayAt(
-                in request, context.ResolvePosition(_positionOffset));
+                in request, in context, _positionOffset, loop, handle,
+                fadeInDuration, fadeOutDuration, duration);
         }
 
         private AudioClip SelectClip()

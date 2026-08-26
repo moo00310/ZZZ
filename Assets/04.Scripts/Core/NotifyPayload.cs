@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -371,9 +372,68 @@ namespace ZZZ
     }
 
     [Serializable]
+    public abstract class SoundNotifyModule
+    {
+    }
+
+    [Serializable]
+    public sealed class SoundFadeModule : SoundNotifyModule
+    {
+        [SerializeField, Min(0f)] private float _fadeInDuration = 0.1f;
+        [SerializeField, Min(0f)] private float _fadeOutDuration = 0.15f;
+
+        public float FadeInDuration
+        {
+            get => _fadeInDuration;
+            set => _fadeInDuration = Mathf.Max(0f, value);
+        }
+
+        public float FadeOutDuration
+        {
+            get => _fadeOutDuration;
+            set => _fadeOutDuration = Mathf.Max(0f, value);
+        }
+
+        public SoundFadeModule()
+        {
+        }
+
+        public SoundFadeModule(float fadeInDuration, float fadeOutDuration)
+        {
+            FadeInDuration = fadeInDuration;
+            FadeOutDuration = fadeOutDuration;
+        }
+    }
+
+    [Serializable]
+    public sealed class SoundDurationModule : SoundNotifyModule
+    {
+        [SerializeField, Min(0f)] private float _duration = 1f;
+
+        public float Duration
+        {
+            get => _duration;
+            set => _duration = Mathf.Max(0f, value);
+        }
+
+        public SoundDurationModule()
+        {
+        }
+
+        public SoundDurationModule(float duration)
+        {
+            Duration = duration;
+        }
+    }
+
+    [Serializable]
     public sealed class SoundNotifyPayload : NotifyPayload
     {
         [SerializeField] private CompositeSound _sound;
+        [SerializeField] private bool _loop;
+        [SerializeField] private string _nextSection = "";
+        [SerializeReference] private List<SoundNotifyModule> _modules =
+            new List<SoundNotifyModule>();
 
         public override NotifyType Type => NotifyType.Sound;
         public CompositeSound Sound
@@ -381,7 +441,34 @@ namespace ZZZ
             get => _sound;
             set => _sound = value;
         }
+        public bool Loop
+        {
+            get => _loop;
+            set => _loop = value;
+        }
+        public string NextSection
+        {
+            get => _nextSection;
+            set => _nextSection = value ?? "";
+        }
+        public List<SoundNotifyModule> Modules
+        {
+            get
+            {
+                if (_modules == null)
+                    _modules = new List<SoundNotifyModule>();
+                return _modules;
+            }
+        }
 
+        public T FindModule<T>() where T : SoundNotifyModule
+        {
+            List<SoundNotifyModule> modules = Modules;
+            for (int i = 0; i < modules.Count; i++)
+                if (modules[i] is T module)
+                    return module;
+            return null;
+        }
     }
 
     [Serializable]
