@@ -1083,7 +1083,7 @@ namespace ZZZ.Editor.AnimationTool
             else if (notify.Type == NotifyType.Sound)
             {
                 DrawSeparator();
-                DrawSoundSection(notify);
+                DrawSoundSection(tc, notify);
             }
 
             DrawSeparator();

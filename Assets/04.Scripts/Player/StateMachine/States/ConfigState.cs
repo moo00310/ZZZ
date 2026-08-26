@@ -28,7 +28,10 @@ namespace ZZZ.Player.StateMachine.States
         private bool[]          _hitSyncPending;
         private EffectTransitionMode[] _notifyTransitionModes;
         private string[]        _notifyNextSections;
+        private AudioHandle[]   _soundActive;
+        private string[]        _soundNextSections;
         private readonly List<EffectHandle> _carriedEffects = new List<EffectHandle>();
+        private readonly List<AudioHandle> _carriedSounds = new List<AudioHandle>();
         private readonly List<PendingNextEffect> _pendingNextEffects =
             new List<PendingNextEffect>();
         private readonly EffectBindingScope _effectBindings = new EffectBindingScope();
@@ -96,6 +99,7 @@ namespace ZZZ.Player.StateMachine.States
             if (_config == null || _config.Clips.Count == 0)
             {
                 StopTrackedEffects(false);
+                StopTrackedSounds(false);
                 StopTrackedHits();
                 _pendingNextEffects.Clear();
                 _effectBindings.Clear();
@@ -268,7 +272,10 @@ namespace ZZZ.Player.StateMachine.States
             string destinationSection = _config.Clips[_active].SectionName;
             StopTrackedHits();
             if (!sameSectionReentry)
+            {
                 StopTrackedEffects(true, destinationSection);
+                StopTrackedSounds(true, destinationSection);
+            }
             PlayPendingNextEffects(destinationSection, sameSectionReentry);
             _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
             _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
@@ -280,9 +287,11 @@ namespace ZZZ.Player.StateMachine.States
             {
                 _notifyFired = null;
                 _notifyActive = null;
+                _soundActive = null;
                 _hitActive = null;
                 _notifyTransitionModes = null;
                 _notifyNextSections = null;
+                _soundNextSections = null;
                 return;
             }
 
@@ -323,40 +332,54 @@ namespace ZZZ.Player.StateMachine.States
             for (int i = 0; i < tc.Modules.Count; i++)
                 tc.Modules[i]?.OnEnter(tc, _sc);
 
-            bool preserveEffectState = sameSectionReentry
+            bool preserveNotifyState = sameSectionReentry
                 && _notifyFired != null
                 && _notifyFired.Length == tc.Notifies.Count
                 && _notifyActive != null
-                && _notifyActive.Length == tc.Notifies.Count;
-            if (!preserveEffectState)
+                && _notifyActive.Length == tc.Notifies.Count
+                && _soundActive != null
+                && _soundActive.Length == tc.Notifies.Count;
+            if (!preserveNotifyState)
             {
                 _notifyFired = new bool[tc.Notifies.Count];
                 _notifyActive = new EffectHandle[tc.Notifies.Count];
+                _soundActive = new AudioHandle[tc.Notifies.Count];
             }
             _hitActive = new HitHandle[tc.Notifies.Count];
             _hitSyncPending = new bool[tc.Notifies.Count];
             for (int i = 0; i < tc.Notifies.Count; i++)
             {
-                if (!preserveEffectState) continue;
+                if (!preserveNotifyState) continue;
 
                 TrackNotify notify = tc.Notifies[i];
-                bool preserveNotify = notify.Payload is EffectNotifyPayload effectPayload
+                bool preserveNotify =
+                    notify.Payload is EffectNotifyPayload effectPayload
                     && (effectPayload.TransitionMode == EffectTransitionMode.Next
                         || effectPayload.TransitionMode == EffectTransitionMode.Stop
-                        && _notifyActive[i] != null);
+                        && _notifyActive[i] != null)
+                    || (notify.Payload is SoundNotifyPayload soundPayload
+                        && soundPayload.Loop
+                        && _soundActive[i] != null
+                        && !_soundActive[i].IsStopped);
                 if (!preserveNotify)
                 {
                     _notifyFired[i] = false;
                     _notifyActive[i] = null;
+                    _soundActive[i] = null;
                 }
             }
 
             _notifyTransitionModes = new EffectTransitionMode[tc.Notifies.Count];
             _notifyNextSections = new string[tc.Notifies.Count];
+            _soundNextSections = new string[tc.Notifies.Count];
             for (int i = 0; i < tc.Notifies.Count; i++)
             {
                 _notifyTransitionModes[i] = tc.Notifies[i].TransitionMode;
                 _notifyNextSections[i] = tc.Notifies[i].NextSection;
+                _soundNextSections[i] =
+                    tc.Notifies[i].Payload is SoundNotifyPayload soundPayload
+                        ? soundPayload.NextSection
+                        : "";
             }
             // 중간 진입 시 그 지점 이전의 Notify는 이미 지난 것으로 처리 — 진입하자마자 무더기 발동 방지.
             if (startOffset > 0f)
@@ -417,6 +440,30 @@ namespace ZZZ.Player.StateMachine.States
                                 hitPayload.WarningDuration);
                         else
                             HitService.Execute(hitPayload.Hit, hitContext);
+                        continue;
+                    }
+                    if (notify.Payload is SoundNotifyPayload soundPayload)
+                    {
+                        if (soundPayload.Sound != null)
+                        {
+                            SoundFadeModule fadeModule =
+                                soundPayload.FindModule<SoundFadeModule>();
+                            SoundDurationModule durationModule =
+                                soundPayload.FindModule<SoundDurationModule>();
+                            _soundActive[i] = AudioService.PlayAfterAnimation(
+                                soundPayload.Sound,
+                                SoundPlayContext.ForTransform(Ctx.Transform),
+                                soundPayload.Loop,
+                                fadeModule != null
+                                    ? fadeModule.FadeInDuration
+                                    : 0f,
+                                fadeModule != null
+                                    ? fadeModule.FadeOutDuration
+                                    : 0f,
+                                durationModule != null
+                                    ? durationModule.Duration
+                                    : 0f);
+                        }
                         continue;
                     }
                     EffectHandle handle = notify.Payload is EffectNotifyPayload
@@ -556,12 +603,6 @@ namespace ZZZ.Player.StateMachine.States
                         CameraFeedbackService.PlayShake(
                             cameraPayload.CreateShakeRequest());
                     return null;
-                case SoundNotifyPayload soundPayload:
-                    if (soundPayload.Sound != null)
-                        AudioService.PlayAfterAnimation(
-                            soundPayload.Sound,
-                            SoundPlayContext.ForTransform(Ctx.Transform));
-                    return null;
                 case CustomNotifyPayload customPayload:
                     if (customPayload.EventType
                         == ConfigEventType.HitShake)
@@ -666,6 +707,34 @@ namespace ZZZ.Player.StateMachine.States
             }
         }
 
+        private void StopTrackedSounds(
+            bool transferNext, string destinationSection = null)
+        {
+            for (int i = 0; i < _carriedSounds.Count; i++)
+                _carriedSounds[i]?.Stop();
+            _carriedSounds.Clear();
+
+            if (_soundActive == null) return;
+            for (int i = 0; i < _soundActive.Length; i++)
+            {
+                AudioHandle handle = _soundActive[i];
+                if (handle != null)
+                {
+                    string nextSection = _soundNextSections != null
+                        && i < _soundNextSections.Length
+                        ? _soundNextSections[i]
+                        : null;
+                    bool matchesDestination = transferNext
+                        && !string.IsNullOrEmpty(nextSection)
+                        && string.Equals(nextSection, destinationSection,
+                            System.StringComparison.Ordinal);
+                    if (matchesDestination) _carriedSounds.Add(handle);
+                    else handle.Stop();
+                }
+                _soundActive[i] = null;
+            }
+        }
+
         private void StopTrackedHits()
         {
             if (_hitActive == null) return;
@@ -680,6 +749,7 @@ namespace ZZZ.Player.StateMachine.States
         public void Exit()
         {
             StopTrackedEffects(false);
+            StopTrackedSounds(false);
             StopTrackedHits();
             _pendingNextEffects.Clear();
             _effectBindings.Clear();
@@ -688,6 +758,8 @@ namespace ZZZ.Player.StateMachine.States
             _hitSyncPending = null;
             _notifyTransitionModes = null;
             _notifyNextSections = null;
+            _soundActive = null;
+            _soundNextSections = null;
             Ctx.Mover.ClearWarpTarget();
             Ctx.Mover.KillRootRotation = false;
             Signals.Invulnerable = false;

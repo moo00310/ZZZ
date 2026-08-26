@@ -141,9 +141,9 @@ namespace ZZZ.Editor.AnimationTool
 
             // 클립 추가 버튼
             float addY = TimelineContentHeight() - _scrollY + 6f;
-            if (addY < rowsH && GUI.Button(new Rect(4, addY, 100, 22), "+ Add Clip"))
+            if (addY < rowsH && GUI.Button(new Rect(4, addY, 110, 22), "+ Add Section"))
             {
-                Undo.RecordObject(_config, "Add Clip");
+                Undo.RecordObject(_config, "Add Section");
                 _config.Clips.Add(new TrackClip());
                 EditorUtility.SetDirty(_config);
                 _serializedConfig = new SerializedObject(_config);

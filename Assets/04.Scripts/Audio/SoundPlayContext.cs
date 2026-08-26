@@ -23,6 +23,9 @@ namespace ZZZ.Audio
 
         public bool IsValid => _anchor != null;
 
+        internal Transform Anchor => _anchor;
+        internal bool FollowsAnchor => !_hasWorldPose;
+
         public static SoundPlayContext ForTransform(Transform anchor) =>
             new SoundPlayContext(
                 anchor, false, default, Quaternion.identity);

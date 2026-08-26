@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 448385c2d502c5a48bc5e5e274b7e6a8, type: 3}
-  m_Name: Snd_Warring
+  m_Name: Snd_Hit
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Audio.CompositeSound
   _clips:
-  - {fileID: 8300000, guid: f2cefb7b65b181b4488ea9379b13a768, type: 3}
+  - {fileID: 8300000, guid: ecf0e45e7fb4f514bb84e1003a686499, type: 3}
   _volume: 0.1
   _pitchRange: {x: 1, y: 1}
   _spatialBlend: 1

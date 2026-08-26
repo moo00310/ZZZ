@@ -217,6 +217,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 1
+    - NormalizedTime: 0.83920527
+      _payload:
+        rid: 986220750427127887
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018926
     - rid: 986220581176737882
@@ -266,6 +277,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 1
+    - NormalizedTime: 0.889204
+      _payload:
+        rid: 986220750427127889
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018928
     - rid: 986220581176737883
@@ -315,6 +337,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 1
+    - NormalizedTime: 0.87920284
+      _payload:
+        rid: 986220750427127891
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 7723411149892091968
     - rid: 6745857324881018929
@@ -364,6 +397,17 @@ MonoBehaviour:
       _legacyTransitionMode: 0
       _legacyNextSection: 
       Locked: 1
+    - NormalizedTime: 0.8992034
+      _payload:
+        rid: 986220750427127893
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018930
     - rid: 6745857446944964671
@@ -683,6 +727,58 @@ MonoBehaviour:
       data:
         Start: 0
         End: 0.59999996
+    - rid: 986220750427127887
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 5f69c6c38f732804794f02d16551b66a, type: 2}
+        _loop: 1
+        _nextSection: Attack_Normal_Enhance_03
+        _modules:
+        - rid: 986220750427127888
+    - rid: 986220750427127888
+      type: {class: SoundFadeModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _fadeInDuration: 0.1
+        _fadeOutDuration: 0.15
+    - rid: 986220750427127889
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 5f69c6c38f732804794f02d16551b66a, type: 2}
+        _loop: 1
+        _nextSection: Attack_Normal_Enhance_02
+        _modules:
+        - rid: 986220750427127890
+    - rid: 986220750427127890
+      type: {class: SoundFadeModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _fadeInDuration: 0.1
+        _fadeOutDuration: 0.15
+    - rid: 986220750427127891
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 5f69c6c38f732804794f02d16551b66a, type: 2}
+        _loop: 1
+        _nextSection: Attack_Normal_Enhance_02
+        _modules:
+        - rid: 986220750427127892
+    - rid: 986220750427127892
+      type: {class: SoundFadeModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _fadeInDuration: 0.1
+        _fadeOutDuration: 0.15
+    - rid: 986220750427127893
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 5f69c6c38f732804794f02d16551b66a, type: 2}
+        _loop: 1
+        _nextSection: Attack_Normal_Enhance_03
+        _modules:
+        - rid: 986220750427127894
+    - rid: 986220750427127894
+      type: {class: SoundFadeModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _fadeInDuration: 0.1
+        _fadeOutDuration: 0.15
     - rid: 6745857324881018921
       type: {class: RotationLockModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -732,6 +828,7 @@ MonoBehaviour:
         End: 0.48
         Distance: 1
         Direction: 1
+        _keepInitialDirection: 0
     - rid: 7723410972547481664
       type: {class: IFrameModule, ns: ZZZ, asm: Assembly-CSharp}
       data:
