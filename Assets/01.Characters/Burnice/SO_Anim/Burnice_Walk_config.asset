@@ -40,7 +40,51 @@ MonoBehaviour:
       Timing: 0
       WindowStart: 0
       WindowEnd: 0.9999999
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0.11645569
+      _payload:
+        rid: 986220773871452223
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.3291139
+      _payload:
+        rid: 986220773871452224
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.5493671
+      _payload:
+        rid: 986220773871452225
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.7721518
+      _payload:
+        rid: 986220773871452226
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018940
   - SectionName: Walk_Loop
@@ -57,7 +101,29 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220773871452228
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.37575758
+      _payload:
+        rid: 986220773871452229
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules: []
   - SectionName: Walk_End
     Clip: {fileID: 7400000, guid: eb44eb5cdd450664785341c0ab88f302, type: 2}
@@ -82,7 +148,40 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0.4
       WindowEnd: 0.85
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220773871452231
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.071717694
+      _payload:
+        rid: 986220773871452232
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.30062205
+      _payload:
+        rid: 986220773871452233
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules:
     - rid: 6745857324881018942
   - SectionName: Walk_Start_End
@@ -108,7 +207,29 @@ MonoBehaviour:
       Timing: 2
       WindowStart: 0
       WindowEnd: 1
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220773871452234
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.149841
+      _payload:
+        rid: 986220773871452235
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules: []
   GlobalLinks:
   - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
@@ -132,6 +253,83 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 986220773871452223
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452224
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 0}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452225
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452226
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452228
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452229
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452231
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452232
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452233
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452234
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 986220773871452235
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1adc85a882d4642449e0354d66f403dd, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
     - rid: 6745857324881018940
       type: {class: StartBoostModule, ns: ZZZ, asm: Assembly-CSharp}
       data:

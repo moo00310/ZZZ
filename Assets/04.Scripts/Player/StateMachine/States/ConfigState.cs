@@ -129,7 +129,7 @@ namespace ZZZ.Player.StateMachine.States
             _clipTime += deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 
-            FireNotifies(tc, ntRaw, deltaTime);
+            FireNotifies(tc, previousNtRaw, ntRaw, deltaTime);
             Ctx.Mover.AllowRotation = true;
             Ctx.Mover.WarpWindowActive = false;
             Ctx.Mover.FaceWindowActive = false;
@@ -402,9 +402,14 @@ namespace ZZZ.Player.StateMachine.States
                 mods[i]?.Tick(tc, ntRaw, _sc);
         }
 
-        private void FireNotifies(TrackClip tc, float ntRaw, float deltaTime)
+        private void FireNotifies(
+            TrackClip tc, float previousNtRaw, float ntRaw, float deltaTime)
         {
             if (_notifyFired == null) return;
+            if (tc.IsLooping
+                && Mathf.FloorToInt(ntRaw) > Mathf.FloorToInt(previousNtRaw))
+                ResetLoopingSoundNotifies(tc);
+
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
             for (int i = 0; i < tc.Notifies.Count && i < _notifyFired.Length; i++)
             {
@@ -507,6 +512,25 @@ namespace ZZZ.Player.StateMachine.States
                     _hitActive[i].Stop();
                     _hitActive[i] = null;
                 }
+            }
+        }
+
+        private void ResetLoopingSoundNotifies(TrackClip tc)
+        {
+            int count = Mathf.Min(tc.Notifies.Count, _notifyFired.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (!(tc.Notifies[i].Payload is SoundNotifyPayload soundPayload))
+                    continue;
+
+                AudioHandle handle = _soundActive != null
+                    && i < _soundActive.Length
+                    ? _soundActive[i]
+                    : null;
+                bool keepPlayingLoop = soundPayload.Loop
+                    && handle != null
+                    && !handle.IsStopped;
+                if (!keepPlayingLoop) _notifyFired[i] = false;
             }
         }
 
