@@ -522,9 +522,19 @@ Duration 모듈이 없는 사운드는 기존 섹션 수명주기를 따른다.
 캐릭터 Transform에서 시작한 루프 사운드는 재생 중에도 캐릭터 위치를 따라간다.
 따라서 화염방사처럼 시작 섹션에서 켜고 홀드 루프 섹션을 거쳐 릴리스 분기에서 끄는 수명을 데이터로 구성할 수 있다.
 
+애니메이션 섹션 자체가 반복되면 ConfigState는 정규화 시간이 다음 정수 구간으로 넘어갈 때
+단발 Sound Notify의 발동 상태를 초기화해 발걸음처럼 매 사이클 다시 재생한다. 반면 이미 활성화된
+Loop Sound Notify는 핸들이 살아 있는 동안 다시 시작하지 않아 중복 루프를 만들지 않는다.
+
 `Preload Audio Data`가 꺼진 AudioClip은 첫 요청에서 `LoadAudioData`를 시작하고 로드가 끝난 뒤 재생한다.
 로드 실패 또는 5초 타임아웃과 64개 서비스 보이스 초과로 기존 음원이 교체되는 경우에는 Console 경고를 남긴다.
 루프 보이스는 일반 단발보다 높은 AudioSource 우선순위를 사용하며, 서비스 보이스 한도에서도 단발보다 먼저 보호한다.
+
+BGM은 캐릭터 Notify가 아니라 씬에 배치한 `BgmPlayer`가 담당한다. 첫 인스턴스는
+`DontDestroyOnLoad` 싱글톤으로 유지되고, 다음 씬의 `BgmPlayer`는 Inspector의 Scene Track·볼륨·
+루프·Mixer·Fade 설정을 기존 인스턴스에 전달한 뒤 제거된다. 같은 곡이면 재시작하지 않고 설정만 갱신하며,
+다른 곡이면 내부 AudioSource 두 개로 크로스페이드한다. BGM이 없는 씬에서 기존 곡을 끄려면
+`Scene Track`을 비우고 `Stop If Track Missing`을 켠다.
 
 ## Entry 이펙트 모듈
 
