@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 448385c2d502c5a48bc5e5e274b7e6a8, type: 3}
-  m_Name: Snd_Boom_Small
+  m_Name: Snd_Whoosh
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Audio.CompositeSound
   _clips:
-  - {fileID: 8300000, guid: 69571de1744bc8e4c84f4b41cf8db484, type: 3}
-  _volume: 0.05
+  - {fileID: 8300000, guid: 683ebab53fd2d8543b33ff22648747c0, type: 3}
+  - {fileID: 8300000, guid: 5a93a3f72af89ac41a3c6b4bbeb22eab, type: 3}
+  - {fileID: 8300000, guid: 3eb288121c7f9e345afc68b751e80aaf, type: 3}
+  _volume: 0.02
   _pitchRange: {x: 1, y: 1}
   _spatialBlend: 1
   _minimumDistance: 1

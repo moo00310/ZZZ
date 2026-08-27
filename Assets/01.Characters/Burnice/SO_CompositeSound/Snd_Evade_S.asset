@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 448385c2d502c5a48bc5e5e274b7e6a8, type: 3}
-  m_Name: Snd_Hit
+  m_Name: Snd_Evade_S
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Audio.CompositeSound
   _clips:
-  - {fileID: 8300000, guid: ecf0e45e7fb4f514bb84e1003a686499, type: 3}
-  _volume: 0.1
+  - {fileID: 8300000, guid: a49ed7178d217fb4fbb1405776e45602, type: 3}
+  - {fileID: 8300000, guid: 57f9f8572f3727849976589e0d5b9fd5, type: 3}
+  - {fileID: 8300000, guid: 43d691d485038f745bce39da9c690d10, type: 3}
+  _volume: 0.05
   _pitchRange: {x: 1, y: 1}
   _spatialBlend: 1
   _minimumDistance: 1

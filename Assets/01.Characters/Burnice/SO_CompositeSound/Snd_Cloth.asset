@@ -10,11 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 448385c2d502c5a48bc5e5e274b7e6a8, type: 3}
-  m_Name: Snd_Boom_Small
+  m_Name: Snd_Cloth
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Audio.CompositeSound
   _clips:
-  - {fileID: 8300000, guid: 69571de1744bc8e4c84f4b41cf8db484, type: 3}
-  _volume: 0.05
+  - {fileID: 8300000, guid: a0135919bfd66694890a09b1b4459f5a, type: 3}
+  - {fileID: 8300000, guid: 090d5dc108772a149979a3ad5344678e, type: 3}
+  - {fileID: 8300000, guid: 970773fc92d020c4fa3837a1cdd4b8b0, type: 3}
+  - {fileID: 8300000, guid: 82216c9df90cba842a0a72d5e248e3cc, type: 3}
+  _volume: 0.1
   _pitchRange: {x: 1, y: 1}
   _spatialBlend: 1
   _minimumDistance: 1

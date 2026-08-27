@@ -22,7 +22,18 @@ MonoBehaviour:
     Speed: 1
     MoveMode: 2
     Links: []
-    Notifies: []
+    Notifies:
+    - NormalizedTime: 0
+      _payload:
+        rid: 986220762572783694
+      _legacyType: 0
+      _legacyEventName: 
+      _legacyEffect: {fileID: 0}
+      _legacyHit: {fileID: 0}
+      EndNormalizedTime: 0
+      _legacyTransitionMode: 0
+      _legacyNextSection: 
+      Locked: 0
     Modules: []
   - SectionName: Monster_Durahan_Ani_Hit_H_Front
     Clip: {fileID: 7400000, guid: 78d1299b970e47e4491e4806c3f645e3, type: 2}
@@ -34,4 +45,11 @@ MonoBehaviour:
   GlobalLinks: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 986220762572783694
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: b43e6e1d807d23f40ae12e9db632a052, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
