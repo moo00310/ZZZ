@@ -1,102 +1,82 @@
 # ZZZ 전투 애니메이션 데모
 
-Unity 6와 URP로 제작 중인 3인칭 액션 전투 프로젝트다. Burnice 캐릭터의 공격, 콤보, 회피, 패링, 피격과 이펙트 재생을 구현하고 있다.
+Unity 6와 URP로 제작 중인 3인칭 액션 전투 프로젝트입니다. Burnice 캐릭터의 공격, 콤보, 회피, 패링, 피격과 전투 피드백을 데이터 기반으로 구성합니다.
 
-이 프로젝트에서는 Animator Controller에 전투 전이를 구성하지 않는다. 전투 흐름은 `AnimationConfig` 에셋에 저장하고, `ConfigState`가 이를 실행한다. Animator는 `CrossFade`를 통한 클립 재생만 담당한다.
+Animator Controller에 전투 전이 그래프를 만들지 않고, `AnimationConfig`가 전투 흐름을 저장하며 `ConfigState`가 이를 해석합니다. Animator는 `CrossFade`를 통한 클립 재생에 집중합니다.
 
-## 주요 기능
+## 핵심 구현 기능
 
-- 공격, 콤보, 강화 공격, 회피, 패링, 피격
-- 입력 버퍼와 조건부 애니메이션 전이
-- 루트 모션 이동과 공격 거리·방향 보정
-- 플레이어와 몬스터가 함께 사용하는 `ConfigState`
-- 애니메이션 구간, 전이, 이벤트를 편집하는 전용 타임라인 도구
-- 여러 프리팹을 묶어 재생하는 이펙트 에셋과 프리팹 단위 오브젝트 풀
-- 애니메이션과 이펙트를 함께 확인하는 에디터 프리뷰
-- `[SerializeReference]` 페이로드로 확장하는 Notify와 플레이어·몬스터 공용 타격 판정
-- 근접·구·부채꼴·박스·캡슐·확장형 범위 및 빠르게 이동하는 공격을 위한 Sweep 판정
-- 실행 중인 이펙트를 키로 추적하는 타격 원점과 Scene/Game View 범위 디버그
+### 데이터 기반 전투 애니메이션
 
-## 구조
+<!-- GIF 추가 예정: ![데이터 기반 전투 애니메이션](Documentation/Images/combat-animation.gif) -->
+
+- `AnimationConfig`에 애니메이션 구간, 전이, Notify와 구간별 기능을 저장합니다.
+- `ConfigState`가 전이 조건과 입력 버퍼를 평가하고 플레이어와 몬스터의 애니메이션 흐름을 실행합니다.
+- `LinkCondition`과 `SectionModule`을 조합해 콤보, 강화 공격, 회피, 패링, 루트 모션과 타깃 보정을 확장합니다.
+- Animator 파라미터와 전이 그래프에 전투 규칙이 분산되지 않도록 런타임 책임을 분리했습니다.
 
 ```text
 입력과 게임 상태
        │
        ▼
-AnimationConfig ── 전이, 재생 구간, 이벤트, 구간 기능
+AnimationConfig ── Section · Link · Notify · Module
        │
        ▼
-  ConfigState ──── 조건 평가와 애니메이션 흐름 실행
+  ConfigState ──── 조건 평가와 전투 흐름 실행
        │
        ├────────── Animator: 클립 재생
        ├────────── PlayerMotor: 이동과 회전
-       ├────────── EffectService: 이펙트 재생, 키 바인딩과 풀링
-       └────────── HitService: Overlap/Sweep 판정과 피격 전달
+       ├────────── EffectService: 이펙트 재생과 풀링
+       └────────── HitService: 타격 판정과 피격 전달
 ```
 
-`AnimationConfig`는 다음 요소로 구성된다.
+[구현 요약: 전투 애니메이션](Documentation/AnimationArchitecture.md) · [주요 설계 결정](Documentation/자료구조_선택.md)
 
-| 요소 | 역할 |
-|---|---|
-| Section | 재생할 애니메이션 클립과 루트모션 사용 여부 |
-| Link | 다른 Section 또는 Config로 넘어가는 조건과 시점 |
-| Notify | 특정 시점이나 구간에 페이로드 기반 이펙트·타격·게임 이벤트 실행 |
-| Module | 추가 이동, 회전, 타깃 보정, 무적·패링 등 섹션 기능 |
+### 전투 데이터 제작 도구
 
-추가 이동과 회전 잠금 같은 섹션 동작은 `TrackClip`의 고정 필드가 아니라
-`SectionModule` 조합으로 구성한다. 새로운 전투 행동은 주로 Config 에셋으로 만들고,
-새로운 전이 조건이나 섹션 기능이 필요할 때 `LinkCondition` 또는 `SectionModule` 구현을 추가한다.
+<!-- GIF 추가 예정: ![AnimationConfigTool 편집 과정](Documentation/Images/animation-tool.gif) -->
 
-## 에디터 도구
+- `AnimationConfigTool`에서 Section, Link, Notify와 Module을 하나의 타임라인으로 편집합니다.
+- 콤보와 루트 모션을 미리 재생하고, 플레이 중인 Config와 입력 상태를 확인할 수 있습니다.
+- Hit Payload의 모양, 크기와 원점을 Scene View에서 편집하고 Game View 디버그 라인으로 검증합니다.
+- `EffectTool`에서 여러 프리팹으로 구성된 `CompositeEffect`를 편집하고 애니메이션과 함께 미리 재생합니다.
 
-### AnimationConfigTool
+[구현 요약: 전투 데이터 제작 도구](Documentation/AnimationArchitecture.md#에디터-툴-연동) · [EffectTool 구조](Documentation/EffectArchitecture.md#에디터-툴)
 
-`AnimationConfig`를 타임라인에서 편집한다.
+### 조합형 이펙트와 전투 피드백
 
-- Section 배치와 재생 구간 편집
-- Link, Notify, Module 편집
-- 모듈 라인 접기·펼치기와 Window 구간 핸들 드래그 편집
-- 콤보와 루트 모션 프리뷰
-- 플레이 중 현재 Config, Section, 입력 상태 확인
-- 애니메이션 위에서 이펙트 시점과 위치 조정
-- Hit Payload의 모양·크기·원점을 Scene View에서 편집하고 플레이 중 범위 확인
-- Notify 우클릭 복사·붙여넣기와 Hit 기즈모 일괄·개별 표시
-- 실행 중인 Effect Entry와 Hit 원점·생명주기 동기화
+<!-- GIF 추가 예정: ![이펙트와 전투 피드백](Documentation/Images/combat-feedback.gif) -->
 
-### EffectTool
-
-`CompositeEffect`를 편집하고 씬에서 미리 재생한다. 하나의 조합에 여러 이펙트 프리팹과 각 프리팹의 지연 시간, 소켓, 위치, 재생 설정을 저장할 수 있다.
-
-각 Entry에는 선택적인 `BindingKey`를 줄 수 있다. Hit Notify가 같은 키를 `EffectKey`로 사용하면
-풀에서 재생 중인 실제 이펙트 Transform을 원점으로 판정하므로, 이동하는 빔이나 파티클을 따라가는
-공격 범위도 별도 콜라이더 프리팹 없이 구성할 수 있다.
-
-## 프로젝트 구조
+- 여러 원시 이펙트를 `CompositeEffect`로 조합하고, 풀링은 프리팹 단위로 분리합니다.
+- `EffectService`와 `EffectPool`이 지연 재생, 소켓 추종, 상태 전환과 자동 반납을 관리합니다.
+- 피격 결과와 공격 강도에 따라 `HitFeedbackProfile`이 이펙트와 타격음을 선택합니다.
+- `AudioService`가 `CompositeSound`의 클립 변형을 선택하고 3D AudioSource voice를 재사용합니다.
+- 패링과 퍼펙트 회피 성공에 히트스톱, 카메라 Shake·Shot과 공격 경고 UI를 연결합니다.
 
 ```text
-Assets/
-├── 04.Scripts/
-│   ├── Core/               AnimationConfig와 공통 실행 인터페이스
-│   ├── Player/             플레이어와 상태 머신
-│   ├── Monster/            몬스터 동작
-│   ├── Movement/           루트 모션 계산
-│   ├── Combat/             타격 판정과 전투 보조 기능
-│   └── Effects/            이펙트 재생과 풀링
-├── 05.Editor/
-│   ├── AnimationTool/      AnimationConfig 편집 도구
-│   └── EffectTool/         CompositeEffect 편집 도구
-└── Tests/EditMode/         EditMode 테스트
+HitService → IHittable.ReceiveHit
+    ├─ Ignored  → 피드백 없음
+    ├─ Parried  ┐
+    └─ Accepted ┴→ HitFeedbackService
+                    └─ HitFeedbackProfile
+                        ├─ CompositeEffect → EffectService → EffectPool
+                        └─ CompositeSound  → AudioService
 ```
 
-## 문서
+[구현 요약: 이펙트 구조](Documentation/EffectArchitecture.md) · [전투 피드백 구조](Documentation/CombatFeedbackArchitecture.md)
 
-- [애니메이션 아키텍처](Documentation/AnimationArchitecture.md): Config 실행 흐름, 루트 모션, 전이, 입력 버퍼와 전투 기능
-- [이펙트 아키텍처](Documentation/EffectArchitecture.md): 이펙트 조합, 재생, 풀링과 자동 반납
-- [설계 결정](Documentation/자료구조_선택.md): 성능과 직렬화를 고려한 주요 구현 선택
-- [코딩 규칙](Documentation/CodingConventions.md)
-- [작업 목록](Documentation/TODO.md)
+### 플레이어 런타임과 캐릭터 교체
 
-## 개발 환경
+<!-- GIF 추가 예정: ![캐릭터 교체](Documentation/Images/character-switch.gif) -->
+
+- 입력 장치와 카메라는 씬의 공용 `PlayerRuntime`이 한 번만 소유합니다.
+- `SquadController`가 캐릭터 프리팹 생성, 활성 캐릭터 교체와 입력 타깃 이전을 담당합니다.
+- 캐릭터별 애니메이션 설정, 이동, 자원과 전투 상태는 각 프리팹 안에 독립적으로 유지합니다.
+- 캐릭터 교체 시 실행 중인 Config와 이펙트를 정리한 뒤 위치, 입력과 카메라 타깃을 안전하게 이전합니다.
+
+[구현 요약: 플레이어 런타임 및 스쿼드 구조](Documentation/PlayerRuntimeArchitecture.md)
+
+## 기술 스택 및 개발 환경
 
 - Unity `6000.3.16f1`
 - Universal Render Pipeline `17.3.0`
@@ -104,4 +84,23 @@ Assets/
 - Cinemachine `3.1.4`
 - Unity Test Framework `1.6.0`
 
-셰이더, 모바일 빌드와 Addressables 적용은 아직 작업 전이다. 진행 상태는 [TODO](Documentation/TODO.md)에 기록한다.
+## 실행 방법
+
+1. Unity Hub에서 프로젝트를 Unity `6000.3.16f1`로 엽니다.
+2. `Assets/99.Scenes/SampleScene.unity` 씬을 엽니다.
+3. Play Mode를 실행해 전투 기능을 확인합니다.
+
+## 추가 문서
+
+- [강화 공격 상태 제어](Documentation/EnhanceStateControl.md)
+- [Burnice 애니메이션 리소스 교체 기록](Documentation/BurniceAnimationResourceMigration.md)
+- [코딩 컨벤션](Documentation/CodingConventions.md)
+- [개발 작업 목록과 로드맵](Documentation/TODO.md)
+
+## 향후 개선 계획
+
+- 적 AI와 체력·경직·사망을 연결해 짧은 전투 수직 단면 완성
+- 전이, 타격 판정과 이펙트 수명주기 EditMode 테스트 보강
+- 대표 전투 및 에디터 도구 GIF 추가
+- Addressables를 이용한 VFX·캐릭터 비동기 로드와 해제, 메모리 전후 측정
+- Android 실기 빌드와 Profiler 기반 성능 검증
