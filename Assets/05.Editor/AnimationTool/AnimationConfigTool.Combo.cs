@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ;
-using ZZZ.Player.StateMachine;
+using ZZZ.Agent;
 
 namespace ZZZ.Editor.AnimationTool
 {
@@ -29,7 +29,7 @@ namespace ZZZ.Editor.AnimationTool
                 if (_blendElapsed >= _blendDuration) _blending = false;
             }
 
-            // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 검사 (런타임 ConfigState와 동일)
+            // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 검사 (런타임 CharacterActionRunner와 동일)
             if (TryLinksPreview(tc.Links, tc, nt)) return;
             if (_config.GlobalLinks != null && TryLinksPreview(_config.GlobalLinks, tc, nt)) return;
 
@@ -173,7 +173,7 @@ namespace ZZZ.Editor.AnimationTool
             return link.Condition is AlwaysCondition;
         }
 
-        // OnEnd 발동 기준 (런타임 ConfigState와 동일 규칙)
+        // OnEnd 발동 기준 (런타임 CharacterActionRunner와 동일 규칙)
         private float EndThreshold(TrackClip tc)
         {
             float dt = _config != null ? _config.DoneThreshold : 0f;

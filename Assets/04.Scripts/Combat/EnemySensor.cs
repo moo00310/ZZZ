@@ -3,8 +3,8 @@ using UnityEngine;
 namespace ZZZ.Combat
 {
     // 전방 부채꼴 범위에서 가장 가까운 적(HitTarget)을 찾는다.
-    // 공격 섹션 진입 시 ConfigState가 호출 — 루트모션 워프 타겟 획득용.
-    // 플레이어 루트(PlayerMotor와 같은 GameObject)에 부착.
+    // 공격 섹션 진입 시 CharacterActionRunner가 호출 — 루트모션 워프 타겟 획득용.
+    // 플레이어 루트(AgentMotor와 같은 GameObject)에 부착.
     public class EnemySensor : MonoBehaviour
     {
         [SerializeField] private float     _radius = 6f;     // 탐지 반경

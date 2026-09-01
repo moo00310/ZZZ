@@ -4,7 +4,6 @@ using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
 
 using ZZZ.Combat;
-using ZZZ.Player.StateMachine.States;
 
 namespace ZZZ.Monster
 {
@@ -12,7 +11,7 @@ namespace ZZZ.Monster
     [RequireComponent(typeof(HitTarget))]
     [RequireComponent(typeof(CharacterAnimatorBridge))]
     [MovedFrom(true, "ZZZ.Monster", "Assembly-CSharp", "MonsterStateMachine")]
-    public class MonsterActionController : MonoBehaviour, IConfigSignals,
+    public class MonsterActionController : MonoBehaviour, ICharacterActionSignals,
         ILiveMonitor, IHitSource, IHitLagTarget
     {
         [Header("State Configs")]
@@ -36,7 +35,7 @@ namespace ZZZ.Monster
         [SerializeField] private bool _showHitGizmos;
         [SerializeField, Min(0f)] private float _hitGizmoDuration = 0.1f;
 
-        private ConfigState _configState;
+        private CharacterActionRunner _runner;
         private MonsterMotor _motor;
         private CharacterAnimatorBridge _animatorBridge;
         private HitTarget _hitTarget;
@@ -47,24 +46,24 @@ namespace ZZZ.Monster
 
         public MonsterConditionContext ConditionContext { get; private set; }
         public bool IsCurrentActionComplete =>
-            _configState != null && _configState.IsCurrentSectionComplete;
+            _runner != null && _runner.IsCurrentSectionComplete;
         public bool Invulnerable { get; set; }
         public bool ParryActive { get; set; }
         public CombatTeam Team => CombatTeam.Enemy;
         public float HitLagSpeed => _hitLagSpeed;
         public void ConsumeInput() { }
 
-        public AnimationConfig CurrentConfig => _configState?.CurrentConfig;
-        public int CurrentClipIndex => _configState?.ActiveIndex ?? -1;
-        public string CurrentSection => _configState?.ActiveSection;
-        public float CurrentNormalizedTime => _configState?.CurrentNormalizedTime ?? 0f;
-        public MoveDir CurrentMoveDir => _configState?.CurrentMoveDir ?? MoveDir.Any;
+        public AnimationConfig CurrentConfig => _runner?.CurrentConfig;
+        public int CurrentClipIndex => _runner?.ActiveIndex ?? -1;
+        public string CurrentSection => _runner?.ActiveSection;
+        public float CurrentNormalizedTime => _runner?.CurrentNormalizedTime ?? 0f;
+        public MoveDir CurrentMoveDir => _runner?.CurrentMoveDir ?? MoveDir.Any;
 
         private void Awake()
         {
             _motor = GetComponent<MonsterMotor>();
             _animatorBridge = GetComponent<CharacterAnimatorBridge>();
-            var context = new ConfigContext
+            var context = new CharacterActionContext
             {
                 Mover = _motor,
                 Animator = _animatorBridge,
@@ -73,7 +72,7 @@ namespace ZZZ.Monster
             };
 
             ConditionContext = new MonsterConditionContext();
-            _configState = new ConfigState(
+            _runner = new CharacterActionRunner(
                 context, this, ConditionContext, _idleConfig,
                 _showHitGizmos, _hitGizmoDuration);
 
@@ -93,8 +92,8 @@ namespace ZZZ.Monster
 
         private void Update()
         {
-            _configState.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
-            _configState.Update(_hitLagSpeed);
+            _runner.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
+            _runner.Update(_hitLagSpeed);
         }
 
         public void SetHitLagSpeed(float speed)
@@ -159,7 +158,7 @@ namespace ZZZ.Monster
         {
             if (config == null) return false;
 
-            _configState.InterruptWith(config, section);
+            _runner.InterruptWith(config, section);
             return true;
         }
     }

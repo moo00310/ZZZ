@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using ZZZ;
-using ZZZ.Player.StateMachine;
+using ZZZ.Agent;
 
 namespace ZZZ.Editor.AnimationTool
 {

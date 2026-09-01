@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using ZZZ;
 using ZZZ.Effects;
-using ZZZ.Player.StateMachine;
+using ZZZ.Agent;
 
 namespace ZZZ.Editor.AnimationTool
 {

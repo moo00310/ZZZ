@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
+using ZZZ.Agent;
 
 namespace ZZZ.Player
 {
@@ -9,21 +11,23 @@ namespace ZZZ.Player
     public sealed class SquadController : MonoBehaviour
     {
         [Header("Squad")]
-        [SerializeField] private List<PlayableCharacter> _characterPrefabs = new List<PlayableCharacter>();
+        [FormerlySerializedAs("_characterPrefabs")]
+        [SerializeField] private List<AgentRoot> _agentPrefabs = new List<AgentRoot>();
         [SerializeField] private int _initialIndex;
-        [SerializeField] private Transform _characterParent;
+        [FormerlySerializedAs("_characterParent")]
+        [SerializeField] private Transform _agentParent;
 
         [Header("Runtime References")]
         [SerializeField] private TPSCameraController _cameraController;
 
-        private readonly List<PlayableCharacter> _characters = new List<PlayableCharacter>();
+        private readonly List<AgentRoot> _agents = new List<AgentRoot>();
         private PlayerInputRouter _inputRouter;
-        private PlayableCharacter _activeCharacter;
+        private AgentRoot _activeAgent;
         private int _activeIndex = -1;
 
-        public event Action<PlayableCharacter> OnActiveCharacterChanged;
+        public event Action<AgentRoot> OnActiveAgentChanged;
 
-        public PlayableCharacter ActiveCharacter => _activeCharacter;
+        public AgentRoot ActiveAgent => _activeAgent;
         public int ActiveIndex => _activeIndex;
 
         private void Awake()
@@ -33,7 +37,7 @@ namespace ZZZ.Player
             if (_cameraController == null && Camera.main != null)
                 _cameraController = Camera.main.GetComponent<TPSCameraController>();
 
-            CreateCharacters();
+            CreateAgents();
         }
 
         private void OnEnable()
@@ -44,13 +48,13 @@ namespace ZZZ.Player
 
         private void Start()
         {
-            if (_characters.Count == 0)
+            if (_agents.Count == 0)
             {
-                Debug.LogError("SquadController has no valid character prefabs.", this);
+                Debug.LogError("SquadController has no valid agent prefabs.", this);
                 return;
             }
 
-            int index = Mathf.Clamp(_initialIndex, 0, _characters.Count - 1);
+            int index = Mathf.Clamp(_initialIndex, 0, _agents.Count - 1);
             SwitchTo(index);
         }
 
@@ -62,50 +66,50 @@ namespace ZZZ.Player
 
         public void SwitchPrevious()
         {
-            if (_characters.Count < 2) return;
-            SwitchTo((_activeIndex - 1 + _characters.Count) % _characters.Count);
+            if (_agents.Count < 2) return;
+            SwitchTo((_activeIndex - 1 + _agents.Count) % _agents.Count);
         }
 
         public void SwitchNext()
         {
-            if (_characters.Count < 2) return;
-            SwitchTo((_activeIndex + 1) % _characters.Count);
+            if (_agents.Count < 2) return;
+            SwitchTo((_activeIndex + 1) % _agents.Count);
         }
 
         public bool SwitchTo(int index)
         {
-            if (index < 0 || index >= _characters.Count) return false;
-            if (_activeCharacter != null && index == _activeIndex) return true;
+            if (index < 0 || index >= _agents.Count) return false;
+            if (_activeAgent != null && index == _activeIndex) return true;
 
-            Vector3 sharedPosition = _activeCharacter != null
-                ? _activeCharacter.transform.position
+            Vector3 sharedPosition = _activeAgent != null
+                ? _activeAgent.transform.position
                 : transform.position;
 
             _inputRouter.ClearTarget();
-            if (_activeCharacter != null) _activeCharacter.Deactivate();
+            if (_activeAgent != null) _activeAgent.Deactivate();
 
             _activeIndex = index;
-            _activeCharacter = _characters[index];
-            _activeCharacter.Activate(sharedPosition);
-            _inputRouter.SetTarget(_activeCharacter.InputTarget);
+            _activeAgent = _agents[index];
+            _activeAgent.Activate(sharedPosition);
+            _inputRouter.SetTarget(_activeAgent.InputTarget);
 
             if (_cameraController != null)
-                _cameraController.SetTarget(_activeCharacter.CameraPoint, true);
+                _cameraController.SetTarget(_activeAgent.CameraPoint, true);
 
-            OnActiveCharacterChanged?.Invoke(_activeCharacter);
+            OnActiveAgentChanged?.Invoke(_activeAgent);
             return true;
         }
 
-        private void CreateCharacters()
+        private void CreateAgents()
         {
-            for (int i = 0; i < _characterPrefabs.Count; i++)
+            for (int i = 0; i < _agentPrefabs.Count; i++)
             {
-                PlayableCharacter prefab = _characterPrefabs[i];
+                AgentRoot prefab = _agentPrefabs[i];
                 if (prefab == null) continue;
 
-                PlayableCharacter character = Instantiate(prefab, _characterParent);
-                character.Deactivate();
-                _characters.Add(character);
+                AgentRoot agent = Instantiate(prefab, _agentParent);
+                agent.Deactivate();
+                _agents.Add(agent);
             }
         }
     }

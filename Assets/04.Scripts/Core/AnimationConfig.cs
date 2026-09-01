@@ -90,7 +90,7 @@ namespace ZZZ
 
         [Header("Condition — 전이 조건 (다형성)")]
         // 무엇이 충족인지를 정의 — 플레이어 입력(InputCondition) / 무조건(AlwaysCondition) / (몬스터)거리·체력 등.
-        // null이면 ConfigState가 항상 true(Always)로 취급한다. [SerializeReference] 다형성 .
+        // null이면 CharacterActionRunner가 항상 true(Always)로 취급한다. [SerializeReference] 다형성 .
         [SerializeReference] public LinkCondition Condition;
 
         [Header("Timing — 언제 평가할지")]
@@ -105,7 +105,7 @@ namespace ZZZ
         WhenMatched,    // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
         OnRelease,      // 이 링크의 Attack 키를 손에서 뗀 순간 발동 (홀드 차지 → 릴리스).
                         //   [WindowStart,End] 안에서 떼야 함. press 버퍼가 아니라 릴리스 신호를 보므로
-                        //   ConfigState에서 ConditionMatches 게이트를 우회해 따로 처리한다.
+                        //   CharacterActionRunner에서 ConditionMatches 게이트를 우회해 따로 처리한다.
         OnEnd,          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
         OnEndIfMatched  // 윈도우 안에서 조건이 '한 번이라도' 충족되면 래치 → 섹션 끝에 발동.
                         //   WhenMatched=즉시 캔슬, 이건 "섹션 끝까지 재생 후 입력 여부로 분기"(카운터 예약 등).
@@ -144,7 +144,7 @@ namespace ZZZ
         Left,       // A
         Right,      // D
         // 관계형 — 카메라 절대 방향이 아니라 "현재 진행(facing) 방향의 반대"로 입력.
-        // 절대 enum끼리 비교(MoveMatches)로는 못 잡아 ConfigState에서 dot으로 특수 처리한다.
+        // 절대 enum끼리 비교(MoveMatches)로는 못 잡아 CharacterActionRunner에서 dot으로 특수 처리한다.
         // 런 루프 중 반대키 입력 → 180 턴 전이용.
         Reverse
     }

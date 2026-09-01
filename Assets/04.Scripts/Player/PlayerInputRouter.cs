@@ -2,26 +2,18 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
-using ZZZ.Player.StateMachine;
+using ZZZ.Agent;
 
 namespace ZZZ.Player
 {
-    public interface IPlayerInputTarget
-    {
-        void SetMoveInput(Vector2 input);
-        void BufferInput(ComboInput input);
-        void SetInputHeld(ComboInput input, bool held);
-        void ClearInput();
-    }
-
     [RequireComponent(typeof(PlayerInput))]
     public sealed class PlayerInputRouter : MonoBehaviour
     {
-        [SerializeField] private PlayerActionController _initialTarget;
+        [SerializeField] private AgentActionController _initialTarget;
 
         private PlayerInput        _playerInput;
         private MonoBehaviour      _targetBehaviour;
-        private IPlayerInputTarget _target;
+        private IAgentInputTarget _target;
         private InputAction        _move;
         private InputAction        _attack;
         private InputAction        _dodge;
@@ -86,10 +78,10 @@ namespace ZZZ.Player
                 return true;
             }
 
-            if (!(targetBehaviour is IPlayerInputTarget target))
+            if (!(targetBehaviour is IAgentInputTarget target))
             {
                 Debug.LogError(
-                    $"{targetBehaviour.name} does not implement {nameof(IPlayerInputTarget)}.",
+                    $"{targetBehaviour.name} does not implement {nameof(IAgentInputTarget)}.",
                     targetBehaviour);
                 return false;
             }

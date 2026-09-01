@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
+using ZZZ.Agent;
 using ZZZ.Combat;
-using ZZZ.Player.StateMachine;
 
 namespace ZZZ.Player
 {
@@ -35,7 +35,7 @@ namespace ZZZ.Player
         [SerializeField] private HitStopSettings _perfectDodge = new HitStopSettings();
 
         private SquadController _squad;
-        private PlayerActionController _activeActions;
+        private AgentActionController _activeActions;
 
         private void Awake()
         {
@@ -44,17 +44,17 @@ namespace ZZZ.Player
 
         private void OnEnable()
         {
-            _squad.OnActiveCharacterChanged += BindCharacter;
-            BindCharacter(_squad.ActiveCharacter);
+            _squad.OnActiveAgentChanged += BindAgent;
+            BindAgent(_squad.ActiveAgent);
         }
 
         private void OnDisable()
         {
-            _squad.OnActiveCharacterChanged -= BindCharacter;
-            BindCharacter(null);
+            _squad.OnActiveAgentChanged -= BindAgent;
+            BindAgent(null);
         }
 
-        private void BindCharacter(PlayableCharacter character)
+        private void BindAgent(AgentRoot agent)
         {
             if (_activeActions != null)
             {
@@ -62,7 +62,7 @@ namespace ZZZ.Player
                 _activeActions.PerfectDodgeSucceeded -= OnPerfectDodgeSucceeded;
             }
 
-            _activeActions = character != null ? character.InputTarget : null;
+            _activeActions = agent != null ? agent.InputTarget : null;
             if (_activeActions == null) return;
 
             _activeActions.ParrySucceeded += OnParrySucceeded;

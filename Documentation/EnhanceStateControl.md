@@ -5,8 +5,8 @@
 ## 입력 차단
 
 `InputBlockModule`은 지정한 normalized time 구간에서 특정 `ComboInput`을 차단한다.
-`PlayerActionController`는 일반 강화 공격 트리거를 실행하기 전에 현재 섹션의
-`ConfigState.ActiveSectionBlocks()`를 확인한다. 링크가 입력을 소비하는 것과 별개로,
+`AgentActionController`는 일반 강화 공격 트리거를 실행하기 전에 현재 섹션의
+`CharacterActionRunner.ActiveSectionBlocks()`를 확인한다. 링크가 입력을 소비하는 것과 별개로,
 현재 동작 중 같은 입력이 전역 트리거로 빠지는 상황을 막을 때 사용한다.
 
 - `Input = Any`: 모든 공격 입력 차단
@@ -28,7 +28,7 @@
 유지하므로, E 사용 중 카메라 위치나 방향을 바꿔도 캐릭터가 따라 회전하지 않는다.
 
 `Attack_Normal_Enhance_Back`은 `RootRotationKillModule`을 사용한다. 루트 회전은 제거하지만
-`AdditionalMovementModule`의 후방 이동은 유지한다. 섹션 이탈 시 `ConfigState`가
+`AdditionalMovementModule`의 후방 이동은 유지한다. 섹션 이탈 시 `CharacterActionRunner`가
 `KillRootRotation`을 초기화하므로 다음 상태로 회전 잠금이 누수되지 않는다.
 
 `Run`의 TurnBack은 `SectionTurnModule`의 목표 각도를 180도로 설정한다. 적용 중에는 누적 회전의
@@ -46,7 +46,7 @@ Effect Notify의 기본 전환 정책은 `Keep`이다.
 | `Stop` | 현재 섹션을 실제로 이탈할 때 정지한다. `Carry Section`을 지정하면 해당 목적지로 소유권을 넘기고 목적지 이탈 시 정지한다. |
 | `Next` | Notify 시점에는 생성하지 않는다. 실제 링크 목적지가 `Next Section`과 일치할 때 목적지 섹션에서 생성한다. |
 
-동일 섹션 self-link는 실제 섹션 이탈로 취급하지 않는다. `ConfigState`는 동일 섹션 재진입 시
+동일 섹션 self-link는 실제 섹션 이탈로 취급하지 않는다. `CharacterActionRunner`는 동일 섹션 재진입 시
 진행 중인 `Stop`/`Next` 상태와 아직 목적지가 확정되지 않은 `Next` 예약을 유지한다. 따라서
 루프마다 이펙트가 중복 생성되거나 조기에 정지하지 않는다.
 

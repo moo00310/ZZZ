@@ -4,7 +4,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
-using ZZZ.Player.StateMachine;
+using ZZZ.Agent;
 
 namespace ZZZ.Player
 {
@@ -16,9 +16,9 @@ namespace ZZZ.Player
     {
         [Header("References (비우면 자동 탐색)")]
         [FormerlySerializedAs("_stateMachine")]
-        [SerializeField] private PlayerActionController _actionController;
+        [SerializeField] private AgentActionController _actionController;
         [FormerlySerializedAs("_controller")]
-        [SerializeField] private PlayerMotor _motor;
+        [SerializeField] private AgentMotor _motor;
 
         [Header("Display")]
         [SerializeField] private Key     _toggleKey = Key.F1;
@@ -35,8 +35,8 @@ namespace ZZZ.Player
         private void Awake()
         {
             if (_actionController == null)
-                _actionController = GetComponentInParent<PlayerActionController>();
-            if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
+                _actionController = GetComponentInParent<AgentActionController>();
+            if (_motor == null) _motor = GetComponentInParent<AgentMotor>();
         }
 
         private void OnEnable()
@@ -118,7 +118,7 @@ namespace ZZZ.Player
             {
                 Label("Speed", _motor.CurrentSpeed.ToString("F2"));
                 LabelColored("Flags", _motor.CurrentFlags.ToString(),
-                    _motor.CurrentFlags == PlayerMotorFlags.None ? Color.grey : Color.green);
+                    _motor.CurrentFlags == AgentMotorFlags.None ? Color.grey : Color.green);
 
                 // 개별 플래그를 색으로 한 줄에 — 켜짐 초록 / 꺼짐 회색
                 DrawFlagRow(_motor.CurrentFlags);
@@ -155,12 +155,12 @@ namespace ZZZ.Player
             GUILayout.Label($"<b>{key}</b>  [{bar}] {t01:F2}", _label);
         }
 
-        private void DrawFlagRow(PlayerMotorFlags flags)
+        private void DrawFlagRow(AgentMotorFlags flags)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            foreach (PlayerMotorFlags v in System.Enum.GetValues(typeof(PlayerMotorFlags)))
+            foreach (AgentMotorFlags v in System.Enum.GetValues(typeof(AgentMotorFlags)))
             {
-                if (v == PlayerMotorFlags.None) continue;
+                if (v == AgentMotorFlags.None) continue;
                 bool on  = (flags & v) != 0;
                 string c = on ? "7CFC00" : "606060";   // 초록 / 회색
                 sb.Append($"<color=#{c}>{v}</color>  ");

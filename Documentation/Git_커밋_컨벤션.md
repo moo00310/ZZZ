@@ -54,7 +54,7 @@ feat(combat): 강공격(Strong) 좌클릭 홀드 추가
 |---|---|
 | `combat` | 공격/콤보/전투 로직 |
 | `input` | 입력(InputSystem), ComboInput |
-| `state` | 상태머신/ConfigState |
+| `state` | 상태머신/CharacterActionRunner |
 | `anim` | 애니메이션 config/클립 |
 | `tool` | 에디터 툴(AnimationConfigTool) |
 | `camera` | 카메라 |

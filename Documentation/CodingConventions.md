@@ -7,18 +7,18 @@
 | 위치 | 네임스페이스 |
 |------|-------------|
 | 04.Scripts/Core (AnimationConfig 등 공용) | `ZZZ` |
+| 04.Scripts/Core/CharacterAction | `ZZZ` |
 | 04.Scripts/Movement | `ZZZ` |
+| 04.Scripts/Agent | `ZZZ.Agent` |
 | 04.Scripts/Player | `ZZZ.Player` |
-| 04.Scripts/Player/StateMachine | `ZZZ.Player.StateMachine` |
-| 04.Scripts/Player/StateMachine/States | `ZZZ.Player.StateMachine.States` |
 | 04.Scripts/Combat | `ZZZ.Combat` |
 | 04.Scripts/Audio | `ZZZ.Audio` |
 | 04.Scripts/Monster | `ZZZ.Monster` |
 | 05.Editor/AnimationTool | `ZZZ.Editor.AnimationTool` |
 | 05.Editor/Audio | `ZZZ.Editor.Audio` |
 
-> `Core/`의 공유 타입(`AnimationConfig` / `ConfigDriving` / `LinkCondition`)과 `Movement/`는 폴더와 무관하게 루트 `ZZZ`를 쓴다 — 플레이어·몬스터 공용이라 최상위 네임스페이스에 둔다.
-> `StateMachine` 하위(States/Triggers/Modules)는 전부 `ZZZ.Player.StateMachine`을 쓴다(폴더별로 더 쪼개지 않음).
+> `Core/`의 공유 타입(`AnimationConfig` / `CharacterActionDriving` / `LinkCondition`)과 `Movement/`는 폴더와 무관하게 루트 `ZZZ`를 쓴다. Agent와 Monster가 공유하는 타입이기 때문이다.
+> 사용자 입력과 스쿼드 전환은 `ZZZ.Player`, 조작 캐릭터 구현은 `ZZZ.Agent`, 몬스터 구현은 `ZZZ.Monster`로 구분한다.
 
 ---
 
@@ -27,7 +27,7 @@
 ### 클래스 / 구조체 / 열거형
 ```csharp
 // PascalCase
-public class PlayerMotor { }
+public class AgentMotor { }
 public struct HitData { }
 public enum AttackType { Light, Heavy, Special }
 ```

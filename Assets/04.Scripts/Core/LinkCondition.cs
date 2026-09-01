@@ -5,7 +5,7 @@ namespace ZZZ
 {
     // 링크 전이 '조건'의 추상 베이스 — TrackClip.Modules(SectionModule)와 동형 패턴.
     // ClipLink.Condition에 [SerializeReference]로 직렬화된다. 새 조건(거리/체력/AI결정 등) =
-    // 이 클래스 상속 1개 추가 (ConfigState/에디터는 안 건드림). 평가에 필요한 질의는 ctx로 받는다.
+    // 이 클래스 상속 1개 추가 (CharacterActionRunner/에디터는 안 건드림). 평가에 필요한 질의는 ctx로 받는다.
     //
     // Timing(WhenMatched/OnRelease/OnEnd/OnEndIfMatched)과 윈도우[Start,End]는 ClipLink에 남는다 —
     // "언제 평가/발동할지"는 링크 소관, "무엇이 충족인지"만 조건 소관.
@@ -23,7 +23,7 @@ namespace ZZZ
         public virtual void Consume(ILinkConditionContext ctx) { }
 
         // 이 조건이 해당 공격 입력을 '받는' 조건인가 — 전역 폴백 트리거(강화 등)가 윈도우 전에
-        // 입력을 가로채지 않도록 게이트하는 데 쓴다(ConfigState.ActiveSectionHandles). 입력형만 true.
+        // 입력을 가로채지 않도록 게이트하는 데 쓴다(CharacterActionRunner.ActiveSectionHandles). 입력형만 true.
         public virtual bool AcceptsInput(ComboInput input) => false;
 
         // 깊은 복사 (에디터 링크 복사/붙여넣기용) — 값 필드만 있는 조건은 멤버와이즈로 충분.
@@ -34,7 +34,7 @@ namespace ZZZ
         public virtual string MenuName    => GetType().Name;
     }
 
-    // 조건 평가에 필요한 공통 런타임 질의 묶음 — 플레이어/몬스터가 각자 구현해 ConfigState에 주입한다.
+    // 조건 평가에 필요한 공통 런타임 질의 묶음 — 플레이어/몬스터가 각자 구현해 CharacterActionRunner에 주입한다.
     // 캐릭터 전용 질의는 이 인터페이스를 직접 늘리지 않고 파생 컨텍스트 인터페이스로 확장한다.
     public interface ILinkConditionContext
     {
@@ -51,7 +51,7 @@ namespace ZZZ
     }
 
     // 플레이어 입력 조건 — 기존 ClipLink의 Attack + Direction(+ RequireHeld)을 그대로 흡수.
-    // 콤보 입력/방향/홀드차지(OnRelease)를 표현한다. (기존 ConfigState.AttackMatches/MoveConditionMatches 로직)
+    // 콤보 입력/방향/홀드차지(OnRelease)를 표현한다. (기존 CharacterActionRunner.AttackMatches/MoveConditionMatches 로직)
     [Serializable]
     public class InputCondition : LinkCondition
     {

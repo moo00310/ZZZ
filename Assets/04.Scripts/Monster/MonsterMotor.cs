@@ -6,7 +6,7 @@ namespace ZZZ.Monster
 {
     [RequireComponent(typeof(Animator))]
     [MovedFrom(true, "ZZZ.Monster", "Assembly-CSharp", "MonsterController")]
-    public class MonsterMotor : MonoBehaviour, IConfigMover
+    public class MonsterMotor : MonoBehaviour, ICharacterMover
     {
         [Header("Rig")]
         [SerializeField] private Transform _bip001Bone;

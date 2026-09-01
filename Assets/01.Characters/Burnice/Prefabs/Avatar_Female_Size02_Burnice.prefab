@@ -1439,7 +1439,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8580145dfa62ea4fa50e691232b5241, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerMotor
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentMotor
   _rotationSpeed: 15
   _rotationEaseTime: 0
   _bip001Bone: {fileID: 4588594420981034427}
@@ -1494,7 +1494,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b0bc1bffa839d0419cb4e06c3f621c5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.StateMachine.PlayerActionController
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentActionController
   _startConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
   _configs:
   - {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
@@ -1538,7 +1538,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b6b0682e4fb9418192db1d6549031b33, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayableCharacter
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentRoot
   _actionController: {fileID: 5508322027037014441}
   _cameraPoint: {fileID: 3859276340687948475}
 --- !u!114 &7334887429754876192
@@ -1569,7 +1569,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9661145278a148b4983ded2dca519561, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerResources
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentResources
   _dashMaxCharges: 2
   _dashRechargeTime: 2
 --- !u!114 &7641824737164803945

@@ -26,7 +26,7 @@
 | `HitFeedbackService` | 결과와 공격 강도에 맞는 이펙트와 사운드 선택 |
 | `EffectService` | `CompositeEffect` 재생과 풀링 |
 | `AudioService` | `CompositeSound` 재생과 3D AudioSource voice 재사용 |
-| `PlayerActionController` | 공격 경고, 회피 후보와 패링·퍼펙트 회피 성공 이벤트 관리 |
+| `AgentActionController` | 공격 경고, 회피 후보와 패링·퍼펙트 회피 성공 이벤트 관리 |
 | `HitStopController` | 성공 이벤트를 히트스톱 설정과 연결 |
 | `CameraFeedbackService` | Animation Notify와 현재 카메라 수신자 연결 |
 
@@ -74,7 +74,7 @@
 Camera Notify는 카메라 컴포넌트를 직접 참조하지 않는다.
 
     AnimationConfig Camera Notify
-      → ConfigState
+      → CharacterActionRunner
         → CameraFeedbackService
           → TPSCameraController
             → 기본 TPS 구도

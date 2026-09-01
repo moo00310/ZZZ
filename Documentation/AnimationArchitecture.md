@@ -1,6 +1,6 @@
 # 전투 애니메이션 구현 요약
 
-`AnimationConfig`가 전투 흐름을 저장하고 `ConfigState`가 이를 실행한다. 플레이어와 몬스터는 같은 실행기를 사용하며, Animator는 전이 판단이 아니라 클립 재생만 담당한다.
+`AnimationConfig`가 전투 흐름을 저장하고 `CharacterActionRunner`가 이를 실행한다. 플레이어와 몬스터는 같은 실행기를 사용하며, Animator는 전이 판단이 아니라 클립 재생만 담당한다.
 
 ## 해결하려는 문제
 
@@ -13,16 +13,16 @@
     입력과 게임 상태
            │
            ▼
-    PlayerActionController
+    AgentActionController
            │
            ▼
     AnimationConfig ── Section · Link · Notify · Module
            │
            ▼
-      ConfigState ──── 조건 평가와 전투 흐름 실행
+      CharacterActionRunner ──── 조건 평가와 전투 흐름 실행
            │
            ├────────── CharacterAnimatorBridge: CrossFade 재생
-           ├────────── PlayerMotor / MonsterMotor: 이동과 회전
+           ├────────── AgentMotor / MonsterMotor: 이동과 회전
            ├────────── EffectService / AudioService: 연출
            └────────── HitService: 판정과 피격 전달
 
@@ -41,11 +41,11 @@
 
 ### 하나의 실행기를 공유한다
 
-`ConfigState`는 MonoBehaviour가 아닌 공용 C# 실행기다. 플레이어와 몬스터는 입력 방식과 이동 구현만 각자의 인터페이스로 제공한다. 전이 평가, Notify 실행과 Module 생명주기는 같은 코드 경로를 사용한다.
+`CharacterActionRunner`는 MonoBehaviour가 아닌 공용 C# 실행기다. 플레이어와 몬스터는 입력 방식과 이동 구현만 각자의 인터페이스로 제공한다. 전이 평가, Notify 실행과 Module 생명주기는 같은 코드 경로를 사용한다.
 
 ### Animator는 재생에 집중한다
 
-Animator 파라미터와 전이 그래프를 사용하지 않는다. `CharacterAnimatorBridge`가 `CrossFadeInFixedTime`으로 클립을 재생하고, 전이 조건과 타이밍은 `ConfigState`가 관리한다. 전투 규칙이 Animator와 코드 양쪽에 나뉘지 않아 실행 흐름을 한곳에서 확인할 수 있다.
+Animator 파라미터와 전이 그래프를 사용하지 않는다. `CharacterAnimatorBridge`가 `CrossFadeInFixedTime`으로 클립을 재생하고, 전이 조건과 타이밍은 `CharacterActionRunner`가 관리한다. 전투 규칙이 Animator와 코드 양쪽에 나뉘지 않아 실행 흐름을 한곳에서 확인할 수 있다.
 
 ### 저장 단위와 편집 단위를 분리한다
 
@@ -89,7 +89,7 @@ Animator 파라미터와 전이 그래프를 사용하지 않는다. `CharacterA
 
 | 장점 | 비용 |
 |---|---|
-| 공격을 데이터 조합으로 추가할 수 있다 | `ConfigState`가 많은 시스템의 실행 순서를 조율한다 |
+| 공격을 데이터 조합으로 추가할 수 있다 | `CharacterActionRunner`가 많은 시스템의 실행 순서를 조율한다 |
 | 플레이어와 몬스터가 실행 코드를 공유한다 | 각 소비자가 공용 인터페이스 경계를 지켜야 한다 |
 | 타이밍과 전이를 한 도구에서 확인한다 | 잘못된 Section, Window와 참조를 에디터에서 검증해야 한다 |
 | 다형성 확장이 쉽다 | `[SerializeReference]` 타입 이름 변경 시 마이그레이션이 필요하다 |

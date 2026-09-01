@@ -5665,10 +5665,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf5e652cea36426f86844ae3102439a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.SquadController
-  _characterPrefabs:
+  _agentPrefabs:
   - {fileID: 3724266460484320341, guid: 6bd74e68a084be14ca8b756e96fb5838, type: 3}
   _initialIndex: 0
-  _characterParent: {fileID: 0}
+  _agentParent: {fileID: 0}
   _cameraController: {fileID: 330585548}
 --- !u!114 &7000000000000000005
 MonoBehaviour:
@@ -5681,7 +5681,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a361f86afd204a9da7486bf6dae23c5a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.ActiveCharacterTargetProvider
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.ActiveAgentTargetProvider
   _squad: {fileID: 7000000000000000004}
 --- !u!114 &7000000000000000006
 MonoBehaviour:

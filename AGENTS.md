@@ -3,7 +3,7 @@
 ## Project overview
 
 - Unity `6000.3.16f1` project using URP 17, the Input System, Cinemachine, and the Unity Test Framework.
-- The project is a data-driven combat-animation prototype. `AnimationConfig` ScriptableObjects describe actions, `ConfigState` interprets them, and Animator is primarily responsible for playback through `CrossFade`.
+- The project is a data-driven combat-animation prototype. `AnimationConfig` ScriptableObjects describe actions, `CharacterActionRunner` interprets them, and Animator is primarily responsible for playback through `CrossFade`.
 - Runtime code lives under `Assets/04.Scripts/`; editor-only tooling lives under `Assets/05.Editor/`; EditMode tests live under `Assets/Tests/EditMode/`.
 - Read `Documentation/AnimationArchitecture.md` and `Documentation/EffectArchitecture.md` before changing their respective systems. Treat `Documentation/CodingConventions.md` as the source of truth for code style.
 
@@ -30,7 +30,8 @@
 ## Architecture boundaries
 
 - Shared animation data and interfaces: `Assets/04.Scripts/Core/`.
-- Player state-machine behavior: `Assets/04.Scripts/Player/StateMachine/`.
+- Shared character-action execution: `Assets/04.Scripts/Core/CharacterAction/`.
+- Player-controlled agent behavior: `Assets/04.Scripts/Agent/`.
 - Monster behavior must depend on shared abstractions rather than player-only implementations.
 - Section behavior is extended through `SectionModule` implementations and link behavior through `LinkCondition` implementations; prefer those extension points over type switches in the shared engine.
 - Effects are played as `CompositeEffect` compositions and pooled per primitive effect through `EffectService`/`EffectPool`. Preserve pool ownership and teardown semantics when adding effects.
@@ -48,4 +49,3 @@
 - Follow `Documentation/Git_커밋_컨벤션.md` when the user asks for commits or branches.
 - Use Conventional Commits and keep each commit to one logical change. Do not commit directly to `main`.
 - Do not create commits, branches, pushes, or PRs unless requested.
-
