@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 using ZZZ.Effects;
 
 namespace ZZZ
@@ -157,26 +156,12 @@ namespace ZZZ
 
         [SerializeReference] private NotifyPayload _payload;
 
-        [SerializeField, HideInInspector, FormerlySerializedAs("Type")]
-        private NotifyType _legacyType;
-        [SerializeField, HideInInspector, FormerlySerializedAs("EventName")]
-        private string _legacyEventName = "";
-        [SerializeField, HideInInspector, FormerlySerializedAs("Effect")]
-        private CompositeEffect _legacyEffect;
-        [SerializeField, HideInInspector, FormerlySerializedAs("Hit")]
-        private HitDefinition _legacyHit;
-
         // 구간(Interval) 이펙트 — End > NormalizedTime이면 [NormalizedTime, End] 동안 '유지'되는 지속 연출.
         // 시작 시점에 스폰해 계속 방출하다가 End에서(또는 섹션 이탈/캔슬 시) 방출을 멈춘다 —
         // 트레일/오라/차지처럼 '한 시점'이 아니라 '구간'에 걸리는 이펙트용. End<=Time = 기존 단발(point).
         // Effect 타입에만 의미. 프리팹은 루프 방출 + DespawnMode.ParticleStopped 권장(정지 후 자연 소멸).
         [Range(0f, 1f)]
         public float EndNormalizedTime = 0f;
-
-        [SerializeField, HideInInspector, FormerlySerializedAs("TransitionMode")]
-        private EffectTransitionMode _legacyTransitionMode = EffectTransitionMode.Keep;
-        [SerializeField, HideInInspector, FormerlySerializedAs("NextSection")]
-        private string _legacyNextSection = "";
 
         // 고정(Lock): 켜지면 타임라인에서 드래그로 시점이 밀리지 않는다 — 값이 확정된 Notify를
         // 실수로 옮기는 사고 방지용. 선택/편집(인스펙터)·삭제는 그대로 가능, 이동만 막는다.
@@ -270,34 +255,7 @@ namespace ZZZ
         {
             if (_payload != null) return false;
 
-            HitData legacyHit = _legacyHit != null ? _legacyHit.CreateDataCopy() : null;
-            _payload = CreatePayload(
-                _legacyType, LegacyConfigEvent(_legacyEventName),
-                _legacyEffect, legacyHit,
-                _legacyTransitionMode, _legacyNextSection);
-            return true;
-        }
-
-        public bool MigratePayload()
-        {
-            bool changed = EnsurePayload();
-            if (_payload is CustomNotifyPayload customPayload
-                && customPayload.MigrateLegacyData())
-                changed = true;
-            bool hasLegacyData = _legacyType != default
-                || !string.IsNullOrEmpty(_legacyEventName)
-                || _legacyEffect != null
-                || _legacyHit != null
-                || _legacyTransitionMode != EffectTransitionMode.Keep
-                || !string.IsNullOrEmpty(_legacyNextSection);
-            if (!hasLegacyData) return changed;
-
-            _legacyType = default;
-            _legacyEventName = "";
-            _legacyEffect = null;
-            _legacyHit = null;
-            _legacyTransitionMode = EffectTransitionMode.Keep;
-            _legacyNextSection = "";
+            _payload = new EffectNotifyPayload();
             return true;
         }
 
@@ -313,14 +271,6 @@ namespace ZZZ
             string nextSection = NextSection;
             _payload = CreatePayload(
                 type, configEvent, effect, hit, transitionMode, nextSection);
-        }
-
-        private static ConfigEventType LegacyConfigEvent(string eventName)
-        {
-            return string.Equals(
-                eventName, "OnHitShake", StringComparison.Ordinal)
-                ? ConfigEventType.HitShake
-                : ConfigEventType.None;
         }
 
         private static NotifyPayload CreatePayload(

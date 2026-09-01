@@ -788,7 +788,6 @@ namespace ZZZ.Editor.AnimationTool
         private void DrawNotifyInspector(TrackClip tc, int ni)
         {
             var notify = tc.Notifies[ni];
-            if (notify.MigratePayload()) EditorUtility.SetDirty(_config);
             HitOrigin previousHitOrigin = notify.Hit?.Origin ?? HitOrigin.CharacterRoot;
             string previousEffectKey = notify.Hit?.EffectKey ?? "";
             EditorGUILayout.LabelField($"Notify  —  {notify.Type}", EditorStyles.boldLabel);
@@ -1804,42 +1803,4 @@ namespace ZZZ.Editor.AnimationTool
         }
     }
 
-    internal static class NotifyPayloadMigration
-    {
-        [MenuItem("Tools/ZZZ/Migrate Animation Notify Payloads")]
-        private static void MigrateAll()
-        {
-            string[] guids = AssetDatabase.FindAssets("t:AnimationConfig");
-            int configCount = 0;
-            int notifyCount = 0;
-
-            for (int i = 0; i < guids.Length; i++)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                AnimationConfig config = AssetDatabase.LoadAssetAtPath<AnimationConfig>(path);
-                if (config == null) continue;
-
-                bool changed = false;
-                for (int clipIndex = 0; clipIndex < config.Clips.Count; clipIndex++)
-                {
-                    List<TrackNotify> notifies = config.Clips[clipIndex].Notifies;
-                    for (int notifyIndex = 0; notifyIndex < notifies.Count; notifyIndex++)
-                    {
-                        TrackNotify notify = notifies[notifyIndex];
-                        if (notify == null || !notify.MigratePayload()) continue;
-                        changed = true;
-                        notifyCount++;
-                    }
-                }
-
-                if (!changed) continue;
-                EditorUtility.SetDirty(config);
-                configCount++;
-            }
-
-            AssetDatabase.SaveAssets();
-            Debug.Log($"Notify Payload migration complete: {configCount} configs, "
-                + $"{notifyCount} notifies.");
-        }
-    }
 }

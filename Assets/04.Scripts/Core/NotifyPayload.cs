@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 using ZZZ.Audio;
 using ZZZ.Effects;
@@ -476,23 +475,11 @@ namespace ZZZ
     {
         [SerializeField] private ConfigEventType _eventType;
 
-        [FormerlySerializedAs("_eventName")]
-        [SerializeField, HideInInspector]
-        private string _legacyEventName = "";
-
         public override NotifyType Type => NotifyType.Custom;
         public ConfigEventType EventType
         {
-            get
-            {
-                MigrateLegacyData();
-                return _eventType;
-            }
-            set
-            {
-                _eventType = value;
-                _legacyEventName = "";
-            }
+            get => _eventType;
+            set => _eventType = value;
         }
 
         public CustomNotifyPayload()
@@ -503,19 +490,5 @@ namespace ZZZ
         {
             _eventType = eventType;
         }
-
-        public bool MigrateLegacyData()
-        {
-            if (string.IsNullOrEmpty(_legacyEventName)) return false;
-
-            _eventType = string.Equals(
-                _legacyEventName, "OnHitShake",
-                StringComparison.Ordinal)
-                ? ConfigEventType.HitShake
-                : ConfigEventType.None;
-            _legacyEventName = "";
-            return true;
-        }
-
     }
 }
