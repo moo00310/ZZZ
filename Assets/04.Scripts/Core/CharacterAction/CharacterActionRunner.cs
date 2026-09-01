@@ -118,25 +118,19 @@ namespace ZZZ
             if (_config == null) return;
             if (_active < 0 || _active >= _config.Clips.Count) return;
 
+            // 현재 시점의 클립(섹션)
             var tc = _config.Clips[_active];
 
-            // 섹션 진입 후 경과 시간으로 nt를 직접 계산한다 — 섹션 타임라인의 0점을 코드가 소유하기 위해서다.
-            // Animator 상태 시간은 같은 섹션 재진입(A→B→A) 시 0이 아닌 이전 지점에서 이어지고, EntryOffset
-            // (중간 진입)도 통제하기 어렵다. _clipTime은 진입 시 0(또는 offset)으로 리셋되므로 항상 섹션 기준이다.
             float deltaTime = Time.deltaTime * Mathf.Max(0f, localTimeScale);
             float previousNtRaw = SectionNormalizedTime(tc);
             _clipTime += deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 
-            FireNotifies(tc, previousNtRaw, ntRaw, deltaTime);
-            Ctx.Mover.AllowRotation = true;
-            Ctx.Mover.WarpWindowActive = false;
-            Ctx.Mover.FaceWindowActive = false;
-            Ctx.Mover.RootRotationWindowActive = false;
-            _sc.PreviousNormalizedTime = previousNtRaw;
-            TickModules(tc, ntRaw);
+            FireNotifies(tc, previousNtRaw, ntRaw, deltaTime);  // 현재 시점의 Notify 발동·갱신·종료
+            PrepareModuleTick(previousNtRaw);                   // Module 실행 전 상태 초기화
+            TickModules(tc, ntRaw);                             // 현재 Section의 Module들을 갱신
 
-            // 클립 고유 링크 먼저, 그 다음 config 공통 링크(Global) 평가
+            // 클립 고유 링크(상태 전이) 먼저, 그 다음 config 공통 링크(Global) 평가
             if (TryLinks(tc.Links, tc, ntRaw)) return;
             if (_config.GlobalLinks != null && TryLinks(_config.GlobalLinks, tc, ntRaw)) return;
         }
@@ -144,7 +138,7 @@ namespace ZZZ
         // links를 순서대로 평가해 첫 발동 링크를 타고 전이한다. 전이했으면 true.
         private bool TryLinks(List<ClipLink> links, TrackClip tc, float ntRaw)
         {
-            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw; // 현재 반복 주기 안에서의 진행도
             foreach (var link in links)
             {
                 // OnEndIfMatched: 조건을 '발동 시점'이 아니라 '윈도우 구간'에서 보고 래치한다.
@@ -163,27 +157,28 @@ namespace ZZZ
                     continue;
                 }
 
-                // 조건이 안 맞으면 어떤 타이밍이든 발동 안 함
+                // 이 Link의 조건이 현재 입력·방향·상태와 일치하지 않으면 다음 Link로 넘어가라.
+                // 버퍼 입력이 Normal인가? 현재 방향 입력이 Forward인가?
                 if (!Cond(link).Matches(_condCtx)) continue;
 
+                // 이번 프레임에 이 Link를 실행할 것인가?
                 bool fire = false;
+
                 switch (link.Timing)
                 {
                     case LinkTiming.WhenMatched:
-                        fire = p >= link.WindowStart && p <= link.WindowEnd;
+                        fire = (link.WindowStart <= p  && p <= link.WindowEnd);
                         break;
 
                     case LinkTiming.OnEnd:
-                        // 루프 클립도 사이클 끝(wrap된 p)에서 탈출 조건을 검사한다.
-                        // 조건(Direction 등)이 안 맞으면 위 Matches에서 이미 걸러짐.
-                        fire = p >= EndThreshold(tc);
+                        fire = (p >= EndThreshold(tc));
                         break;
                 }
 
                 if (fire)
                 {
                     Cond(link).Consume(_condCtx);   // 입력을 요구한 조건만 버퍼 소비(InputCondition)
-                    TakeLink(link);
+                    TakeLink(link);                 // Link를 따라 실제 다음 Section으로 이동
                     return true;
                 }
             }
@@ -223,23 +218,21 @@ namespace ZZZ
             return true;
         }
 
-        // OnEnd 발동 기준 normalizedTime.
-        // config.DoneThreshold가 (0,1) 사이면 수동값, 아니면 클립 마지막 프레임(1 - 1/frames)
+        // OnEnd 발동 기준. 수동값이 없으면 클립의 마지막 프레임 시작 지점을 사용한다.
         private float EndThreshold(TrackClip tc)
         {
-            float dt = _config != null ? _config.DoneThreshold : 0f;
-            if (dt > 0f && dt < 1f) return dt;
-            return LastFrameNt(tc);
-        }
+            float configuredThreshold =
+                _config != null ? _config.DoneThreshold : 0f;
+            if (0f < configuredThreshold && configuredThreshold < 1f)
+                return configuredThreshold;
 
-        // 클립의 끝에서 한 프레임 전 지점 (프레임 정확도)
-        private static float LastFrameNt(TrackClip tc)
-        {
             if (tc.Clip != null && tc.Clip.frameRate > 0f)
             {
-                float frames = tc.Clip.length * tc.Clip.frameRate;
-                if (frames > 1f) return Mathf.Clamp01(1f - 1f / frames);
+                float frameCount = tc.Clip.length * tc.Clip.frameRate;
+                if (frameCount > 1f)
+                    return Mathf.Clamp01(1f - 1f / frameCount);
             }
+
             return 0.999f;
         }
 
@@ -259,7 +252,9 @@ namespace ZZZ
                 SwitchConfig(_homeConfig, null, link.BlendDuration, link.EntryOffset);
                 return;
             }
-            bool sameSectionReentry = ti == _active;
+
+            // 같은 클립(섹션) 이라면
+            bool sameSectionReentry = (ti == _active);
             _active = ti;
             PlayActive(link.BlendDuration, link.EntryOffset, sameSectionReentry);
         }
@@ -269,6 +264,26 @@ namespace ZZZ
             bool sameSectionReentry = false)
         {
             string destinationSection = _config.Clips[_active].SectionName;
+            PrepareTrackedStateForSection(destinationSection, sameSectionReentry);
+            ResetSectionEntryState();
+
+            TrackClip tc = _config.Clips[_active];
+            if (tc.Clip == null)
+            {
+                ClearNotifyStateForMissingClip();
+                return;
+            }
+
+            float offsetSeconds = SetSectionStartTime(tc, startOffset);
+            PlaySectionAnimation(tc, blend, offsetSeconds);
+            ResetMoverForSection(tc);
+            EnterSectionModules(tc);
+            PrepareNotifyState(tc, startOffset, sameSectionReentry);
+        }
+
+        private void PrepareTrackedStateForSection(string destinationSection,
+            bool sameSectionReentry)
+        {
             StopTrackedHits();
             if (!sameSectionReentry)
             {
@@ -276,40 +291,51 @@ namespace ZZZ
                 StopTrackedSounds(true, destinationSection);
             }
             PlayPendingNextEffects(destinationSection, sameSectionReentry);
-            _clipTime = 0f;   // 새 섹션 진입 → 타임라인 리셋
-            _latched.Clear(); // 새 섹션 → OnEndIfMatched 윈도우 래치 리셋
-            Signals.Invulnerable = false;    // 섹션 진입 시 무적 해제 — i-frame 모듈이 윈도우 동안만 다시 켠다
-            Signals.ParryActive  = false;    // 섹션 진입 시 패링 해제 — parry 모듈이 윈도우 동안만 다시 켠다
+        }
 
-            var tc = _config.Clips[_active];
-            if (tc.Clip == null)
-            {
-                _notifyFired = null;
-                _notifyActive = null;
-                _soundActive = null;
-                _hitActive = null;
-                _notifyTransitionModes = null;
-                _notifyNextSections = null;
-                _soundNextSections = null;
-                return;
-            }
+        private void ResetSectionEntryState()
+        {
+            _clipTime = 0f;
+            _latched.Clear();
 
-            // 중간 프레임 진입 — 로직 타임라인(_clipTime)과 애니 시작점을 같은 normalizedTime으로 맞춘다.
-            // SectionNormalizedTime = _clipTime * Speed / length 이므로 _clipTime = off * length / Speed.
-            float offsetSec = 0f;
-            if (startOffset > 0f && tc.Clip.length > 0f)
-            {
-                float off = Mathf.Clamp01(startOffset);
-                _clipTime = off * tc.Clip.length / Mathf.Max(0.01f, tc.Speed);
-                offsetSec = off * tc.Clip.length;   // CrossFade는 클립 초(speed 무관) 단위
-            }
+            // 무적과 패링은 해당 SectionModule의 활성 구간에서만 다시 켜진다.
+            Signals.Invulnerable = false;
+            Signals.ParryActive = false;
+        }
 
-            Ctx.Animator.Play(tc.Clip.name, blend, offsetSec);
-            // 비주얼 재생 속도를 로직 타임라인(SectionNormalizedTime의 Speed)과 일치시킨다.
-            // 안 맞추면 애니는 1배속으로 끝나 freeze되고 로직만 Speed배로 흘러 OnEnd가 늦게/일찍 발동(전환 딜레이).
+        private void ClearNotifyStateForMissingClip()
+        {
+            _notifyFired = null;
+            _notifyActive = null;
+            _soundActive = null;
+            _hitActive = null;
+            _notifyTransitionModes = null;
+            _notifyNextSections = null;
+            _soundNextSections = null;
+        }
+
+        private float SetSectionStartTime(TrackClip tc, float startOffset)
+        {
+            if (startOffset <= 0f || tc.Clip.length <= 0f) return 0f;
+
+            float normalizedOffset = Mathf.Clamp01(startOffset);
+            _clipTime = normalizedOffset * tc.Clip.length
+                / Mathf.Max(0.01f, tc.Speed);
+
+            // Animator의 시작 위치는 재생 속도와 무관한 클립 초 단위다.
+            return normalizedOffset * tc.Clip.length;
+        }
+
+        private void PlaySectionAnimation(TrackClip tc, float blend, float offsetSeconds)
+        {
+            Ctx.Animator.Play(tc.Clip.name, blend, offsetSeconds);
+
+            // 비주얼과 로직의 재생 속도가 다르면 OnEnd 전환 시점이 어긋난다.
             Ctx.Animator.ApplyAnimatorSpeed(tc.Speed);
+        }
 
-            // 이동 방식 적용
+        private void ResetMoverForSection(TrackClip tc)
+        {
             Ctx.Mover.UseCodeMovement = tc.MoveMode != MoveMode.RootMotion;
             Ctx.Mover.AllowRotation = true;
             Ctx.Mover.BackMotionScale = 1f;
@@ -321,7 +347,11 @@ namespace ZZZ
             Ctx.Mover.RootRotationWindowActive = false;
             Ctx.Mover.ClearWarpTarget();
             Ctx.Mover.AddStartBoost(0f, 0f);
-            // 섹션 기능은 모듈만 소유한다. 위 기본값 초기화 후 OnEnter 순서대로 필요한 기능을 켠다.
+        }
+
+        private void EnterSectionModules(TrackClip tc)
+        {
+            // 기본 상태를 만든 뒤 모듈이 필요한 Section 기능만 순서대로 켠다.
             _sc.FacedInputThisEnter = false;
             _sc.EntryForward = Ctx.Transform != null
                 ? Ctx.Transform.forward
@@ -330,26 +360,45 @@ namespace ZZZ
             _sc.PreviousNormalizedTime = SectionNormalizedTime(tc);
             for (int i = 0; i < tc.Modules.Count; i++)
                 tc.Modules[i]?.OnEnter(tc, _sc);
+        }
 
-            bool preserveNotifyState = sameSectionReentry
+        private void PrepareNotifyState(TrackClip tc, float startOffset,
+            bool sameSectionReentry)
+        {
+            bool preserveNotifyState = CanPreserveNotifyState(tc, sameSectionReentry);
+            if (!preserveNotifyState) InitializeNotifyPlaybackState(tc.Notifies.Count);
+
+            _hitActive = new HitHandle[tc.Notifies.Count];
+            _hitSyncPending = new bool[tc.Notifies.Count];
+
+            if (preserveNotifyState) ResetReplayableNotifyState(tc);
+
+            CacheNotifyTransitionState(tc);
+            MarkNotifiesBeforeOffsetAsFired(tc, startOffset);
+        }
+
+        private bool CanPreserveNotifyState(TrackClip tc, bool sameSectionReentry)
+        {
+            return sameSectionReentry
                 && _notifyFired != null
                 && _notifyFired.Length == tc.Notifies.Count
                 && _notifyActive != null
                 && _notifyActive.Length == tc.Notifies.Count
                 && _soundActive != null
                 && _soundActive.Length == tc.Notifies.Count;
-            if (!preserveNotifyState)
-            {
-                _notifyFired = new bool[tc.Notifies.Count];
-                _notifyActive = new EffectHandle[tc.Notifies.Count];
-                _soundActive = new AudioHandle[tc.Notifies.Count];
-            }
-            _hitActive = new HitHandle[tc.Notifies.Count];
-            _hitSyncPending = new bool[tc.Notifies.Count];
+        }
+
+        private void InitializeNotifyPlaybackState(int notifyCount)
+        {
+            _notifyFired = new bool[notifyCount];
+            _notifyActive = new EffectHandle[notifyCount];
+            _soundActive = new AudioHandle[notifyCount];
+        }
+
+        private void ResetReplayableNotifyState(TrackClip tc)
+        {
             for (int i = 0; i < tc.Notifies.Count; i++)
             {
-                if (!preserveNotifyState) continue;
-
                 TrackNotify notify = tc.Notifies[i];
                 bool preserveNotify =
                     notify.Payload is EffectNotifyPayload effectPayload
@@ -367,11 +416,15 @@ namespace ZZZ
                     _soundActive[i] = null;
                 }
             }
+        }
 
-            _notifyTransitionModes = new EffectTransitionMode[tc.Notifies.Count];
-            _notifyNextSections = new string[tc.Notifies.Count];
-            _soundNextSections = new string[tc.Notifies.Count];
-            for (int i = 0; i < tc.Notifies.Count; i++)
+        private void CacheNotifyTransitionState(TrackClip tc)
+        {
+            int notifyCount = tc.Notifies.Count;
+            _notifyTransitionModes = new EffectTransitionMode[notifyCount];
+            _notifyNextSections = new string[notifyCount];
+            _soundNextSections = new string[notifyCount];
+            for (int i = 0; i < notifyCount; i++)
             {
                 _notifyTransitionModes[i] = tc.Notifies[i].TransitionMode;
                 _notifyNextSections[i] = tc.Notifies[i].NextSection;
@@ -380,10 +433,15 @@ namespace ZZZ
                         ? soundPayload.NextSection
                         : "";
             }
+        }
+
+        private void MarkNotifiesBeforeOffsetAsFired(TrackClip tc, float startOffset)
+        {
             // 중간 진입 시 그 지점 이전의 Notify는 이미 지난 것으로 처리 — 진입하자마자 무더기 발동 방지.
-            if (startOffset > 0f)
-                for (int i = 0; i < tc.Notifies.Count; i++)
-                    if (tc.Notifies[i].NormalizedTime < startOffset) _notifyFired[i] = true;
+            if (startOffset <= 0f) return;
+
+            for (int i = 0; i < tc.Notifies.Count; i++)
+                if (tc.Notifies[i].NormalizedTime < startOffset) _notifyFired[i] = true;
         }
 
         // 섹션 진입 후 경과 시간을 normalizedTime으로 변환 (Speed 반영, 루프는 계속 증가)
@@ -391,6 +449,16 @@ namespace ZZZ
         {
             if (tc.Clip == null || tc.Clip.length <= 0f) return 1f;
             return _clipTime * Mathf.Max(0.01f, tc.Speed) / tc.Clip.length;
+        }
+
+        // 모듈이 매 프레임 결과를 다시 계산하도록 이전 프레임의 임시 상태를 기본값으로 되돌린다.
+        private void PrepareModuleTick(float previousNormalizedTime)
+        {
+            Ctx.Mover.AllowRotation = true;
+            Ctx.Mover.WarpWindowActive = false;
+            Ctx.Mover.FaceWindowActive = false;
+            Ctx.Mover.RootRotationWindowActive = false;
+            _sc.PreviousNormalizedTime = previousNormalizedTime;
         }
 
         // 섹션 모듈 매 프레임 구동 (i-frame 등). 있는 모듈만 실행.
@@ -401,117 +469,173 @@ namespace ZZZ
                 mods[i]?.Tick(tc, ntRaw, _sc);
         }
 
+        // Notify의 시작·진행·종료 순서를 한곳에서 유지해 프레임별 처리 순서가 섞이지 않게 한다.
         private void FireNotifies(
             TrackClip tc, float previousNtRaw, float ntRaw, float deltaTime)
         {
+            // 현재 Section에 Notify 실행 상태가 준비되지 않았으면 처리할 수 없다.
             if (_notifyFired == null) return;
-            if (tc.IsLooping
-                && Mathf.FloorToInt(ntRaw) > Mathf.FloorToInt(previousNtRaw))
-                ResetLoopingSoundNotifies(tc);
 
+            // 루프가 새 주기로 넘어갔다면 다시 재생할 수 있는 사운드 Notify를 초기화한다.
+            ResetLoopingSoundNotifiesIfNeeded(tc, previousNtRaw, ntRaw);
+
+            // 루프 클립은 누적 진행도를 0~1 범위의 현재 주기 진행도로 변환한다.
             float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
+            // 현재 Section에 등록된 Notify와 대응하는 실행 상태를 같은 인덱스로 순회한다.
             for (int i = 0; i < tc.Notifies.Count && i < _notifyFired.Length; i++)
             {
-                var notify = tc.Notifies[i];
+                TrackNotify notify = tc.Notifies[i];
 
-                // 시작 — 아직 발동 안 했고 시작 시점을 지났으면 스폰. 구간 이펙트면 정지용 핸들을 보관한다.
-                if (!_notifyFired[i] && p >= notify.NormalizedTime)
+                // 아직 실행하지 않았고 설정된 발동 시점에 도달한 Notify를 시작한다.
+                if (ShouldStartNotify(notify, i, p))
                 {
+                    // 다음 프레임에 같은 Notify가 중복 실행되지 않도록 먼저 기록한다.
                     _notifyFired[i] = true;
                     if (notify.Payload is HitNotifyPayload hitPayload)
                     {
-                        bool parryWarning = hitPayload.Action
-                            == HitNotifyAction.ParryWarning;
-                        if (!parryWarning && hitPayload.SyncWithEffect)
-                        {
-                            _hitSyncPending[i] = !TryAttachSynchronizedHit(
-                                tc, notify, hitPayload.Hit);
-                            continue;
-                        }
-                        var hitContext = new HitExecutionContext(
-                            Ctx.Transform, null, _effectBindings,
-                            _showHitGizmos, _hitGizmoDuration);
-                        if (notify.IsInterval
-                            || hitPayload.Hit.Origin == HitOrigin.Effect)
-                            _hitActive[i] = parryWarning
-                                ? HitService.BeginParryWarning(
-                                    hitPayload.Hit, hitContext,
-                                    hitPayload.WarningDuration)
-                                : HitService.Begin(hitPayload.Hit, hitContext);
-                        else if (parryWarning)
-                            HitService.ExecuteParryWarning(
-                                hitPayload.Hit, hitContext,
-                                hitPayload.WarningDuration);
-                        else
-                            HitService.Execute(hitPayload.Hit, hitContext);
+                        // Hit 또는 패링 경고 판정을 시작하고, 필요한 경우 활성 핸들을 보관한다.
+                        StartHitNotify(tc, notify, hitPayload, i);
                         continue;
                     }
                     if (notify.Payload is SoundNotifyPayload soundPayload)
                     {
-                        if (soundPayload.Sound != null)
-                        {
-                            SoundFadeModule fadeModule =
-                                soundPayload.FindModule<SoundFadeModule>();
-                            SoundDurationModule durationModule =
-                                soundPayload.FindModule<SoundDurationModule>();
-                            _soundActive[i] = AudioService.PlayAfterAnimation(
-                                soundPayload.Sound,
-                                SoundPlayContext.ForTransform(Ctx.Transform),
-                                soundPayload.Loop,
-                                fadeModule != null
-                                    ? fadeModule.FadeInDuration
-                                    : 0f,
-                                fadeModule != null
-                                    ? fadeModule.FadeOutDuration
-                                    : 0f,
-                                durationModule != null
-                                    ? durationModule.Duration
-                                    : 0f);
-                        }
+                        // Sound 설정과 모듈에 따라 오디오 재생을 시작한다.
+                        StartSoundNotify(soundPayload, i);
                         continue;
                     }
-                    EffectHandle handle = notify.Payload is EffectNotifyPayload
-                        && notify.TransitionMode == EffectTransitionMode.Next
-                        ? QueueNextEffect(tc, notify)
-                        : DispatchNotify(notify);
-                    if (notify.Payload is EffectNotifyPayload && handle != null)
-                        _notifyActive[i] = handle;
+
+                    // Effect, Camera, Custom Payload는 공통 디스패치 경로로 전달한다.
+                    StartDispatchedNotify(tc, notify, i);
                 }
 
-                if (_hitSyncPending != null && _hitSyncPending[i]
-                    && notify.Payload is HitNotifyPayload pendingHit)
-                    _hitSyncPending[i] = !TryAttachSynchronizedHit(
-                        tc, notify, pendingHit.Hit);
-
-                if (_hitActive != null && _hitActive[i] != null)
-                {
-                    float duration = notify.EndNormalizedTime - notify.NormalizedTime;
-                    float progress = duration > 0f
-                        ? Mathf.InverseLerp(
-                            notify.NormalizedTime, notify.EndNormalizedTime, p)
-                        : 1f;
-                    _hitActive[i].Tick(deltaTime, progress);
-                    if (!notify.IsInterval && _hitActive[i].HasSampled)
-                    {
-                        _hitActive[i].Stop();
-                        _hitActive[i] = null;
-                    }
-                }
-
-                // 종료 — 구간 이펙트가 진행 중이고 끝 시점을 지났으면 방출 정지(잔여 파티클은 자연 소멸).
-                if (notify.IsInterval && _notifyActive[i] != null
-                    && p >= notify.EndNormalizedTime)
-                {
-                    _notifyActive[i].Stop();
-                    _notifyActive[i] = null;
-                }
-                if (notify.IsInterval && _hitActive != null && _hitActive[i] != null
-                    && p >= notify.EndNormalizedTime)
-                {
-                    _hitActive[i].Stop();
-                    _hitActive[i] = null;
-                }
+                // 이펙트 생성 전이라 연결하지 못한 Hit을 다시 연결한다.
+                UpdatePendingSynchronizedHit(tc, notify, i);
+                // 진행 중인 Hit 판정을 현재 프레임 위치까지 갱신한다.
+                UpdateActiveHit(notify, i, p, deltaTime);
+                // 종료 시점에 도달한 구간형 Effect와 Hit을 정리한다.
+                StopCompletedInterval(notify, i, p);
             }
+        }
+
+        // 루프가 한 바퀴 돌 때, 이미 끝난 사운드만 다시 발동할 수 있게 풀어준다.
+        private void ResetLoopingSoundNotifiesIfNeeded(
+            TrackClip tc, float previousNtRaw, float ntRaw)
+        {
+            if (tc.IsLooping
+                && Mathf.FloorToInt(ntRaw) > Mathf.FloorToInt(previousNtRaw))
+                ResetLoopingSoundNotifies(tc);
+        }
+
+        // 프레임 드롭으로 정확한 시점을 건너뛰어도 지나간 Notify가 누락되지 않게 한다.
+        private bool ShouldStartNotify(
+            TrackNotify notify, int index, float normalizedTime)
+            => !_notifyFired[index] && normalizedTime >= notify.NormalizedTime;
+
+        // 이펙트 원점 Hit과 구간 Hit은 이후 프레임에서도 갱신해야 하므로 핸들을 보관한다.
+        private void StartHitNotify(
+            TrackClip tc, TrackNotify notify,
+            HitNotifyPayload payload, int index)
+        {
+            bool parryWarning = payload.Action == HitNotifyAction.ParryWarning;
+            if (!parryWarning && payload.SyncWithEffect)
+            {
+                _hitSyncPending[index] = !TryAttachSynchronizedHit(
+                    tc, notify, payload.Hit);
+                return;
+            }
+
+            var hitContext = new HitExecutionContext(
+                Ctx.Transform, null, _effectBindings,
+                _showHitGizmos, _hitGizmoDuration);
+            if (notify.IsInterval || payload.Hit.Origin == HitOrigin.Effect)
+                _hitActive[index] = parryWarning
+                    ? HitService.BeginParryWarning(
+                        payload.Hit, hitContext, payload.WarningDuration)
+                    : HitService.Begin(payload.Hit, hitContext);
+            else if (parryWarning)
+                HitService.ExecuteParryWarning(
+                    payload.Hit, hitContext, payload.WarningDuration);
+            else
+                HitService.Execute(payload.Hit, hitContext);
+        }
+
+        // Fade와 재생 시간은 Sound Payload의 모듈 조합에서 가져온다.
+        private void StartSoundNotify(SoundNotifyPayload payload, int index)
+        {
+            if (payload.Sound == null) return;
+
+            SoundFadeModule fadeModule = payload.FindModule<SoundFadeModule>();
+            SoundDurationModule durationModule =
+                payload.FindModule<SoundDurationModule>();
+            _soundActive[index] = AudioService.PlayAfterAnimation(
+                payload.Sound,
+                SoundPlayContext.ForTransform(Ctx.Transform),
+                payload.Loop,
+                fadeModule != null ? fadeModule.FadeInDuration : 0f,
+                fadeModule != null ? fadeModule.FadeOutDuration : 0f,
+                durationModule != null ? durationModule.Duration : 0f);
+        }
+
+        // Next 이펙트는 현재 Section에서 재생하지 않고 다음 Section 진입까지 보류한다.
+        private void StartDispatchedNotify(
+            TrackClip tc, TrackNotify notify, int index)
+        {
+            EffectHandle handle = notify.Payload is EffectNotifyPayload
+                && notify.TransitionMode == EffectTransitionMode.Next
+                ? QueueNextEffect(tc, notify)
+                : DispatchNotify(notify);
+            if (notify.Payload is EffectNotifyPayload && handle != null)
+                _notifyActive[index] = handle;
+        }
+
+        // 이펙트 바인딩이 아직 만들어지지 않았다면 다음 프레임에 Hit 연결을 다시 시도한다.
+        private void UpdatePendingSynchronizedHit(
+            TrackClip tc, TrackNotify notify, int index)
+        {
+            if (_hitSyncPending == null || !_hitSyncPending[index]
+                || !(notify.Payload is HitNotifyPayload payload)) return;
+
+            _hitSyncPending[index] = !TryAttachSynchronizedHit(
+                tc, notify, payload.Hit);
+        }
+
+        // 지속 판정은 매 프레임 샘플링하고, 단발 판정은 첫 샘플 뒤 즉시 정리한다.
+        private void UpdateActiveHit(
+            TrackNotify notify, int index,
+            float normalizedTime, float deltaTime)
+        {
+            if (_hitActive == null || _hitActive[index] == null) return;
+
+            float duration = notify.EndNormalizedTime - notify.NormalizedTime;
+            float progress = duration > 0f
+                ? Mathf.InverseLerp(
+                    notify.NormalizedTime,
+                    notify.EndNormalizedTime,
+                    normalizedTime)
+                : 1f;
+            _hitActive[index].Tick(deltaTime, progress);
+            if (notify.IsInterval || !_hitActive[index].HasSampled) return;
+
+            _hitActive[index].Stop();
+            _hitActive[index] = null;
+        }
+
+        // 구간 끝에서는 활성 핸들을 정지해 Section 밖으로 판정과 연출이 새지 않게 한다.
+        private void StopCompletedInterval(
+            TrackNotify notify, int index, float normalizedTime)
+        {
+            if (!notify.IsInterval
+                || normalizedTime < notify.EndNormalizedTime) return;
+
+            if (_notifyActive[index] != null)
+            {
+                _notifyActive[index].Stop();
+                _notifyActive[index] = null;
+            }
+            if (_hitActive == null || _hitActive[index] == null) return;
+
+            _hitActive[index].Stop();
+            _hitActive[index] = null;
         }
 
         private void ResetLoopingSoundNotifies(TrackClip tc)
