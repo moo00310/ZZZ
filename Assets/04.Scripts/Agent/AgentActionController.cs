@@ -162,12 +162,10 @@ namespace ZZZ.Agent
             if (HasBufferedInput && BufferedInput == ComboInput.Parry) _parry.Trigger();
 
             _runner.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
-            _runner.Update();   // 콤보/섹션 링크 평가 — Attack_Normal_Enhance 링크가 E를 먼저 소비할 기회
+            _runner.Update();   // 콤보/섹션 링크 평가 — Link 규칙을 따라 자연스럽게 다음 Section으로 이동
 
-            // 강화 공격은 링크가 못 받은 경우의 전역 폴백(after) — E 링크를 가진 섹션(콤보·Rush 등)에선
-            // 그 섹션이 직접 E를 처리하므로 폴백을 억제한다. 안 그러면 링크 윈도우가 열리기 전에 폴백이 E를
-            // 가로채 일반 강화로 새버린다(예: Rush 윈도우 전 E → RushToEnhance 대신 일반 강화). E 링크가 없는
-            // idle/walk 등에서만 이 트리거가 받는다.
+            // Enhance 공격 Section으로 강제 이동
+            // (Enhance입력이남아있고 && Enhance를담당하는Link가없고 && Enhance를차단하지않다면)
             if (HasBufferedInput && BufferedInput == ComboInput.Enhance
                 && !_runner.ActiveSectionHandles(ComboInput.Enhance)
                 && !_runner.ActiveSectionBlocks(ComboInput.Enhance))
