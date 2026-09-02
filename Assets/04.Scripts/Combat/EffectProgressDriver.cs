@@ -5,7 +5,7 @@ namespace ZZZ.Combat
     // 이펙트 프리팹에 붙여, 파티클 재생 시간에 맞춰 셰이더의 _Progress를 0→1로 흘려준다.
     // FX_FlameBurst 등 _Progress 프로퍼티로 연출(디졸브/회색 전환 등)을 구동하는 머티리얼용.
     //
-    // 흐름: Effect Notify가 이 프리팹을 Instantiate(CharacterActionRunner.DispatchNotify) →
+    // 흐름: CharacterNotifyRunner가 EffectService에 재생을 요청해 이 프리팹을 생성 →
     // 매 프레임 ParticleSystem.time을 읽어 진행도 계산.
     // 값은 MaterialPropertyBlock으로 렌더러 단위 격리 → 같은 .mat을 공유해도 인스턴스끼리 안 섞인다.
     //

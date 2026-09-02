@@ -2,7 +2,7 @@
 
 Unity 6와 URP로 제작 중인 3인칭 액션 전투 프로젝트입니다. Burnice 캐릭터의 공격, 콤보, 회피, 패링, 피격과 전투 피드백을 데이터 기반으로 구성합니다.
 
-Animator Controller에 전투 전이 그래프를 만들지 않고, `AnimationConfig`가 전투 흐름을 저장하며 `ConfigState`가 이를 해석합니다. Animator는 `CrossFade`를 통한 클립 재생에 집중합니다.
+Animator Controller에 전투 전이 그래프를 만들지 않고, `AnimationConfig`가 전투 흐름을 저장하며 `CharacterActionRunner`가 이를 실행합니다. Animator는 `CharacterAnimatorBridge`의 `CrossFade`를 통한 클립 재생에 집중합니다.
 
 ## 핵심 구현 기능
 
@@ -11,9 +11,10 @@ Animator Controller에 전투 전이 그래프를 만들지 않고, `AnimationCo
 <!-- GIF 추가 예정: ![데이터 기반 전투 애니메이션](Documentation/Images/combat-animation.gif) -->
 
 - `AnimationConfig`에 애니메이션 구간, 전이, Notify와 구간별 기능을 저장합니다.
-- `ConfigState`가 전이 조건과 입력 버퍼를 평가하고 플레이어와 몬스터의 애니메이션 흐름을 실행합니다.
+- `CharacterActionRunner`가 Section 전환, Link 조건 평가와 Module 실행을 담당하며 플레이어와 몬스터가 같은 실행 흐름을 공유합니다.
+- `CharacterNotifyRunner`가 Notify 발동 시점과 실행 중인 이펙트·사운드·타격 Handle의 생명주기를 관리합니다.
 - `LinkCondition`과 `SectionModule`을 조합해 콤보, 강화 공격, 회피, 패링, 루트 모션과 타깃 보정을 확장합니다.
-- Animator 파라미터와 전이 그래프에 전투 규칙이 분산되지 않도록 런타임 책임을 분리했습니다.
+- 실제 연출과 판정은 `EffectService`, `AudioService`, `CameraFeedbackService`, `HitService`에 위임해 전투 흐름과 기능 구현의 책임을 분리했습니다.
 
 ```text
 입력과 게임 상태
@@ -22,12 +23,15 @@ Animator Controller에 전투 전이 그래프를 만들지 않고, `AnimationCo
 AnimationConfig ── Section · Link · Notify · Module
        │
        ▼
-  ConfigState ──── 조건 평가와 전투 흐름 실행
+CharacterActionRunner ── Section · Link · Module 실행
        │
-       ├────────── Animator: 클립 재생
-       ├────────── PlayerMotor: 이동과 회전
-       ├────────── EffectService: 이펙트 재생과 풀링
-       └────────── HitService: 타격 판정과 피격 전달
+       ├────────── CharacterAnimatorBridge: CrossFade 재생
+       ├────────── AgentMotor / MonsterMotor: 이동과 회전
+       └────────── CharacterNotifyRunner: Notify 시간과 생명주기
+                              │
+                              ├── EffectService / AudioService: 연출
+                              ├── CameraFeedbackService: 카메라 피드백
+                              └── HitService: 판정과 피격 전달
 ```
 
 [구현 요약: 전투 애니메이션](Documentation/AnimationArchitecture.md) · [주요 설계 결정](Documentation/자료구조_선택.md)

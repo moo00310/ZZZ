@@ -46,8 +46,9 @@ Effect Notify의 기본 전환 정책은 `Keep`이다.
 | `Stop` | 현재 섹션을 실제로 이탈할 때 정지한다. `Carry Section`을 지정하면 해당 목적지로 소유권을 넘기고 목적지 이탈 시 정지한다. |
 | `Next` | Notify 시점에는 생성하지 않는다. 실제 링크 목적지가 `Next Section`과 일치할 때 목적지 섹션에서 생성한다. |
 
-동일 섹션 self-link는 실제 섹션 이탈로 취급하지 않는다. `CharacterActionRunner`는 동일 섹션 재진입 시
-진행 중인 `Stop`/`Next` 상태와 아직 목적지가 확정되지 않은 `Next` 예약을 유지한다. 따라서
+동일 섹션 self-link는 실제 섹션 이탈로 취급하지 않는다. `CharacterActionRunner`가 동일 섹션으로
+재진입하면 `CharacterNotifyRunner`는 진행 중인 `Stop`/`Next` 상태와 아직 목적지가 확정되지 않은
+`Next` 예약을 유지한다. 따라서
 루프마다 이펙트가 중복 생성되거나 조기에 정지하지 않는다.
 
 `Next`는 목적지 분기를 먼저 확인한 뒤 생성하므로 잘못된 분기에서 이펙트가 한 프레임

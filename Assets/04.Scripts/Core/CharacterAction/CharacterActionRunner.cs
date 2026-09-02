@@ -1,8 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using ZZZ.Audio;
-using ZZZ.Combat;
-using ZZZ.Effects;
 
 namespace ZZZ
 {
@@ -15,34 +12,11 @@ namespace ZZZ
         private readonly ICharacterActionSignals  Signals;
         private readonly AnimationConfig _homeConfig;   // 진입/복귀 기본 config
         private readonly SectionContext  _sc;           // 섹션 모듈에 넘기는 핸들 묶음
-        private bool _showHitGizmos;
-        private float _hitGizmoDuration;
+        private readonly CharacterNotifyRunner _notifyRunner;
 
         private AnimationConfig _config;   // 현재 구동 중 config
         private int             _active;   // 현재 클립 인덱스
-        private bool[]          _notifyFired;
-        // 구간(Interval) 이펙트의 활성 핸들 — 단발이거나 미진행이면 null. _notifyFired와 인덱스 정렬, 섹션 스코프.
-        private EffectHandle[]  _notifyActive;
-        private HitHandle[]     _hitActive;
-        private bool[]          _hitSyncPending;
-        private EffectTransitionMode[] _notifyTransitionModes;
-        private string[]        _notifyNextSections;
-        private AudioHandle[]   _soundActive;
-        private string[]        _soundNextSections;
-        private readonly List<EffectHandle> _carriedEffects = new List<EffectHandle>();
-        private readonly List<AudioHandle> _carriedSounds = new List<AudioHandle>();
-        private readonly List<PendingNextEffect> _pendingNextEffects =
-            new List<PendingNextEffect>();
-        private readonly EffectBindingScope _effectBindings = new EffectBindingScope();
         private float           _clipTime; // 현재 섹션 진입 후 경과 시간(초) — 전환마다 0으로 리셋
-
-        private sealed class PendingNextEffect
-        {
-            public CompositeEffect Effect;
-            public HitData Hit;
-            public string NextSection;
-            public float NormalizedTime;
-        }
 
         // OnEndIfMatched 링크의 윈도우 래치 상태 — 섹션 진입마다 비운다(섹션 스코프).
         private readonly HashSet<ClipLink> _latched = new HashSet<ClipLink>();
@@ -66,8 +40,8 @@ namespace ZZZ
             _homeConfig = homeConfig;
             _condCtx    = condCtx;
             _sc         = new SectionContext { Ctx = ctx, Machine = signals };
-            _showHitGizmos = showHitGizmos;
-            _hitGizmoDuration = Mathf.Max(0f, hitGizmoDuration);
+            _notifyRunner = new CharacterNotifyRunner(
+                ctx, showHitGizmos, hitGizmoDuration);
         }
 
         public void Enter()
@@ -78,8 +52,7 @@ namespace ZZZ
 
         public void SetHitDebug(bool showHitGizmos, float hitGizmoDuration)
         {
-            _showHitGizmos = showHitGizmos;
-            _hitGizmoDuration = Mathf.Max(0f, hitGizmoDuration);
+            _notifyRunner.SetHitDebug(showHitGizmos, hitGizmoDuration);
         }
 
         // 외부 이벤트(피격 등)로 현재 config를 즉시 갈아끼운다.
@@ -97,11 +70,7 @@ namespace ZZZ
             _config = config;
             if (_config == null || _config.Clips.Count == 0)
             {
-                StopTrackedEffects(false);
-                StopTrackedSounds(false);
-                StopTrackedHits();
-                _pendingNextEffects.Clear();
-                _effectBindings.Clear();
+                _notifyRunner.StopPlayback();
                 _active = -1;
                 return;
             }
@@ -126,7 +95,7 @@ namespace ZZZ
             _clipTime += deltaTime;
             float ntRaw = SectionNormalizedTime(tc);
 
-            FireNotifies(tc, previousNtRaw, ntRaw, deltaTime);  // 현재 시점의 Notify 발동·갱신·종료
+            _notifyRunner.Tick(tc, previousNtRaw, ntRaw, deltaTime);
             PrepareModuleTick(previousNtRaw);                   // Module 실행 전 상태 초기화
             TickModules(tc, ntRaw);                             // 현재 Section의 Module들을 갱신
 
@@ -264,13 +233,14 @@ namespace ZZZ
             bool sameSectionReentry = false)
         {
             string destinationSection = _config.Clips[_active].SectionName;
-            PrepareTrackedStateForSection(destinationSection, sameSectionReentry);
+            _notifyRunner.PrepareForSection(
+                destinationSection, sameSectionReentry);
             ResetSectionEntryState();
 
             TrackClip tc = _config.Clips[_active];
             if (tc.Clip == null)
             {
-                ClearNotifyStateForMissingClip();
+                _notifyRunner.ClearSectionStateForMissingClip();
                 return;
             }
 
@@ -278,19 +248,8 @@ namespace ZZZ
             PlaySectionAnimation(tc, blend, offsetSeconds);
             ResetMoverForSection(tc);
             EnterSectionModules(tc);
-            PrepareNotifyState(tc, startOffset, sameSectionReentry);
-        }
-
-        private void PrepareTrackedStateForSection(string destinationSection,
-            bool sameSectionReentry)
-        {
-            StopTrackedHits();
-            if (!sameSectionReentry)
-            {
-                StopTrackedEffects(true, destinationSection);
-                StopTrackedSounds(true, destinationSection);
-            }
-            PlayPendingNextEffects(destinationSection, sameSectionReentry);
+            _notifyRunner.EnterSection(
+                tc, startOffset, sameSectionReentry);
         }
 
         private void ResetSectionEntryState()
@@ -301,17 +260,6 @@ namespace ZZZ
             // 무적과 패링은 해당 SectionModule의 활성 구간에서만 다시 켜진다.
             Signals.Invulnerable = false;
             Signals.ParryActive = false;
-        }
-
-        private void ClearNotifyStateForMissingClip()
-        {
-            _notifyFired = null;
-            _notifyActive = null;
-            _soundActive = null;
-            _hitActive = null;
-            _notifyTransitionModes = null;
-            _notifyNextSections = null;
-            _soundNextSections = null;
         }
 
         private float SetSectionStartTime(TrackClip tc, float startOffset)
@@ -362,88 +310,6 @@ namespace ZZZ
                 tc.Modules[i]?.OnEnter(tc, _sc);
         }
 
-        private void PrepareNotifyState(TrackClip tc, float startOffset,
-            bool sameSectionReentry)
-        {
-            bool preserveNotifyState = CanPreserveNotifyState(tc, sameSectionReentry);
-            if (!preserveNotifyState) InitializeNotifyPlaybackState(tc.Notifies.Count);
-
-            _hitActive = new HitHandle[tc.Notifies.Count];
-            _hitSyncPending = new bool[tc.Notifies.Count];
-
-            if (preserveNotifyState) ResetReplayableNotifyState(tc);
-
-            CacheNotifyTransitionState(tc);
-            MarkNotifiesBeforeOffsetAsFired(tc, startOffset);
-        }
-
-        private bool CanPreserveNotifyState(TrackClip tc, bool sameSectionReentry)
-        {
-            return sameSectionReentry
-                && _notifyFired != null
-                && _notifyFired.Length == tc.Notifies.Count
-                && _notifyActive != null
-                && _notifyActive.Length == tc.Notifies.Count
-                && _soundActive != null
-                && _soundActive.Length == tc.Notifies.Count;
-        }
-
-        private void InitializeNotifyPlaybackState(int notifyCount)
-        {
-            _notifyFired = new bool[notifyCount];
-            _notifyActive = new EffectHandle[notifyCount];
-            _soundActive = new AudioHandle[notifyCount];
-        }
-
-        private void ResetReplayableNotifyState(TrackClip tc)
-        {
-            for (int i = 0; i < tc.Notifies.Count; i++)
-            {
-                TrackNotify notify = tc.Notifies[i];
-                bool preserveNotify =
-                    notify.Payload is EffectNotifyPayload effectPayload
-                    && (effectPayload.TransitionMode == EffectTransitionMode.Next
-                        || effectPayload.TransitionMode == EffectTransitionMode.Stop
-                        && _notifyActive[i] != null)
-                    || (notify.Payload is SoundNotifyPayload soundPayload
-                        && soundPayload.Loop
-                        && _soundActive[i] != null
-                        && !_soundActive[i].IsStopped);
-                if (!preserveNotify)
-                {
-                    _notifyFired[i] = false;
-                    _notifyActive[i] = null;
-                    _soundActive[i] = null;
-                }
-            }
-        }
-
-        private void CacheNotifyTransitionState(TrackClip tc)
-        {
-            int notifyCount = tc.Notifies.Count;
-            _notifyTransitionModes = new EffectTransitionMode[notifyCount];
-            _notifyNextSections = new string[notifyCount];
-            _soundNextSections = new string[notifyCount];
-            for (int i = 0; i < notifyCount; i++)
-            {
-                _notifyTransitionModes[i] = tc.Notifies[i].TransitionMode;
-                _notifyNextSections[i] = tc.Notifies[i].NextSection;
-                _soundNextSections[i] =
-                    tc.Notifies[i].Payload is SoundNotifyPayload soundPayload
-                        ? soundPayload.NextSection
-                        : "";
-            }
-        }
-
-        private void MarkNotifiesBeforeOffsetAsFired(TrackClip tc, float startOffset)
-        {
-            // 중간 진입 시 그 지점 이전의 Notify는 이미 지난 것으로 처리 — 진입하자마자 무더기 발동 방지.
-            if (startOffset <= 0f) return;
-
-            for (int i = 0; i < tc.Notifies.Count; i++)
-                if (tc.Notifies[i].NormalizedTime < startOffset) _notifyFired[i] = true;
-        }
-
         // 섹션 진입 후 경과 시간을 normalizedTime으로 변환 (Speed 반영, 루프는 계속 증가)
         private float SectionNormalizedTime(TrackClip tc)
         {
@@ -469,444 +335,10 @@ namespace ZZZ
                 mods[i]?.Tick(tc, ntRaw, _sc);
         }
 
-        // Notify의 시작·진행·종료 순서를 한곳에서 유지해 프레임별 처리 순서가 섞이지 않게 한다.
-        private void FireNotifies(
-            TrackClip tc, float previousNtRaw, float ntRaw, float deltaTime)
-        {
-            // 현재 Section에 Notify 실행 상태가 준비되지 않았으면 처리할 수 없다.
-            if (_notifyFired == null) return;
-
-            // 루프가 새 주기로 넘어갔다면 다시 재생할 수 있는 사운드 Notify를 초기화한다.
-            ResetLoopingSoundNotifiesIfNeeded(tc, previousNtRaw, ntRaw);
-
-            // 루프 클립은 누적 진행도를 0~1 범위의 현재 주기 진행도로 변환한다.
-            float p = tc.IsLooping ? Mathf.Repeat(ntRaw, 1f) : ntRaw;
-            // 현재 Section에 등록된 Notify와 대응하는 실행 상태를 같은 인덱스로 순회한다.
-            for (int i = 0; i < tc.Notifies.Count && i < _notifyFired.Length; i++)
-            {
-                TrackNotify notify = tc.Notifies[i];
-
-                // 아직 실행하지 않았고 설정된 발동 시점에 도달한 Notify를 시작한다.
-                if (ShouldStartNotify(notify, i, p))
-                {
-                    // 다음 프레임에 같은 Notify가 중복 실행되지 않도록 먼저 기록한다.
-                    _notifyFired[i] = true;
-                    if (notify.Payload is HitNotifyPayload hitPayload)
-                    {
-                        // Hit 또는 패링 경고 판정을 시작하고, 필요한 경우 활성 핸들을 보관한다.
-                        StartHitNotify(tc, notify, hitPayload, i);
-                        continue;
-                    }
-                    if (notify.Payload is SoundNotifyPayload soundPayload)
-                    {
-                        // Sound 설정과 모듈에 따라 오디오 재생을 시작한다.
-                        StartSoundNotify(soundPayload, i);
-                        continue;
-                    }
-
-                    // Effect, Camera, Custom Payload는 공통 디스패치 경로로 전달한다.
-                    StartDispatchedNotify(tc, notify, i);
-                }
-
-                // 이펙트 생성 전이라 연결하지 못한 Hit을 다시 연결한다.
-                UpdatePendingSynchronizedHit(tc, notify, i);
-                // 진행 중인 Hit 판정을 현재 프레임 위치까지 갱신한다.
-                UpdateActiveHit(notify, i, p, deltaTime);
-                // 종료 시점에 도달한 구간형 Effect와 Hit을 정리한다.
-                StopCompletedInterval(notify, i, p);
-            }
-        }
-
-        // 루프가 한 바퀴 돌 때, 이미 끝난 사운드만 다시 발동할 수 있게 풀어준다.
-        private void ResetLoopingSoundNotifiesIfNeeded(
-            TrackClip tc, float previousNtRaw, float ntRaw)
-        {
-            if (tc.IsLooping
-                && Mathf.FloorToInt(ntRaw) > Mathf.FloorToInt(previousNtRaw))
-                ResetLoopingSoundNotifies(tc);
-        }
-
-        // 프레임 드롭으로 정확한 시점을 건너뛰어도 지나간 Notify가 누락되지 않게 한다.
-        private bool ShouldStartNotify(
-            TrackNotify notify, int index, float normalizedTime)
-            => !_notifyFired[index] && normalizedTime >= notify.NormalizedTime;
-
-        // 이펙트 원점 Hit과 구간 Hit은 이후 프레임에서도 갱신해야 하므로 핸들을 보관한다.
-        private void StartHitNotify(
-            TrackClip tc, TrackNotify notify,
-            HitNotifyPayload payload, int index)
-        {
-            bool parryWarning = payload.Action == HitNotifyAction.ParryWarning;
-            if (!parryWarning && payload.SyncWithEffect)
-            {
-                _hitSyncPending[index] = !TryAttachSynchronizedHit(
-                    tc, notify, payload.Hit);
-                return;
-            }
-
-            var hitContext = new HitExecutionContext(
-                Ctx.Transform, null, _effectBindings,
-                _showHitGizmos, _hitGizmoDuration);
-            if (notify.IsInterval || payload.Hit.Origin == HitOrigin.Effect)
-                _hitActive[index] = parryWarning
-                    ? HitService.BeginParryWarning(
-                        payload.Hit, hitContext, payload.WarningDuration)
-                    : HitService.Begin(payload.Hit, hitContext);
-            else if (parryWarning)
-                HitService.ExecuteParryWarning(
-                    payload.Hit, hitContext, payload.WarningDuration);
-            else
-                HitService.Execute(payload.Hit, hitContext);
-        }
-
-        // Fade와 재생 시간은 Sound Payload의 모듈 조합에서 가져온다.
-        private void StartSoundNotify(SoundNotifyPayload payload, int index)
-        {
-            if (payload.Sound == null) return;
-
-            SoundFadeModule fadeModule = payload.FindModule<SoundFadeModule>();
-            SoundDurationModule durationModule =
-                payload.FindModule<SoundDurationModule>();
-            _soundActive[index] = AudioService.PlayAfterAnimation(
-                payload.Sound,
-                SoundPlayContext.ForTransform(Ctx.Transform),
-                payload.Loop,
-                fadeModule != null ? fadeModule.FadeInDuration : 0f,
-                fadeModule != null ? fadeModule.FadeOutDuration : 0f,
-                durationModule != null ? durationModule.Duration : 0f);
-        }
-
-        // Next 이펙트는 현재 Section에서 재생하지 않고 다음 Section 진입까지 보류한다.
-        private void StartDispatchedNotify(
-            TrackClip tc, TrackNotify notify, int index)
-        {
-            EffectHandle handle = notify.Payload is EffectNotifyPayload
-                && notify.TransitionMode == EffectTransitionMode.Next
-                ? QueueNextEffect(tc, notify)
-                : DispatchNotify(notify);
-            if (notify.Payload is EffectNotifyPayload && handle != null)
-                _notifyActive[index] = handle;
-        }
-
-        // 이펙트 바인딩이 아직 만들어지지 않았다면 다음 프레임에 Hit 연결을 다시 시도한다.
-        private void UpdatePendingSynchronizedHit(
-            TrackClip tc, TrackNotify notify, int index)
-        {
-            if (_hitSyncPending == null || !_hitSyncPending[index]
-                || !(notify.Payload is HitNotifyPayload payload)) return;
-
-            _hitSyncPending[index] = !TryAttachSynchronizedHit(
-                tc, notify, payload.Hit);
-        }
-
-        // 지속 판정은 매 프레임 샘플링하고, 단발 판정은 첫 샘플 뒤 즉시 정리한다.
-        private void UpdateActiveHit(
-            TrackNotify notify, int index,
-            float normalizedTime, float deltaTime)
-        {
-            if (_hitActive == null || _hitActive[index] == null) return;
-
-            float duration = notify.EndNormalizedTime - notify.NormalizedTime;
-            float progress = duration > 0f
-                ? Mathf.InverseLerp(
-                    notify.NormalizedTime,
-                    notify.EndNormalizedTime,
-                    normalizedTime)
-                : 1f;
-            _hitActive[index].Tick(deltaTime, progress);
-            if (notify.IsInterval || !_hitActive[index].HasSampled) return;
-
-            _hitActive[index].Stop();
-            _hitActive[index] = null;
-        }
-
-        // 구간 끝에서는 활성 핸들을 정지해 Section 밖으로 판정과 연출이 새지 않게 한다.
-        private void StopCompletedInterval(
-            TrackNotify notify, int index, float normalizedTime)
-        {
-            if (!notify.IsInterval
-                || normalizedTime < notify.EndNormalizedTime) return;
-
-            if (_notifyActive[index] != null)
-            {
-                _notifyActive[index].Stop();
-                _notifyActive[index] = null;
-            }
-            if (_hitActive == null || _hitActive[index] == null) return;
-
-            _hitActive[index].Stop();
-            _hitActive[index] = null;
-        }
-
-        private void ResetLoopingSoundNotifies(TrackClip tc)
-        {
-            int count = Mathf.Min(tc.Notifies.Count, _notifyFired.Length);
-            for (int i = 0; i < count; i++)
-            {
-                if (!(tc.Notifies[i].Payload is SoundNotifyPayload soundPayload))
-                    continue;
-
-                AudioHandle handle = _soundActive != null
-                    && i < _soundActive.Length
-                    ? _soundActive[i]
-                    : null;
-                bool keepPlayingLoop = soundPayload.Loop
-                    && handle != null
-                    && !handle.IsStopped;
-                if (!keepPlayingLoop) _notifyFired[i] = false;
-            }
-        }
-
-        private bool TryAttachHitToEffect(HitData hit)
-        {
-            if (hit == null || hit.Origin != HitOrigin.Effect) return false;
-            return _effectBindings.TryAttachHit(
-                hit.EffectKey, hit, Ctx.Transform,
-                _showHitGizmos, _hitGizmoDuration);
-        }
-
-        private bool TryAttachSynchronizedHit(
-            TrackClip clip, TrackNotify hitNotify, HitData hit)
-        {
-            if (hit == null || hit.Origin != HitOrigin.Effect) return false;
-            if (TryAssignHitToPendingNextEffect(hitNotify.NormalizedTime, hit))
-                return true;
-
-            // A same-time Next effect has no live binding until the section changes.
-            if (HasMatchingNextEffect(clip, hitNotify.NormalizedTime, hit))
-                return false;
-
-            return TryAttachHitToEffect(hit);
-        }
-
-        private bool TryAssignHitToPendingNextEffect(float normalizedTime, HitData hit)
-        {
-            for (int i = _pendingNextEffects.Count - 1; i >= 0; i--)
-            {
-                PendingNextEffect pending = _pendingNextEffects[i];
-                if (!Mathf.Approximately(pending.NormalizedTime, normalizedTime)
-                    || !CanBindHit(pending.Effect, hit))
-                    continue;
-
-                if (pending.Hit == null) pending.Hit = hit;
-                return true;
-            }
-            return false;
-        }
-
-        private static bool HasMatchingNextEffect(
-            TrackClip clip, float normalizedTime, HitData hit)
-        {
-            for (int i = 0; i < clip.Notifies.Count; i++)
-            {
-                TrackNotify notify = clip.Notifies[i];
-                if (!Mathf.Approximately(notify.NormalizedTime, normalizedTime)
-                    || notify.TransitionMode != EffectTransitionMode.Next
-                    || !(notify.Payload is EffectNotifyPayload payload)
-                    || !CanBindHit(payload.Effect, hit))
-                    continue;
-
-                return true;
-            }
-            return false;
-        }
-
-        private static bool CanBindHit(CompositeEffect effect, HitData hit)
-        {
-            if (effect == null || hit == null
-                || string.IsNullOrEmpty(hit.EffectKey)) return false;
-
-            string effectKey = hit.EffectKey;
-            for (int i = 0; i < effect.Entries.Count; i++)
-            {
-                CompositeEffectEntry entry = effect.Entries[i];
-                if (entry != null && string.Equals(
-                    entry.BindingKey?.Trim(), effectKey,
-                    System.StringComparison.Ordinal))
-                    return true;
-            }
-            return false;
-        }
-
-        // 이펙트 재생이면 정지용 EffectHandle을 돌려준다(구간 이펙트만 사용). 그 외/단발은 null.
-        private EffectHandle DispatchNotify(TrackNotify notify)
-        {
-            switch (notify.Payload)
-            {
-                case EffectNotifyPayload effectPayload:
-                    if (effectPayload.Effect != null)
-                        return EffectService.PlayAfterAnimation(
-                            effectPayload.Effect,
-                            EffectPlayContext.ForCharacter(
-                                Ctx.Transform, effectPayload.Hit, _effectBindings,
-                                _showHitGizmos, _hitGizmoDuration),
-                            true);
-                    return null;
-                case CameraNotifyPayload cameraPayload:
-                    if (cameraPayload.Mode == CameraNotifyMode.Shot)
-                        CameraFeedbackService.PlayShot(
-                            cameraPayload.CreateShotRequest(Ctx.Transform));
-                    else
-                        CameraFeedbackService.PlayShake(
-                            cameraPayload.CreateShakeRequest());
-                    return null;
-                case CustomNotifyPayload customPayload:
-                    if (customPayload.EventType
-                        == ConfigEventType.HitShake)
-                        Ctx.Animator.PlayHitShake();
-                    return null;
-                default:
-                    return null;
-            }
-        }
-
-        private EffectHandle QueueNextEffect(TrackClip clip, TrackNotify notify)
-        {
-            if (!(notify.Payload is EffectNotifyPayload payload)
-                || payload.Effect == null
-                || string.IsNullOrEmpty(payload.NextSection)) return null;
-            var pending = new PendingNextEffect
-            {
-                Effect = payload.Effect,
-                Hit = payload.Hit,
-                NextSection = payload.NextSection,
-                NormalizedTime = notify.NormalizedTime,
-            };
-            _pendingNextEffects.Add(pending);
-            AssignFiredHitToPendingNextEffect(clip, pending);
-            return null;
-        }
-
-        private void AssignFiredHitToPendingNextEffect(
-            TrackClip clip, PendingNextEffect pending)
-        {
-            for (int i = 0; i < clip.Notifies.Count; i++)
-            {
-                if (!_notifyFired[i] || !_hitSyncPending[i]
-                    || !(clip.Notifies[i].Payload is HitNotifyPayload payload)
-                    || !payload.SyncWithEffect
-                    || !Mathf.Approximately(
-                        clip.Notifies[i].NormalizedTime, pending.NormalizedTime)
-                    || !CanBindHit(pending.Effect, payload.Hit))
-                    continue;
-
-                if (pending.Hit == null) pending.Hit = payload.Hit;
-                _hitSyncPending[i] = false;
-                return;
-            }
-        }
-
-        private void PlayPendingNextEffects(string destinationSection,
-            bool preserveUnmatched = false)
-        {
-            for (int i = _pendingNextEffects.Count - 1; i >= 0; i--)
-            {
-                PendingNextEffect pending = _pendingNextEffects[i];
-                if (!string.Equals(pending.NextSection, destinationSection,
-                    System.StringComparison.Ordinal))
-                    continue;
-
-                EffectHandle handle = EffectService.PlayAfterAnimation(
-                    pending.Effect,
-                    EffectPlayContext.ForCharacter(
-                        Ctx.Transform, pending.Hit, _effectBindings,
-                        _showHitGizmos, _hitGizmoDuration),
-                    true);
-                if (handle != null) _carriedEffects.Add(handle);
-                _pendingNextEffects.RemoveAt(i);
-            }
-            if (!preserveUnmatched) _pendingNextEffects.Clear();
-        }
-
-        // 추적 중인 이펙트를 실제 섹션 이탈·인터럽트·종료 시 정리한다.
-        private void StopTrackedEffects(bool transferNext, string destinationSection = null)
-        {
-            for (int i = 0; i < _carriedEffects.Count; i++)
-                _carriedEffects[i]?.Stop();
-            _carriedEffects.Clear();
-
-            if (_notifyActive == null) return;
-            for (int i = 0; i < _notifyActive.Length; i++)
-            {
-                EffectHandle handle = _notifyActive[i];
-                if (handle != null)
-                {
-                    EffectTransitionMode mode = _notifyTransitionModes != null
-                        && i < _notifyTransitionModes.Length
-                        ? _notifyTransitionModes[i]
-                        : EffectTransitionMode.Keep;
-                    if (mode == EffectTransitionMode.Stop
-                        || mode == EffectTransitionMode.Next)
-                    {
-                        string nextSection = _notifyNextSections != null
-                            && i < _notifyNextSections.Length
-                            ? _notifyNextSections[i]
-                            : null;
-                        bool matchesDestination = transferNext
-                            && !string.IsNullOrEmpty(nextSection)
-                            && string.Equals(nextSection, destinationSection,
-                                System.StringComparison.Ordinal);
-                        if (matchesDestination) _carriedEffects.Add(handle);
-                        else handle.Stop();
-                    }
-                }
-                _notifyActive[i] = null;
-            }
-        }
-
-        private void StopTrackedSounds(
-            bool transferNext, string destinationSection = null)
-        {
-            for (int i = 0; i < _carriedSounds.Count; i++)
-                _carriedSounds[i]?.Stop();
-            _carriedSounds.Clear();
-
-            if (_soundActive == null) return;
-            for (int i = 0; i < _soundActive.Length; i++)
-            {
-                AudioHandle handle = _soundActive[i];
-                if (handle != null)
-                {
-                    string nextSection = _soundNextSections != null
-                        && i < _soundNextSections.Length
-                        ? _soundNextSections[i]
-                        : null;
-                    bool matchesDestination = transferNext
-                        && !string.IsNullOrEmpty(nextSection)
-                        && string.Equals(nextSection, destinationSection,
-                            System.StringComparison.Ordinal);
-                    if (matchesDestination) _carriedSounds.Add(handle);
-                    else handle.Stop();
-                }
-                _soundActive[i] = null;
-            }
-        }
-
-        private void StopTrackedHits()
-        {
-            if (_hitActive == null) return;
-            for (int i = 0; i < _hitActive.Length; i++)
-            {
-                _hitActive[i]?.Stop();
-                _hitActive[i] = null;
-            }
-        }
-
         // 현재는 항상 활성이라 호출되지 않지만, 무적 누수 방지를 위한 정리 진입점으로 남겨둔다.
         public void Exit()
         {
-            StopTrackedEffects(false);
-            StopTrackedSounds(false);
-            StopTrackedHits();
-            _pendingNextEffects.Clear();
-            _effectBindings.Clear();
-            _notifyFired = null;
-            _hitActive = null;
-            _hitSyncPending = null;
-            _notifyTransitionModes = null;
-            _notifyNextSections = null;
-            _soundActive = null;
-            _soundNextSections = null;
+            _notifyRunner.Exit();
             Ctx.Mover.ClearWarpTarget();
             Ctx.Mover.KillRootRotation = false;
             Signals.Invulnerable = false;

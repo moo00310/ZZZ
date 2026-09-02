@@ -74,7 +74,7 @@
 Camera Notify는 카메라 컴포넌트를 직접 참조하지 않는다.
 
     AnimationConfig Camera Notify
-      → CharacterActionRunner
+      → CharacterNotifyRunner
         → CameraFeedbackService
           → TPSCameraController
             → 기본 TPS 구도

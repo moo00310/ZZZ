@@ -14,6 +14,9 @@
     AnimationConfig Effect Notify
                   │
                   ▼
+       CharacterNotifyRunner
+                  │
+                  ▼
           CompositeEffect
           ├─ Entry A: Prefab · Delay · Socket · Offset
           ├─ Entry B: Prefab · Delay · Socket · Offset
@@ -29,6 +32,7 @@
 |---|---|
 | `CompositeEffect` | 여러 Entry의 재생 순서와 조합 설정을 저장 |
 | `CompositeEffectEntry` | 프리팹, 지연, 소켓, 위치와 재생 옵션을 정의 |
+| `CharacterNotifyRunner` | Effect Notify의 발동 시점과 실행 중 Handle의 생명주기 관리 |
 | `EffectService` | 재생 요청을 받고 프리팹별 풀을 조회·생성 |
 | `EffectPool` | 원시 프리팹 인스턴스를 대여하고 회수 |
 | `PooledEffectHandle` | 재생 상태, 정지와 원래 풀로의 반환을 관리 |

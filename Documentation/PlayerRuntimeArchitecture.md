@@ -43,7 +43,7 @@ Agent 프리팹
 `Previous` 또는 `Next` 액션이 들어오면 다음 순서로 교체한다.
 
 1. 현재 입력 타깃을 해제하고 남은 입력을 초기화한다.
-2. 이전 캐릭터의 `CharacterActionRunner.Exit()`을 호출해 상태 플래그와 실행 중인 이펙트를 정리한다.
+2. 이전 캐릭터의 `CharacterActionRunner.Exit()`을 호출해 상태 플래그를 초기화하고, 내부 `CharacterNotifyRunner`가 실행 중인 이펙트·사운드·타격 Handle을 정리한다.
 3. 이전 캐릭터를 비활성화한다.
 4. 이전 캐릭터의 월드 위치를 새 캐릭터에 전달한다.
 5. 새 캐릭터를 활성화하고 기본 `AnimationConfig`를 시작한다.

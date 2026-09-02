@@ -19,12 +19,15 @@
     AnimationConfig ── Section · Link · Notify · Module
            │
            ▼
-      CharacterActionRunner ──── 조건 평가와 전투 흐름 실행
+      CharacterActionRunner ──── Section · Link · Module 실행
            │
            ├────────── CharacterAnimatorBridge: CrossFade 재생
            ├────────── AgentMotor / MonsterMotor: 이동과 회전
-           ├────────── EffectService / AudioService: 연출
-           └────────── HitService: 판정과 피격 전달
+           └────────── CharacterNotifyRunner: Notify 시간과 생명주기
+                              │
+                              ├── EffectService / AudioService: 연출
+                              ├── CameraFeedbackService: 카메라 피드백
+                              └── HitService: 판정과 피격 전달
 
 | 구성 요소 | 역할 |
 |---|---|
@@ -32,6 +35,7 @@
 | Link (`ClipLink`) | 전이 대상, 조건, 평가 시점과 입력 윈도우 |
 | Notify (`TrackNotify`) | 특정 시점 또는 구간에 타격·이펙트·사운드·카메라 요청 |
 | Module (`SectionModule`) | 구간별 이동, 회전, 타깃 보정, 무적과 패링 기능 |
+| `CharacterNotifyRunner` | Notify 발동 시점과 실행 중 Handle의 시작·갱신·종료 관리 |
 
 ## 핵심 설계
 
@@ -41,7 +45,9 @@
 
 ### 하나의 실행기를 공유한다
 
-`CharacterActionRunner`는 MonoBehaviour가 아닌 공용 C# 실행기다. 플레이어와 몬스터는 입력 방식과 이동 구현만 각자의 인터페이스로 제공한다. 전이 평가, Notify 실행과 Module 생명주기는 같은 코드 경로를 사용한다.
+`CharacterActionRunner`는 MonoBehaviour가 아닌 공용 C# 실행기다. 플레이어와 몬스터는 입력 방식과 이동 구현만 각자의 인터페이스로 제공한다. 전이 평가와 Module 생명주기는 같은 코드 경로를 사용하며, Notify 실행은 내부의 `CharacterNotifyRunner`에 위임한다.
+
+`CharacterNotifyRunner`는 Notify의 발동 시점과 실행 중 Handle만 관리한다. 실제 이펙트 생성, 사운드 재생, 카메라 피드백과 타격 판정은 각각 `EffectService`, `AudioService`, `CameraFeedbackService`, `HitService`가 담당하므로 Notify 타임라인과 기능 구현의 경계가 유지된다.
 
 ### Animator는 재생에 집중한다
 
@@ -89,12 +95,12 @@ Animator 파라미터와 전이 그래프를 사용하지 않는다. `CharacterA
 
 | 장점 | 비용 |
 |---|---|
-| 공격을 데이터 조합으로 추가할 수 있다 | `CharacterActionRunner`가 많은 시스템의 실행 순서를 조율한다 |
+| 공격을 데이터 조합으로 추가할 수 있다 | `CharacterActionRunner`와 `CharacterNotifyRunner` 사이의 실행 순서를 유지해야 한다 |
 | 플레이어와 몬스터가 실행 코드를 공유한다 | 각 소비자가 공용 인터페이스 경계를 지켜야 한다 |
 | 타이밍과 전이를 한 도구에서 확인한다 | 잘못된 Section, Window와 참조를 에디터에서 검증해야 한다 |
 | 다형성 확장이 쉽다 | `[SerializeReference]` 타입 이름 변경 시 마이그레이션이 필요하다 |
 
-중앙 실행기가 비대해지지 않도록 입력 판단은 Condition과 Trigger, 구간 동작은 Module, 외부 연출은 Notify에 유지한다.
+중앙 실행기가 비대해지지 않도록 입력 판단은 Condition과 Trigger, 구간 동작은 Module, 외부 연출의 시간과 생명주기는 `CharacterNotifyRunner`에 유지한다.
 
 ## 관련 문서
 

@@ -34,7 +34,7 @@
 - [ ] **타격 판정 테스트** — Sweep 경계, 동일 대상 중복 타격 방지, EffectKey 원점 바인딩과 판정 종료 검증
 - [ ] **이펙트 수명 테스트** — 지연 재생, 구간 이펙트 중단, Config 전환, 풀 반납과 재사용 시 상태 초기화 검증
 - [ ] **에디터 데이터 검증 강화** — 중복 Section, 누락된 대상/클립, 잘못된 Window와 BindingKey를 저장 또는 재생 전에 명확히 표시
-- [ ] **핵심 코드 경계 점검** — `CharacterActionRunner`가 계속 비대해지지 않도록 입력 판단은 Condition/Trigger, 구간 동작은 Module, 외부 연출은 Notify에 유지
+- [x] **핵심 코드 경계 분리** — 입력 판단은 Condition/Trigger, 구간 동작은 Module, 외부 연출의 시간과 생명주기는 `CharacterNotifyRunner`로 분리
 
 ### P2 — 포트폴리오 전달력
 
