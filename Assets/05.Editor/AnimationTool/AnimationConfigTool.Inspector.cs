@@ -789,7 +789,8 @@ namespace ZZZ.Editor.AnimationTool
         {
             var notify = tc.Notifies[ni];
             HitOrigin previousHitOrigin = notify.Hit?.Origin ?? HitOrigin.CharacterRoot;
-            string previousEffectKey = notify.Hit?.EffectKey ?? "";
+            string previousEffectOriginKey =
+                notify.Hit?.EffectOriginKey ?? "";
             EditorGUILayout.LabelField($"Notify  —  {notify.Type}", EditorStyles.boldLabel);
 
             // 이 클립의 Notify 목록 — 타임라인에서 겹쳐 집기 어려울 때 여기서 확실히 선택.
@@ -928,14 +929,15 @@ namespace ZZZ.Editor.AnimationTool
                 {
                     syncHitFromHitNotify = EditorGUILayout.Toggle(
                         new GUIContent("Sync With Effect",
-                            "Effect Key의 실제 실행 인스턴스에 Hit을 붙입니다. Effect가 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
+                            "Effect Origin Key의 실제 실행 인스턴스에 Hit을 붙입니다. Effect가 정지되거나 풀에 반납될 때 Hit도 종료됩니다."),
                         syncHitFromHitNotify);
                 }
                 DrawHitData(hit, syncHitFromHitNotify,
                     hitAction == HitNotifyAction.Damage);
-                if (syncHitFromHitNotify && string.IsNullOrEmpty(hit.EffectKey))
+                if (syncHitFromHitNotify
+                    && string.IsNullOrEmpty(hit.EffectOriginKey))
                     EditorGUILayout.HelpBox(
-                        "Effect Key를 지정하고 Composite Effect Entry의 Binding Key와 동일하게 맞춰야 합니다.",
+                        "Hit과 Composite Effect Entry에 동일한 Effect Origin Key를 지정해야 합니다.",
                         MessageType.Warning);
             }
             else if (type == NotifyType.Effect)
@@ -951,9 +953,9 @@ namespace ZZZ.Editor.AnimationTool
                         hit = new HitData { Origin = HitOrigin.Effect };
                     }
                     DrawHitData(hit, true);
-                    if (string.IsNullOrEmpty(hit.EffectKey))
+                    if (string.IsNullOrEmpty(hit.EffectOriginKey))
                         EditorGUILayout.HelpBox(
-                            "Effect Key를 지정하고 Composite Effect Entry의 Binding Key와 동일하게 맞춰야 합니다.",
+                            "Hit과 Composite Effect Entry에 동일한 Effect Origin Key를 지정해야 합니다.",
                             MessageType.Warning);
                 }
                 else hit = null;
@@ -1064,7 +1066,8 @@ namespace ZZZ.Editor.AnimationTool
                 bool bindingChanged = (type == NotifyType.Hit
                         || type == NotifyType.Effect) && hit != null
                     && (hit.Origin != previousHitOrigin
-                        || !string.Equals(hit.EffectKey, previousEffectKey,
+                        || !string.Equals(
+                            hit.EffectOriginKey, previousEffectOriginKey,
                             StringComparison.Ordinal));
                 if (typeChanged || bindingChanged) _fxDirty = true;
             }
@@ -1244,7 +1247,8 @@ namespace ZZZ.Editor.AnimationTool
                     (int)hit.OriginTracking, trackingLabels);
             }
             else if (hit.Origin == HitOrigin.Effect)
-                hit.EffectKey = DrawEffectBindingKey(hit.EffectKey);
+                hit.EffectOriginKey =
+                    DrawEffectOriginKey(hit.EffectOriginKey);
             hit.PositionOffset = EditorGUILayout.Vector3Field(
                 "Position Offset", hit.PositionOffset);
             hit.EulerOffset = EditorGUILayout.Vector3Field(
@@ -1299,7 +1303,7 @@ namespace ZZZ.Editor.AnimationTool
                     "Repeat Interval", hit.RepeatInterval);
         }
 
-        private string DrawEffectBindingKey(string currentKey)
+        private string DrawEffectOriginKey(string currentKey)
         {
             var keys = new List<string>();
             if (_config != null)
@@ -1313,7 +1317,8 @@ namespace ZZZ.Editor.AnimationTool
                         if (effect == null) continue;
                         for (int entryIndex = 0; entryIndex < effect.Entries.Count; entryIndex++)
                         {
-                            string key = effect.Entries[entryIndex]?.BindingKey?.Trim();
+                            string key = effect.Entries[entryIndex]
+                                ?.EffectOriginKey?.Trim();
                             if (!string.IsNullOrEmpty(key) && !keys.Contains(key))
                                 keys.Add(key);
                         }
@@ -1327,7 +1332,7 @@ namespace ZZZ.Editor.AnimationTool
             if (missing) keys.Add(currentKey);
 
             var labels = new string[keys.Count + 1];
-            labels[0] = "(Select Effect Key)";
+            labels[0] = "(Select Effect Origin Key)";
             for (int i = 0; i < keys.Count; i++)
                 labels[i + 1] = missing && keys[i] == currentKey
                     ? $"{keys[i]} (Missing)"
@@ -1336,12 +1341,13 @@ namespace ZZZ.Editor.AnimationTool
             int selected = string.IsNullOrEmpty(currentKey)
                 ? 0
                 : Mathf.Max(0, keys.IndexOf(currentKey) + 1);
-            selected = EditorGUILayout.Popup("Effect Key", selected, labels);
+            selected = EditorGUILayout.Popup(
+                "Effect Origin Key", selected, labels);
             string result = selected > 0 ? keys[selected - 1] : "";
 
             if (keys.Count == 0)
                 EditorGUILayout.HelpBox(
-                    "먼저 Effect Notify의 CompositeEffect Entry에 Binding Key를 지정하세요.",
+                    "먼저 Effect Notify의 CompositeEffect Entry에 Effect Origin Key를 지정하세요.",
                     MessageType.Warning);
             else if (missing && result == currentKey)
                 EditorGUILayout.HelpBox(
@@ -1555,8 +1561,8 @@ namespace ZZZ.Editor.AnimationTool
                 for (int i = 0; i < _fxAtoms.Count; i++)
                 {
                     FxPreviewAtom atom = _fxAtoms[i];
-                    if (!string.Equals(atom.Entry.BindingKey?.Trim(),
-                            notify.Hit.EffectKey, StringComparison.Ordinal)
+                    if (!string.Equals(atom.Entry.EffectOriginKey?.Trim(),
+                            notify.Hit.EffectOriginKey, StringComparison.Ordinal)
                         || atom.Root == null)
                         continue;
                     if (!atom.Root.activeInHierarchy) PlaceFxAtom(atom);

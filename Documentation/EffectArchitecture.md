@@ -36,7 +36,7 @@
 | `EffectService` | 재생 요청을 받고 프리팹별 풀을 조회·생성 |
 | `EffectPool` | 원시 프리팹 인스턴스를 대여하고 회수 |
 | `PooledEffectHandle` | 재생 상태, 정지와 원래 풀로의 반환을 관리 |
-| `BindingKey` | 실행 중인 실제 이펙트 Transform을 Hit 원점으로 연결 |
+| `EffectOriginKey` | 실행 중인 실제 이펙트 Transform을 Hit 원점으로 연결 |
 
 ## 핵심 설계
 
@@ -77,7 +77,7 @@ Module 실행 순서는 위치 → 회전 → 시뮬레이션 채널로 고정�
 
 ## Hit 원점과 생명주기 연동
 
-Entry에 `BindingKey`를 지정하면 `EffectService`가 실행 중인 실제 풀 인스턴스의 Transform을 캐릭터별 범위에 등록한다. Hit Notify가 같은 `EffectKey`를 사용하면 캐릭터 루트 대신 이동 중인 빔이나 파티클을 원점으로 판정한다.
+Entry에 `EffectOriginKey`를 지정하면 `EffectService`가 실행 중인 실제 풀 인스턴스의 Transform을 캐릭터별 범위에 등록한다. Hit Notify가 같은 `EffectOriginKey`를 사용하면 캐릭터 루트 대신 이동 중인 빔이나 파티클을 원점으로 판정한다.
 
 판정과 이펙트 수명을 완전히 묶어야 할 때는 `Sync Hit With Effect`를 사용한다.
 
@@ -104,7 +104,7 @@ Entry에 `BindingKey`를 지정하면 `EffectService`가 실행 중인 실제 �
 | 원시 프리팹과 풀을 여러 조합이 공유한다 | 풀 용량과 조합별 동시 사용량을 함께 고려해야 한다 |
 | 조합 데이터만으로 복합 연출을 제작한다 | Entry와 Module 조합이 많아지면 에디터 검증이 필요하다 |
 | 핸들이 반납과 상태 복원을 책임진다 | 모든 종료 경로가 핸들을 거쳐야 한다 |
-| Hit와 이동 이펙트를 동기화할 수 있다 | `BindingKey` 불일치를 저장 전에 검증해야 한다 |
+| Hit와 이동 이펙트를 동기화할 수 있다 | `EffectOriginKey` 불일치를 저장 전에 검증해야 한다 |
 
 Addressables를 적용할 때는 풀에 인스턴스가 남아 있는 동안 원본 에셋 핸들을 유지하고, 풀을 비운 뒤 Addressables 핸들을 해제해야 한다.
 

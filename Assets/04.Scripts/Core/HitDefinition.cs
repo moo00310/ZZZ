@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ZZZ
 {
@@ -55,7 +56,8 @@ namespace ZZZ
         [SerializeField] private HitOriginTracking _originTracking =
             HitOriginTracking.Follow;
         [SerializeField] private string _socket = "";
-        [SerializeField] private string _effectKey = "";
+        [FormerlySerializedAs("_effectKey")]
+        [SerializeField] private string _effectOriginKey = "";
         [SerializeField] private Vector3 _positionOffset;
         [SerializeField] private Vector3 _eulerOffset;
         [SerializeField] private HitShape _shape = HitShape.Sphere;
@@ -87,10 +89,10 @@ namespace ZZZ
             set => _originTracking = value;
         }
         public string Socket { get => _socket; set => _socket = value ?? ""; }
-        public string EffectKey
+        public string EffectOriginKey
         {
-            get => _effectKey;
-            set => _effectKey = value?.Trim() ?? "";
+            get => _effectOriginKey;
+            set => _effectOriginKey = value?.Trim() ?? "";
         }
         public Vector3 PositionOffset { get => _positionOffset; set => _positionOffset = value; }
         public Vector3 EulerOffset { get => _eulerOffset; set => _eulerOffset = value; }
@@ -131,7 +133,7 @@ namespace ZZZ
             _origin = source._origin;
             _originTracking = source._originTracking;
             _socket = source._socket;
-            _effectKey = source._effectKey;
+            _effectOriginKey = source._effectOriginKey;
             _positionOffset = source._positionOffset;
             _eulerOffset = source._eulerOffset;
             _shape = source._shape;
@@ -159,7 +161,7 @@ namespace ZZZ
             _origin = source.Origin;
             _originTracking = source.OriginTracking;
             _socket = source.Socket;
-            _effectKey = source.EffectKey;
+            _effectOriginKey = source.EffectOriginKey;
             _positionOffset = source.PositionOffset;
             _eulerOffset = source.EulerOffset;
             _shape = source.Shape;
@@ -229,7 +231,8 @@ namespace ZZZ
         [SerializeField] private HitOriginTracking _originTracking =
             HitOriginTracking.Follow;
         [SerializeField] private string _socket = "";
-        [SerializeField] private string _effectKey = "";
+        [FormerlySerializedAs("_effectKey")]
+        [SerializeField] private string _effectOriginKey = "";
         [SerializeField] private Vector3 _positionOffset;
         [SerializeField] private Vector3 _eulerOffset;
 
@@ -261,7 +264,7 @@ namespace ZZZ
         public HitOrigin Origin => _origin;
         public HitOriginTracking OriginTracking => _originTracking;
         public string Socket => _socket;
-        public string EffectKey => _effectKey;
+        public string EffectOriginKey => _effectOriginKey;
         public Vector3 PositionOffset => _positionOffset;
         public Vector3 EulerOffset => _eulerOffset;
         public Quaternion RotationOffset => Quaternion.Euler(_eulerOffset);

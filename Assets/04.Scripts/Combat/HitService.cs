@@ -224,7 +224,7 @@ namespace ZZZ.Combat
                     if (context.EffectOrigin != null) return context.EffectOrigin;
                     if (context.OriginResolver != null
                         && context.OriginResolver.TryResolve(
-                            definition.EffectKey, out Transform effectOrigin))
+                            definition.EffectOriginKey, out Transform effectOrigin))
                         return effectOrigin;
                     return null;
                 case HitOrigin.Socket:

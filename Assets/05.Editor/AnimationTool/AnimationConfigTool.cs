@@ -245,7 +245,7 @@ namespace ZZZ.Editor.AnimationTool
                 _serializedConfig.ApplyModifiedProperties();
         }
 
-        // Effect Notify 또는 Effect Key에 바인딩된 Hit Notify를 선택하면 씬 이펙트 프리뷰가 켜진다.
+        // Effect Notify 또는 Effect Origin Key로 연결된 Hit Notify를 선택하면 씬 이펙트 프리뷰가 켜진다.
         private bool EffectPreviewActive
         {
             get
@@ -258,7 +258,7 @@ namespace ZZZ.Editor.AnimationTool
                 return notify.Type == NotifyType.Effect
                     || notify.Payload is HitNotifyPayload
                     && notify.Hit.Origin == HitOrigin.Effect
-                    && !string.IsNullOrEmpty(notify.Hit.EffectKey);
+                    && !string.IsNullOrEmpty(notify.Hit.EffectOriginKey);
             }
         }
 

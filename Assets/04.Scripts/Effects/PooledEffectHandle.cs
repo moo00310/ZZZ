@@ -35,13 +35,13 @@ namespace ZZZ.Effects
         private float _synchronizedHitElapsed;
         private int _bindingVersion;
         private EffectBindingScope _effectBindings;
-        private string _effectBindingKey;
+        private string _effectOriginKey;
         private int _effectBindingId;
 
         internal int BindingVersion => _bindingVersion;
 
         internal void NotifyPlaybackStarted(
-            EffectPlayContext context, string bindingKey)
+            EffectPlayContext context, string effectOriginKey)
         {
             if (_playbackListeners == null)
             {
@@ -56,10 +56,10 @@ namespace ZZZ.Effects
             _playbackActive = true;
             ReleaseEffectBinding();
             _effectBindings = context.Bindings;
-            _effectBindingKey = bindingKey?.Trim() ?? "";
-            if (_effectBindings != null && !string.IsNullOrEmpty(_effectBindingKey))
+            _effectOriginKey = effectOriginKey?.Trim() ?? "";
+            if (_effectBindings != null && !string.IsNullOrEmpty(_effectOriginKey))
                 _effectBindingId = _effectBindings.Register(
-                    _effectBindingKey, transform, this);
+                    _effectOriginKey, transform, this);
             StartSynchronizedHit(context);
             for (int i = 0; i < _playbackListeners.Length; i++)
                 _playbackListeners[i].OnEffectPlay(context);
@@ -324,9 +324,9 @@ namespace ZZZ.Effects
         private void ReleaseEffectBinding()
         {
             if (_effectBindings != null)
-                _effectBindings.Unregister(_effectBindingKey, _effectBindingId);
+                _effectBindings.Unregister(_effectOriginKey, _effectBindingId);
             _effectBindings = null;
-            _effectBindingKey = "";
+            _effectOriginKey = "";
             _effectBindingId = 0;
         }
     }

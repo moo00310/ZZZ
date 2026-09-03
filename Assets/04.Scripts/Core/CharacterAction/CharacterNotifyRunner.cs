@@ -359,7 +359,7 @@ namespace ZZZ
         {
             if (hit == null || hit.Origin != HitOrigin.Effect) return false;
             return _effectBindings.TryAttachHit(
-                hit.EffectKey, hit, _context.Transform,
+                hit.EffectOriginKey, hit, _context.Transform,
                 _showHitGizmos, _hitGizmoDuration);
         }
 
@@ -411,14 +411,14 @@ namespace ZZZ
         private static bool CanBindHit(CompositeEffect effect, HitData hit)
         {
             if (effect == null || hit == null
-                || string.IsNullOrEmpty(hit.EffectKey)) return false;
+                || string.IsNullOrEmpty(hit.EffectOriginKey)) return false;
 
-            string effectKey = hit.EffectKey;
+            string effectOriginKey = hit.EffectOriginKey;
             for (int i = 0; i < effect.Entries.Count; i++)
             {
                 CompositeEffectEntry entry = effect.Entries[i];
                 if (entry != null && string.Equals(
-                    entry.BindingKey?.Trim(), effectKey,
+                    entry.EffectOriginKey?.Trim(), effectOriginKey,
                     System.StringComparison.Ordinal)) return true;
             }
             return false;
