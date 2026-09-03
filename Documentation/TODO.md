@@ -8,7 +8,7 @@
 
 - [x] **페이로드 기반 Notify** — `TrackNotify`의 공통 타이밍과 `[SerializeReference] NotifyPayload`를 분리하고 기존 에셋을 마이그레이션
 - [x] **공용 타격 판정** — 플레이어·몬스터가 같은 `HitService`를 사용하며 Sphere/Cone/Box/Capsule/ExpandingSphere와 Overlap/Sweep 지원
-- [x] **이펙트 원점 바인딩** — `CompositeEffectEntry.BindingKey`와 `HitData.EffectKey`로 풀링된 실제 이펙트 Transform을 캐릭터별 스코프에서 추적
+- [x] **이펙트 원점 바인딩** — `CompositeEffectEntry.EffectOriginKey`와 `HitData.EffectOriginKey`로 풀링된 실제 이펙트 Transform을 캐릭터별 스코프에서 추적
 - [x] **타격 범위 디버그** — AnimationConfigTool Scene View 편집 기즈모와 플레이 중 Game View 디버그 라인 지원
 - [x] **FireBeam 풀 반납 검증** — 최상위 ParticleSystem의 Stop Action을 Callback으로 설정하고 재사용 확인
 
@@ -31,9 +31,9 @@
 - [ ] **공용 CharacterActionRunner의 두 번째 소비자 완성** — 몬스터의 이동·공격·피격을 같은 실행 엔진으로 구동해 플레이어 전용 구조가 아님을 증명
 - [ ] **데이터만으로 공격 추가 사례 작성** — 코드 수정 없이 Config/Module 조합으로 새 공격을 제작하고 작업 과정과 소요 시간을 기록
 - [ ] **전이 로직 EditMode 테스트** — 전이 윈도우 경계, 입력 버퍼 소비, OnRelease/OnEndIfMatched와 피격 인터럽트 검증
-- [ ] **타격 판정 테스트** — Sweep 경계, 동일 대상 중복 타격 방지, EffectKey 원점 바인딩과 판정 종료 검증
+- [ ] **타격 판정 테스트** — Sweep 경계, 동일 대상 중복 타격 방지, EffectOriginKey 원점 바인딩과 판정 종료 검증
 - [ ] **이펙트 수명 테스트** — 지연 재생, 구간 이펙트 중단, Config 전환, 풀 반납과 재사용 시 상태 초기화 검증
-- [ ] **에디터 데이터 검증 강화** — 중복 Section, 누락된 대상/클립, 잘못된 Window와 BindingKey를 저장 또는 재생 전에 명확히 표시
+- [ ] **에디터 데이터 검증 강화** — 중복 Section, 누락된 대상/클립, 잘못된 Window와 EffectOriginKey를 저장 또는 재생 전에 명확히 표시
 - [x] **핵심 코드 경계 분리** — 입력 판단은 Condition/Trigger, 구간 동작은 Module, 외부 연출의 시간과 생명주기는 `CharacterNotifyRunner`로 분리
 
 ### P2 — 포트폴리오 전달력

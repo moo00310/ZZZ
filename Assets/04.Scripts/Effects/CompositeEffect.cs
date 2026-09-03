@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ZZZ.Effects
 {
@@ -24,7 +25,8 @@ namespace ZZZ.Effects
     public class CompositeEffectEntry
     {
         public GameObject Prefab;                    // 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 포함)
-        public string     BindingKey = "";           // Hit Notify가 이 실행 인스턴스를 찾는 캐릭터 스코프 키
+        [FormerlySerializedAs("BindingKey")]
+        public string EffectOriginKey = "";          // Hit가 이 실행 인스턴스를 판정 원점으로 찾는 캐릭터 스코프 키
         public float      StartDelay = 0f;            // 이 조합 안에서의 상대 시차(초)
 
         // 룩 통째 교체 노브 — 프리팹 렌더러(단일)의 sharedMaterial을 조합마다 스왑한다. null = 프리팹 기본값.

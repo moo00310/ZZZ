@@ -149,9 +149,9 @@ namespace ZZZ.Editor.AnimationTool
 
             if (notify.Payload is not HitNotifyPayload
                 || notify.Hit.Origin != HitOrigin.Effect
-                || string.IsNullOrEmpty(notify.Hit.EffectKey)) return;
+                || string.IsNullOrEmpty(notify.Hit.EffectOriginKey)) return;
 
-            string bindingKey = notify.Hit.EffectKey;
+            string effectOriginKey = notify.Hit.EffectOriginKey;
             for (int clipIndex = 0; clipIndex < _config.Clips.Count; clipIndex++)
             {
                 TrackClip effectClip = _config.Clips[clipIndex];
@@ -164,7 +164,8 @@ namespace ZZZ.Editor.AnimationTool
                     foreach (CompositeEffectEntry entry in effectNotify.Effect.Entries)
                     {
                         if (entry == null || entry.Prefab == null
-                            || !string.Equals(entry.BindingKey?.Trim(), bindingKey,
+                            || !string.Equals(
+                                entry.EffectOriginKey?.Trim(), effectOriginKey,
                                 System.StringComparison.Ordinal)) continue;
                         SpawnFxAtom(clipIndex, effectNotify, entry);
                     }
@@ -466,7 +467,7 @@ namespace ZZZ.Editor.AnimationTool
                 entries.InsertArrayElementAtIndex(n);
                 var e = entries.GetArrayElementAtIndex(n);
                 e.FindPropertyRelative("Prefab").objectReferenceValue = null;
-                e.FindPropertyRelative("BindingKey").stringValue = "";
+                e.FindPropertyRelative("EffectOriginKey").stringValue = "";
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
                 e.FindPropertyRelative("Duration").floatValue = 0f;
                 e.FindPropertyRelative("PlaybackSpeed").floatValue = 1f;

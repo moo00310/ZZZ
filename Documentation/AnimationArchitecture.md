@@ -71,7 +71,7 @@ Animator 파라미터와 전이 그래프를 사용하지 않는다. `CharacterA
 - `TargetWarpModule`과 `FaceTargetModule`이 공격 거리와 방향을 독립적으로 보정한다.
 - `IFrameModule`은 회피 구간의 피격 무시를, `ParryModule`은 공격을 쳐내는 구간을 표현한다.
 - Hit Notify는 근접, 구, 부채꼴, 박스, 캡슐과 Sweep 판정을 같은 `HitService`에 요청한다.
-- 실행 중인 이펙트의 `BindingKey`를 Hit 원점으로 사용해 이동하는 빔과 파티클 판정을 동기화할 수 있다.
+- 실행 중인 이펙트와 Hit에 같은 `EffectOriginKey`를 지정해 이동하는 빔과 파티클 판정을 동기화할 수 있다.
 
 ## 입력과 방어 흐름
 

@@ -276,9 +276,9 @@ namespace ZZZ.Effects
 
             instance.SetActive(true);
             HitData entryHit = context.Hit != null
-                && !string.IsNullOrEmpty(context.Hit.EffectKey)
+                && !string.IsNullOrEmpty(context.Hit.EffectOriginKey)
                 && string.Equals(
-                    context.Hit.EffectKey, entry.BindingKey?.Trim(),
+                    context.Hit.EffectOriginKey, entry.EffectOriginKey?.Trim(),
                     System.StringComparison.Ordinal)
                 ? context.Hit
                 : null;
@@ -287,7 +287,7 @@ namespace ZZZ.Effects
                 context.Bindings, context.DebugDraw, context.DebugDuration,
                 context.HasWorldPose, context.WorldPosition,
                 context.WorldRotation);
-            handle.NotifyPlaybackStarted(entryContext, entry.BindingKey);
+            handle.NotifyPlaybackStarted(entryContext, entry.EffectOriginKey);
             RestartParticles(instance);
             return handle;
         }
