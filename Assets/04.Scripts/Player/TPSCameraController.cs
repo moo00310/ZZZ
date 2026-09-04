@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -58,6 +59,26 @@ namespace ZZZ.Player
         private AnimationCurve _shotBlendCurve;
         private AnimationCurve _shotMoveCurve;
         private bool _shotActive;
+        private Transform _pathAnchor;
+        private Quaternion _pathAnchorRotation;
+        private Vector3[] _pathLocalPoints = Array.Empty<Vector3>();
+        private float[] _pathPointTimes = Array.Empty<float>();
+        private float[] _pathLookAtHeights = Array.Empty<float>();
+        private float _pathStartFieldOfView;
+        private float _pathEndFieldOfView;
+        private float _pathBlendIn;
+        private float _pathMoveDuration;
+        private float _pathHold;
+        private float _pathBlendOut;
+        private bool _pathReturnBehindTarget;
+        private bool _pathReturnHeadingAligned;
+        private float _pathElapsed;
+        private AnimationCurve _pathBlendCurve;
+        private AnimationCurve _pathMoveCurve;
+        private bool _pathActive;
+        private bool _lookInputEnabled = true;
+
+        public bool LookInputEnabled => _lookInputEnabled;
 
         private void Awake()
         {
@@ -80,6 +101,7 @@ namespace ZZZ.Player
             CameraFeedbackService.Unregister(this);
             _shakeActive = false;
             _shotActive = false;
+            _pathActive = false;
             if (_camera != null) _camera.fieldOfView = _defaultFieldOfView;
         }
 
@@ -87,6 +109,11 @@ namespace ZZZ.Player
         {
             _target = target;
             if (snap && _target != null) _currentFollowPos = _target.position;
+        }
+
+        public void SetLookInputEnabled(bool enabled)
+        {
+            _lookInputEnabled = enabled;
         }
 
         private void LateUpdate()
@@ -99,6 +126,8 @@ namespace ZZZ.Player
 
         private void ReadLookInput()
         {
+            if (!_lookInputEnabled) return;
+
             Vector2 delta = Mouse.current.delta.ReadValue();
             _yaw   += delta.x * _sensitivityX;
             _pitch -= delta.y * _sensitivityY;
@@ -114,6 +143,7 @@ namespace ZZZ.Player
             );
 
             AlignShotReturnHeading();
+            AlignPathReturnHeading();
 
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, 0f);
             EvaluateCameraShake(
@@ -144,6 +174,8 @@ namespace ZZZ.Player
             Quaternion cameraRotation = rotation;
             float fieldOfView = _defaultFieldOfView;
             EvaluateCameraShot(
+                ref cameraPosition, ref cameraRotation, ref fieldOfView);
+            EvaluateCameraPath(
                 ref cameraPosition, ref cameraRotation, ref fieldOfView);
 
             transform.position = cameraPosition + cameraRotation * positionShake;
@@ -191,6 +223,36 @@ namespace ZZZ.Player
             _shotMoveCurve = request.MoveCurve;
             _shotElapsed = 0f;
             _shotActive = true;
+            _pathActive = false;
+        }
+
+        public void PlayCameraPath(CameraPathRequest request)
+        {
+            float totalDuration = request.BlendIn + request.MoveDuration
+                + request.Hold + request.BlendOut;
+            if (request.Anchor == null || request.LocalPoints == null
+                || request.LocalPoints.Length < 2
+                || totalDuration <= 0f)
+                return;
+
+            _pathAnchor = request.Anchor;
+            _pathAnchorRotation = request.Anchor.rotation;
+            _pathLocalPoints = request.LocalPoints;
+            _pathPointTimes = request.PointTimes;
+            _pathLookAtHeights = request.LookAtHeights;
+            _pathStartFieldOfView = request.StartFieldOfView;
+            _pathEndFieldOfView = request.EndFieldOfView;
+            _pathBlendIn = request.BlendIn;
+            _pathMoveDuration = request.MoveDuration;
+            _pathHold = request.Hold;
+            _pathBlendOut = request.BlendOut;
+            _pathReturnBehindTarget = request.ReturnBehindTarget;
+            _pathReturnHeadingAligned = false;
+            _pathBlendCurve = request.BlendCurve;
+            _pathMoveCurve = request.MoveCurve;
+            _pathElapsed = 0f;
+            _pathActive = true;
+            _shotActive = false;
         }
 
         private void AlignShotReturnHeading()
@@ -205,6 +267,20 @@ namespace ZZZ.Player
 
             _yaw = _target.eulerAngles.y;
             _shotReturnHeadingAligned = true;
+        }
+
+        private void AlignPathReturnHeading()
+        {
+            if (!_pathActive || !_pathReturnBehindTarget
+                || _pathReturnHeadingAligned || _target == null)
+                return;
+
+            float blendOutStart =
+                _pathBlendIn + _pathMoveDuration + _pathHold;
+            if (_pathElapsed + Time.unscaledDeltaTime < blendOutStart) return;
+
+            _yaw = _target.eulerAngles.y;
+            _pathReturnHeadingAligned = true;
         }
 
         private void EvaluateCameraShot(ref Vector3 position,
@@ -271,6 +347,83 @@ namespace ZZZ.Player
             float time = Mathf.Clamp01(normalizedTime);
             return _shotBlendCurve != null
                 ? Mathf.Clamp01(_shotBlendCurve.Evaluate(time))
+                : time;
+        }
+
+        private void EvaluateCameraPath(ref Vector3 position,
+            ref Quaternion rotation, ref float fieldOfView)
+        {
+            if (!_pathActive || _pathAnchor == null
+                || _pathLocalPoints.Length < 2)
+            {
+                _pathActive = false;
+                return;
+            }
+
+            _pathElapsed += Time.unscaledDeltaTime;
+            float totalDuration = _pathBlendIn + _pathMoveDuration
+                + _pathHold + _pathBlendOut;
+            if (_pathElapsed >= totalDuration)
+            {
+                _pathActive = false;
+                return;
+            }
+
+            float weight = EvaluatePathWeight(_pathElapsed);
+            float moveTime = EvaluatePathMoveWeight(_pathElapsed);
+            float pathParameter = CameraPathUtility.RemapPointTime(
+                _pathPointTimes, _pathLocalPoints.Length, moveTime);
+            Vector3 localPosition = CameraPathUtility.Evaluate(
+                _pathLocalPoints, pathParameter);
+            Vector3 pathPosition = _pathAnchor.position
+                + _pathAnchorRotation * localPosition;
+            Vector3 up = _pathAnchorRotation * Vector3.up;
+            float lookAtHeight = CameraPathUtility.EvaluateLinear(
+                _pathLookAtHeights, pathParameter, 1f);
+            Vector3 lookTarget = _pathAnchor.position + up * lookAtHeight;
+            Vector3 lookDirection = lookTarget - pathPosition;
+            Quaternion pathRotation = lookDirection.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(lookDirection, up)
+                : rotation;
+            float pathFieldOfView = Mathf.Lerp(
+                _pathStartFieldOfView, _pathEndFieldOfView, moveTime);
+
+            position = Vector3.Lerp(position, pathPosition, weight);
+            rotation = Quaternion.Slerp(rotation, pathRotation, weight);
+            fieldOfView = Mathf.Lerp(
+                _defaultFieldOfView, pathFieldOfView, weight);
+        }
+
+        private float EvaluatePathWeight(float elapsed)
+        {
+            if (_pathBlendIn > 0f && elapsed < _pathBlendIn)
+                return EvaluatePathCurve(elapsed / _pathBlendIn);
+
+            float blendOutStart =
+                _pathBlendIn + _pathMoveDuration + _pathHold;
+            if (elapsed <= blendOutStart) return 1f;
+            if (_pathBlendOut <= 0f) return 0f;
+            return 1f - EvaluatePathCurve(
+                (elapsed - blendOutStart) / _pathBlendOut);
+        }
+
+        private float EvaluatePathMoveWeight(float elapsed)
+        {
+            if (elapsed <= _pathBlendIn) return 0f;
+            if (_pathMoveDuration <= 0f) return 1f;
+
+            float normalizedTime = Mathf.Clamp01(
+                (elapsed - _pathBlendIn) / _pathMoveDuration);
+            return _pathMoveCurve != null
+                ? Mathf.Clamp01(_pathMoveCurve.Evaluate(normalizedTime))
+                : normalizedTime;
+        }
+
+        private float EvaluatePathCurve(float normalizedTime)
+        {
+            float time = Mathf.Clamp01(normalizedTime);
+            return _pathBlendCurve != null
+                ? Mathf.Clamp01(_pathBlendCurve.Evaluate(time))
                 : time;
         }
 

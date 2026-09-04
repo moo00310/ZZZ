@@ -442,12 +442,25 @@ namespace ZZZ
                     return null;
 
                 case CameraNotifyPayload cameraPayload:
-                    if (cameraPayload.Mode == CameraNotifyMode.Shot)
-                        CameraFeedbackService.PlayShot(
-                            cameraPayload.CreateShotRequest(_context.Transform));
-                    else
-                        CameraFeedbackService.PlayShake(
-                            cameraPayload.CreateShakeRequest());
+                    switch (cameraPayload.Mode)
+                    {
+                        case CameraNotifyMode.Shot:
+                            CameraFeedbackService.PlayShot(
+                                cameraPayload.CreateShotRequest(
+                                    _context.Transform));
+                            break;
+
+                        case CameraNotifyMode.Path:
+                            CameraFeedbackService.PlayPath(
+                                cameraPayload.CreatePathRequest(
+                                    _context.Transform));
+                            break;
+
+                        default:
+                            CameraFeedbackService.PlayShake(
+                                cameraPayload.CreateShakeRequest());
+                            break;
+                    }
                     return null;
 
                 case CustomNotifyPayload customPayload:

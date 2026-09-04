@@ -21,9 +21,12 @@ namespace ZZZ.Player
         private InputAction        _enhance;
         private InputAction        _previous;
         private InputAction        _next;
+        private bool               _inputEnabled = true;
 
         public event Action OnPreviousRequested;
         public event Action OnNextRequested;
+
+        public bool InputEnabled => _inputEnabled;
 
         private void Awake()
         {
@@ -100,6 +103,14 @@ namespace ZZZ.Player
             _target          = null;
         }
 
+        public void SetInputEnabled(bool enabled)
+        {
+            if (_inputEnabled == enabled) return;
+
+            _inputEnabled = enabled;
+            if (!enabled) ResetTargetInput();
+        }
+
         private bool HasTarget => _targetBehaviour != null && _target != null;
 
         private void ResetTargetInput()
@@ -109,11 +120,13 @@ namespace ZZZ.Player
 
         private void OnMove(InputAction.CallbackContext context)
         {
+            if (!_inputEnabled) return;
             if (HasTarget) _target.SetMoveInput(context.ReadValue<Vector2>());
         }
 
         private void OnAttack(InputAction.CallbackContext context)
         {
+            if (!_inputEnabled) return;
             if (!HasTarget) return;
             ComboInput input = context.interaction is HoldInteraction
                 ? ComboInput.Strong
@@ -123,26 +136,33 @@ namespace ZZZ.Player
 
         private void OnDodge(InputAction.CallbackContext context)
         {
+            if (!_inputEnabled) return;
             if (HasTarget) _target.BufferInput(ComboInput.Dodge);
         }
 
         private void OnParry(InputAction.CallbackContext context)
         {
+            if (!_inputEnabled) return;
             if (HasTarget) _target.BufferInput(ComboInput.Parry);
         }
 
         private void OnEnhance(InputAction.CallbackContext context)
         {
+            if (!_inputEnabled) return;
             if (!HasTarget) return;
             bool held = context.ReadValueAsButton();
             _target.SetInputHeld(ComboInput.Enhance, held);
             if (held) _target.BufferInput(ComboInput.Enhance);
         }
 
-        private void OnPrevious(InputAction.CallbackContext context) =>
-            OnPreviousRequested?.Invoke();
+        private void OnPrevious(InputAction.CallbackContext context)
+        {
+            if (_inputEnabled) OnPreviousRequested?.Invoke();
+        }
 
-        private void OnNext(InputAction.CallbackContext context) =>
-            OnNextRequested?.Invoke();
+        private void OnNext(InputAction.CallbackContext context)
+        {
+            if (_inputEnabled) OnNextRequested?.Invoke();
+        }
     }
 }
