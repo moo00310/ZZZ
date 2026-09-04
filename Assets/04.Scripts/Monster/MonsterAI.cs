@@ -18,11 +18,14 @@ namespace ZZZ.Monster
         [SerializeField, Min(0f)] private float _attackCooldown = 2f;
 
         private MonsterActionController _actions;
+        private MonsterRegistry _registry;
         private MonsterFsm _fsm;
+        private bool _decisionEnabled = true;
 
         public Transform Target => _target;
         public MonsterActionState CurrentState => _fsm?.CurrentState
             ?? MonsterActionState.Idle;
+        public bool DecisionEnabled => _decisionEnabled;
 
         private void Awake()
         {
@@ -38,10 +41,14 @@ namespace ZZZ.Monster
                 _target = _targetProvider.CurrentTarget;
             }
             SetTarget(_target);
+            RegisterWithRegistry();
         }
 
         private void OnDisable()
         {
+            if (_registry != null)
+                _registry.Unregister(this);
+
             _actions.HitRequested -= OnHitRequested;
             if (_targetProvider != null)
                 _targetProvider.TargetChanged -= SetTarget;
@@ -59,11 +66,18 @@ namespace ZZZ.Monster
                 _attackCooldown);
             _fsm.SetTarget(_target);
             _fsm.Enter();
+            RegisterWithRegistry();
         }
 
         private void LateUpdate()
         {
+            if (!_decisionEnabled) return;
             _fsm?.Tick(Time.deltaTime * _actions.HitLagSpeed);
+        }
+
+        public void SetDecisionEnabled(bool enabled)
+        {
+            _decisionEnabled = enabled;
         }
 
         public void SetTarget(Transform target)
@@ -76,6 +90,15 @@ namespace ZZZ.Monster
         private void OnHitRequested(string section)
         {
             _fsm?.InterruptWithHit(section);
+        }
+
+        private void RegisterWithRegistry()
+        {
+            if (_registry == null)
+                _registry = FindFirstObjectByType<MonsterRegistry>();
+
+            if (_registry != null)
+                _registry.Register(this);
         }
     }
 }

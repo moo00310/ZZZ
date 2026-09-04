@@ -22,7 +22,8 @@ namespace ZZZ
     public enum CameraNotifyMode
     {
         Shake,
-        Shot
+        Shot,
+        Path
     }
 
     public readonly struct CameraShakeRequest
@@ -86,10 +87,50 @@ namespace ZZZ
         }
     }
 
+    public readonly struct CameraPathRequest
+    {
+        public Transform Anchor { get; }
+        public Vector3[] LocalPoints { get; }
+        public float[] PointTimes { get; }
+        public float[] LookAtHeights { get; }
+        public float StartFieldOfView { get; }
+        public float EndFieldOfView { get; }
+        public float BlendIn { get; }
+        public float MoveDuration { get; }
+        public float Hold { get; }
+        public float BlendOut { get; }
+        public bool ReturnBehindTarget { get; }
+        public AnimationCurve BlendCurve { get; }
+        public AnimationCurve MoveCurve { get; }
+
+        public CameraPathRequest(Transform anchor, Vector3[] localPoints,
+            float[] pointTimes, float[] lookAtHeights,
+            float startFieldOfView, float endFieldOfView, float blendIn,
+            float moveDuration, float hold, float blendOut,
+            bool returnBehindTarget, AnimationCurve blendCurve,
+            AnimationCurve moveCurve)
+        {
+            Anchor = anchor;
+            LocalPoints = localPoints ?? Array.Empty<Vector3>();
+            PointTimes = pointTimes ?? Array.Empty<float>();
+            LookAtHeights = lookAtHeights ?? Array.Empty<float>();
+            StartFieldOfView = Mathf.Clamp(startFieldOfView, 1f, 179f);
+            EndFieldOfView = Mathf.Clamp(endFieldOfView, 1f, 179f);
+            BlendIn = Mathf.Max(0f, blendIn);
+            MoveDuration = Mathf.Max(0f, moveDuration);
+            Hold = Mathf.Max(0f, hold);
+            BlendOut = Mathf.Max(0f, blendOut);
+            ReturnBehindTarget = returnBehindTarget;
+            BlendCurve = blendCurve;
+            MoveCurve = moveCurve;
+        }
+    }
+
     public interface ICameraFeedbackReceiver
     {
         void PlayCameraShake(CameraShakeRequest request);
         void PlayCameraShot(CameraShotRequest request);
+        void PlayCameraPath(CameraPathRequest request);
     }
 
     public static class CameraFeedbackService
@@ -134,6 +175,18 @@ namespace ZZZ
             }
 
             s_receiver?.PlayCameraShot(request);
+        }
+
+        public static void PlayPath(CameraPathRequest request)
+        {
+            if (s_receiver is UnityEngine.Object receiverObject
+                && receiverObject == null)
+            {
+                s_receiver = null;
+                return;
+            }
+
+            s_receiver?.PlayCameraPath(request);
         }
     }
 
@@ -255,6 +308,34 @@ namespace ZZZ
         [SerializeField] private AnimationCurve _shotMoveCurve =
             AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        [Header("Path")]
+        [SerializeField] private List<Vector3> _pathPoints =
+            new List<Vector3>
+            {
+                new Vector3(0.8f, 0.4f, -0.8f),
+                new Vector3(1.2f, 0.8f, 0f),
+                new Vector3(0.5f, 1.4f, 1.2f),
+                new Vector3(-1.2f, 1.8f, 0.4f),
+            };
+        [SerializeField] private List<float> _pathPointTimes =
+            new List<float> { 0f, 0.3333f, 0.6667f, 1f };
+        [SerializeField] private List<float> _pathLookAtHeights =
+            new List<float> { 0.8f, 1.0333f, 1.2667f, 1.5f };
+        [SerializeField] private bool _pathPointMetadataInitialized;
+        [SerializeField] private float _pathStartLookAtHeight = 0.8f;
+        [SerializeField] private float _pathEndLookAtHeight = 1.5f;
+        [SerializeField, Range(1f, 179f)] private float _pathStartFieldOfView = 60f;
+        [SerializeField, Range(1f, 179f)] private float _pathEndFieldOfView = 60f;
+        [SerializeField, Min(0f)] private float _pathBlendIn = 0.08f;
+        [SerializeField, Min(0f)] private float _pathMoveDuration = 2.5f;
+        [SerializeField, Min(0f)] private float _pathHold = 0.08f;
+        [SerializeField, Min(0f)] private float _pathBlendOut = 0.4f;
+        [SerializeField] private bool _pathPreserveReturnHeading;
+        [SerializeField] private AnimationCurve _pathBlendCurve =
+            AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [SerializeField] private AnimationCurve _pathMoveCurve =
+            AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
         public override NotifyType Type => NotifyType.Camera;
         public CameraNotifyMode Mode
         {
@@ -351,6 +432,256 @@ namespace ZZZ
             get => _shotMoveCurve;
             set => _shotMoveCurve = value;
         }
+        private List<Vector3> PathPointList =>
+            _pathPoints ??= new List<Vector3>();
+
+        public IReadOnlyList<Vector3> PathPoints => PathPointList;
+        public float GetPathPointTime(int index)
+        {
+            if (index < 0 || index >= PathPointList.Count) return 0f;
+            if (_pathPointMetadataInitialized
+                && _pathPointTimes != null
+                && _pathPointTimes.Count == PathPointList.Count)
+                return Mathf.Clamp01(_pathPointTimes[index]);
+
+            return PathPointList.Count > 1
+                ? (float)index / (PathPointList.Count - 1)
+                : 0f;
+        }
+
+        public float GetPathPointLookAtHeight(int index)
+        {
+            if (index < 0 || index >= PathPointList.Count) return 0f;
+            if (_pathPointMetadataInitialized
+                && _pathLookAtHeights != null
+                && _pathLookAtHeights.Count == PathPointList.Count)
+                return _pathLookAtHeights[index];
+
+            float normalizedTime = PathPointList.Count > 1
+                ? (float)index / (PathPointList.Count - 1)
+                : 0f;
+            return Mathf.Lerp(
+                _pathStartLookAtHeight,
+                _pathEndLookAtHeight,
+                normalizedTime);
+        }
+        public float PathStartLookAtHeight
+        {
+            get => _pathStartLookAtHeight;
+            set => _pathStartLookAtHeight = value;
+        }
+        public float PathEndLookAtHeight
+        {
+            get => _pathEndLookAtHeight;
+            set => _pathEndLookAtHeight = value;
+        }
+        public float PathStartFieldOfView
+        {
+            get => _pathStartFieldOfView;
+            set => _pathStartFieldOfView = Mathf.Clamp(value, 1f, 179f);
+        }
+        public float PathEndFieldOfView
+        {
+            get => _pathEndFieldOfView;
+            set => _pathEndFieldOfView = Mathf.Clamp(value, 1f, 179f);
+        }
+        public float PathBlendIn
+        {
+            get => _pathBlendIn;
+            set => _pathBlendIn = Mathf.Max(0f, value);
+        }
+        public float PathMoveDuration
+        {
+            get => _pathMoveDuration;
+            set => _pathMoveDuration = Mathf.Max(0f, value);
+        }
+        public float PathHold
+        {
+            get => _pathHold;
+            set => _pathHold = Mathf.Max(0f, value);
+        }
+        public float PathBlendOut
+        {
+            get => _pathBlendOut;
+            set => _pathBlendOut = Mathf.Max(0f, value);
+        }
+        public bool PathReturnBehindTarget
+        {
+            get => !_pathPreserveReturnHeading;
+            set => _pathPreserveReturnHeading = !value;
+        }
+        public AnimationCurve PathBlendCurve
+        {
+            get => _pathBlendCurve;
+            set => _pathBlendCurve = value;
+        }
+        public AnimationCurve PathMoveCurve
+        {
+            get => _pathMoveCurve;
+            set => _pathMoveCurve = value;
+        }
+
+        public void SetPathPoints(IEnumerable<Vector3> points)
+        {
+            PathPointList.Clear();
+            if (points != null) PathPointList.AddRange(points);
+            ResetPathPointMetadata();
+        }
+
+        public void SetPathPointData(IReadOnlyList<Vector3> points,
+            IReadOnlyList<float> pointTimes,
+            IReadOnlyList<float> lookAtHeights)
+        {
+            PathPointList.Clear();
+            _pathPointTimes ??= new List<float>();
+            _pathLookAtHeights ??= new List<float>();
+            _pathPointTimes.Clear();
+            _pathLookAtHeights.Clear();
+
+            int pointCount = points?.Count ?? 0;
+            for (int i = 0; i < pointCount; i++)
+            {
+                float fallbackTime = pointCount > 1
+                    ? (float)i / (pointCount - 1)
+                    : 0f;
+                PathPointList.Add(points[i]);
+                _pathPointTimes.Add(pointTimes != null
+                        && i < pointTimes.Count
+                    ? Mathf.Clamp01(pointTimes[i])
+                    : fallbackTime);
+                _pathLookAtHeights.Add(lookAtHeights != null
+                        && i < lookAtHeights.Count
+                    ? lookAtHeights[i]
+                    : Mathf.Lerp(
+                        _pathStartLookAtHeight,
+                        _pathEndLookAtHeight,
+                        fallbackTime));
+            }
+
+            _pathPointMetadataInitialized = true;
+            SortPathPointData();
+        }
+
+        public void SetPathPoint(int index, Vector3 point)
+        {
+            if (index < 0 || index >= PathPointList.Count) return;
+            PathPointList[index] = point;
+        }
+
+        public int SetPathPointTime(int index, float normalizedTime)
+        {
+            EnsurePathPointMetadata();
+            if (index < 0 || index >= PathPointList.Count) return -1;
+
+            float time = Mathf.Clamp01(normalizedTime);
+            Vector3 point = PathPointList[index];
+            float lookAtHeight = _pathLookAtHeights[index];
+            PathPointList.RemoveAt(index);
+            _pathPointTimes.RemoveAt(index);
+            _pathLookAtHeights.RemoveAt(index);
+
+            int insertIndex = 0;
+            while (insertIndex < _pathPointTimes.Count
+                && _pathPointTimes[insertIndex] <= time)
+                insertIndex++;
+
+            PathPointList.Insert(insertIndex, point);
+            _pathPointTimes.Insert(insertIndex, time);
+            _pathLookAtHeights.Insert(insertIndex, lookAtHeight);
+            return insertIndex;
+        }
+
+        public void SetPathPointLookAtHeight(int index, float height)
+        {
+            EnsurePathPointMetadata();
+            if (index < 0 || index >= PathPointList.Count) return;
+            _pathLookAtHeights[index] = height;
+        }
+
+        public void AddPathPoint(Vector3 point)
+        {
+            EnsurePathPointMetadata();
+            int previousCount = PathPointList.Count;
+            if (previousCount >= 2
+                && Mathf.Approximately(
+                    _pathPointTimes[previousCount - 1], 1f))
+            {
+                float previousTime = _pathPointTimes[previousCount - 2];
+                _pathPointTimes[previousCount - 1] =
+                    Mathf.Lerp(previousTime, 1f, 0.5f);
+            }
+
+            float lookAtHeight = previousCount > 0
+                ? _pathLookAtHeights[previousCount - 1]
+                : _pathStartLookAtHeight;
+            PathPointList.Add(point);
+            _pathPointTimes.Add(previousCount == 0 ? 0f : 1f);
+            _pathLookAtHeights.Add(lookAtHeight);
+        }
+
+        public void RemovePathPointAt(int index)
+        {
+            EnsurePathPointMetadata();
+            if (index < 0 || index >= PathPointList.Count) return;
+            PathPointList.RemoveAt(index);
+            _pathPointTimes.RemoveAt(index);
+            _pathLookAtHeights.RemoveAt(index);
+        }
+
+        private void EnsurePathPointMetadata()
+        {
+            if (_pathPointMetadataInitialized
+                && _pathPointTimes != null
+                && _pathPointTimes.Count == PathPointList.Count
+                && _pathLookAtHeights != null
+                && _pathLookAtHeights.Count == PathPointList.Count)
+                return;
+
+            ResetPathPointMetadata();
+        }
+
+        private void ResetPathPointMetadata()
+        {
+            _pathPointTimes ??= new List<float>();
+            _pathLookAtHeights ??= new List<float>();
+            _pathPointTimes.Clear();
+            _pathLookAtHeights.Clear();
+            _pathPointMetadataInitialized = true;
+
+            int pointCount = PathPointList.Count;
+            for (int i = 0; i < pointCount; i++)
+            {
+                float normalizedTime = pointCount > 1
+                    ? (float)i / (pointCount - 1)
+                    : 0f;
+                _pathPointTimes.Add(normalizedTime);
+                _pathLookAtHeights.Add(Mathf.Lerp(
+                    _pathStartLookAtHeight,
+                    _pathEndLookAtHeight,
+                    normalizedTime));
+            }
+        }
+
+        private void SortPathPointData()
+        {
+            for (int i = 1; i < _pathPointTimes.Count; i++)
+            {
+                int index = i;
+                while (index > 0
+                    && _pathPointTimes[index] < _pathPointTimes[index - 1])
+                {
+                    (_pathPointTimes[index - 1], _pathPointTimes[index]) =
+                        (_pathPointTimes[index], _pathPointTimes[index - 1]);
+                    (PathPointList[index - 1], PathPointList[index]) =
+                        (PathPointList[index], PathPointList[index - 1]);
+                    (_pathLookAtHeights[index - 1],
+                        _pathLookAtHeights[index]) =
+                        (_pathLookAtHeights[index],
+                            _pathLookAtHeights[index - 1]);
+                    index--;
+                }
+            }
+        }
 
         public CameraShakeRequest CreateShakeRequest()
         {
@@ -367,6 +698,17 @@ namespace ZZZ
                 Quaternion.Euler(_shotEndEulerAngles), _shotEndFieldOfView,
                 _shotBlendIn, _shotMoveDuration, _shotHold, _shotBlendOut,
                 !_shotPreserveReturnHeading, _shotBlendCurve, _shotMoveCurve);
+        }
+
+        public CameraPathRequest CreatePathRequest(Transform anchor)
+        {
+            EnsurePathPointMetadata();
+            return new CameraPathRequest(
+                anchor, PathPointList.ToArray(), _pathPointTimes.ToArray(),
+                _pathLookAtHeights.ToArray(), _pathStartFieldOfView,
+                _pathEndFieldOfView, _pathBlendIn, _pathMoveDuration,
+                _pathHold, _pathBlendOut, !_pathPreserveReturnHeading,
+                _pathBlendCurve, _pathMoveCurve);
         }
     }
 

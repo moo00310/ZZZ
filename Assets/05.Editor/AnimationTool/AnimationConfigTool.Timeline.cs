@@ -440,6 +440,125 @@ namespace ZZZ.Editor.AnimationTool
             if (tc.Clip != null)
                 for (int ni = 0; ni < tc.Notifies.Count; ni++)
                     DrawNotifyMarker(tc.Notifies[ni], ni, idx, barX, barW, rowY);
+
+            if (_notifyClipIdx == idx
+                && _selectedNotify >= 0
+                && _selectedNotify < tc.Notifies.Count
+                && tc.Notifies[_selectedNotify].Payload
+                    is CameraNotifyPayload cameraPayload
+                && cameraPayload.Mode == CameraNotifyMode.Path)
+            {
+                DrawCameraPathTimeline(
+                    tc, idx, tc.Notifies[_selectedNotify], cameraPayload, rowY);
+            }
+        }
+
+        private void DrawCameraPathTimeline(TrackClip clip, int clipIndex,
+            TrackNotify notify, CameraNotifyPayload payload, float rowY)
+        {
+            float notifyTime = GetCameraNotifyTrackTime(
+                clip, clipIndex, notify);
+            float blendInEnd = notifyTime + payload.PathBlendIn;
+            float moveEnd = blendInEnd + payload.PathMoveDuration;
+            float holdEnd = moveEnd + payload.PathHold;
+            float blendOutEnd = holdEnd + payload.PathBlendOut;
+            float laneY = rowY + ClipH - 19f;
+
+            DrawCameraPathTimelineRange(
+                notifyTime, blendInEnd, laneY,
+                new Color(1f, 0.55f, 0.12f, 0.3f));
+            DrawCameraPathTimelineRange(
+                blendInEnd, moveEnd, laneY,
+                new Color(1f, 0.55f, 0.12f, 0.9f));
+            DrawCameraPathTimelineRange(
+                moveEnd, holdEnd, laneY,
+                new Color(1f, 0.8f, 0.18f, 0.75f));
+            DrawCameraPathTimelineRange(
+                holdEnd, blendOutEnd, laneY,
+                new Color(1f, 0.55f, 0.12f, 0.3f));
+
+            for (int i = 0; i < payload.PathPoints.Count; i++)
+            {
+                float pointTime = GetCameraPathPointTrackTime(
+                    clip, clipIndex, notify, payload, i);
+                float pointX = LabelW + pointTime * _pxPerSec - _scrollX;
+                bool selected = _selectedCameraPathPoint == i;
+                Color color = selected
+                    ? Color.yellow
+                    : new Color(1f, 0.58f, 0.12f);
+                var marker = new Rect(
+                    pointX - 9f, laneY - 14f, 18f, 13f);
+                EditorGUIUtility.AddCursorRect(
+                    marker, MouseCursor.SlideArrow);
+
+                EditorGUI.DrawRect(
+                    new Rect(pointX - 1f, laneY - 1f, 2f, 7f), color);
+                EditorGUI.DrawRect(marker, color);
+                GUI.Label(marker, new GUIContent($"P{i + 1}",
+                        $"Path Point {i + 1}  |  {pointTime:0.00}s"),
+                    new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 8,
+                        normal =
+                        {
+                            textColor = new Color(0.08f, 0.08f, 0.08f),
+                        },
+                    });
+            }
+        }
+
+        private void DrawCameraPathTimelineRange(
+            float startTime, float endTime, float y, Color color)
+        {
+            float startX = LabelW + startTime * _pxPerSec - _scrollX;
+            float endX = LabelW + endTime * _pxPerSec - _scrollX;
+            EditorGUI.DrawRect(
+                new Rect(startX, y, Mathf.Max(1f, endX - startX), 4f), color);
+        }
+
+        private float GetCameraPathPointTrackTime(TrackClip clip,
+            int clipIndex, TrackNotify notify, CameraNotifyPayload payload,
+            int pointIndex)
+        {
+            float pathParameter = payload.GetPathPointTime(pointIndex);
+            float moveTime = FindCameraPathMoveTime(
+                payload.PathMoveCurve, pathParameter);
+            return GetCameraNotifyTrackTime(clip, clipIndex, notify)
+                + payload.PathBlendIn
+                + moveTime * payload.PathMoveDuration;
+        }
+
+        private float GetCameraNotifyTrackTime(
+            TrackClip clip, int clipIndex, TrackNotify notify)
+        {
+            float clipDuration = clip.Clip != null
+                ? clip.Clip.length / Mathf.Max(0.01f, clip.Speed)
+                : 0f;
+            return GetClipStartTime(clipIndex)
+                + notify.NormalizedTime * clipDuration;
+        }
+
+        private static float FindCameraPathMoveTime(
+            AnimationCurve curve, float pathParameter)
+        {
+            float target = Mathf.Clamp01(pathParameter);
+            if (curve == null) return target;
+
+            const int sampleCount = 128;
+            float closestTime = 0f;
+            float closestDistance = float.MaxValue;
+            for (int i = 0; i <= sampleCount; i++)
+            {
+                float time = (float)i / sampleCount;
+                float value = Mathf.Clamp01(curve.Evaluate(time));
+                float distance = Mathf.Abs(value - target);
+                if (distance >= closestDistance) continue;
+
+                closestDistance = distance;
+                closestTime = time;
+            }
+            return closestTime;
         }
 
         private void DrawModuleLanes(TrackClip tc, float barX, float barW,

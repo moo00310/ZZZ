@@ -14,6 +14,7 @@ namespace ZZZ.Editor.AnimationTool
         [SerializeField] private GameObject      _target;
         [SerializeField] private AnimationConfig _config;
         [SerializeField] private bool _showHitPreviewGizmos = true;
+        [SerializeField] private bool _followPathCameraPreview = true;
         private SerializedObject _serializedConfig;
 
         // ── 이펙트 프리뷰 활성 상태 ────────────────────────────────
@@ -70,6 +71,7 @@ namespace ZZZ.Editor.AnimationTool
         [SerializeField] private int _selectedClip   = -1;
         private int _selectedNotify = -1;
         private int _notifyClipIdx  = -1;
+        private int _selectedCameraPathPoint = -1;
         private readonly System.Collections.Generic.List<int> _notifyHitBuf =
             new System.Collections.Generic.List<int>();   // 겹친 Notify 순환 선택용 후보 버퍼
         private readonly HashSet<TrackClip> _expandedModuleClips = new HashSet<TrackClip>();
@@ -83,6 +85,8 @@ namespace ZZZ.Editor.AnimationTool
         private bool _draggingNotify;
         private int  _dragNotifyClip;
         private int  _dragNotifyIdx;
+        private bool _draggingCameraPathPointTime;
+        private int _dragCameraPathPointIndex = -1;
 
         // ── 드래그: Module Window ────────────────────────────────
         private TrackClip   _dragModuleClip;

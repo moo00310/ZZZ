@@ -97,6 +97,7 @@ namespace ZZZ.Editor.AnimationTool
                     if (tc.IsLooping) clipTime = Mathf.Repeat(clipTime, tc.Clip.length);
                     clipTime = Mathf.Clamp(clipTime, 0f, tc.Clip.length);
                     SampleClipPose(tc, i, clipTime, advancePlayback);
+                    PreviewSelectedCameraPathAtTime(time);
                     return;
                 }
                 t += dur;

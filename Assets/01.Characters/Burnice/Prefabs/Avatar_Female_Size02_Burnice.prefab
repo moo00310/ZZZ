@@ -1496,6 +1496,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentActionController
   _startConfig: {fileID: 11400000, guid: 085be3d5d46fc7f45bec543da3ec9317, type: 2}
+  _introConfig: {fileID: 11400000, guid: b5f398c6f7f24644ba9f73f30c1fdf43, type: 2}
   _configs:
   - {fileID: 11400000, guid: 9a544159a0808d741931b2c8857f5cb7, type: 2}
   - {fileID: 11400000, guid: 27432c16e249c3f4591798d2e41c2ef4, type: 2}

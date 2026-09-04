@@ -29,6 +29,7 @@ namespace ZZZ.Agent
     {
         [Header("Animation Config")]
         [SerializeField] private AnimationConfig _startConfig;   // 시작/기본(걷기) config. 콤보 등은 링크의 TargetConfig로 연결
+        [SerializeField] private AnimationConfig _introConfig;
 
         // 이벤트로 진입하는 추가 config들(Hit/Evade 등). 링크로 도달하지 않는 진입점만 여기 등록.
         // config가 새로 생기면 이 리스트에 드롭만 하면 됨 (재생할 섹션 이름으로 자동 검색 — ConfigRegistry).
@@ -146,8 +147,16 @@ namespace ZZZ.Agent
         private IEnumerable<AnimationConfig> OwnedConfigs()
         {
             yield return _startConfig;
+            if (_introConfig != null && _introConfig != _startConfig)
+                yield return _introConfig;
             if (_configs != null)
-                foreach (var c in _configs) yield return c;
+            {
+                foreach (AnimationConfig config in _configs)
+                {
+                    if (config != _startConfig && config != _introConfig)
+                        yield return config;
+                }
+            }
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → CharacterAnimatorBridge 초기화 보장
@@ -262,6 +271,26 @@ namespace ZZZ.Agent
         public string          CurrentSection        => _runner?.ActiveSection;
         public float           CurrentNormalizedTime => _runner?.CurrentNormalizedTime ?? 0f;
         public MoveDir         CurrentMoveDir         => _runner?.CurrentMoveDir ?? MoveDir.Any;
+        public bool IsPlayingIntro =>
+            _introConfig != null && CurrentConfig == _introConfig;
+
+        public bool TryPlayIntro(float blendDuration = 0.1f)
+        {
+            if (!_isRunning || _runner == null || _introConfig == null)
+                return false;
+
+            ClearInput();
+            _runner.InterruptWith(_introConfig, null, blendDuration);
+            return true;
+        }
+
+        public void ExitIntro(float blendDuration = 0.1f)
+        {
+            if (!IsPlayingIntro || _startConfig == null) return;
+
+            ClearInput();
+            _runner.InterruptWith(_startConfig, null, blendDuration);
+        }
 
         public void SetMoveInput(Vector2 input)
         {

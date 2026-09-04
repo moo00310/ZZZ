@@ -41,6 +41,13 @@ namespace ZZZ.Editor.AnimationTool
             // ── MouseDown ────────────────────────────────────────
             if (ev.type == EventType.MouseDown && ev.button == 0 && area.Contains(ev.mousePosition))
             {
+                if (TrySelectCameraPathPoint(ev.mousePosition))
+                {
+                    ev.Use();
+                    Repaint();
+                    return;
+                }
+
                 if (TryBeginModuleWindowDrag(ev.mousePosition))
                 {
                     ev.Use();
@@ -105,6 +112,7 @@ namespace ZZZ.Editor.AnimationTool
                             }
 
                             _selectedClip = i; _selectedNotify = pick; _notifyClipIdx = i;
+                            _selectedCameraPathPoint = -1;
                             // 고정된 Notify는 선택만 하고 드래그(이동)는 시작하지 않는다.
                             if (!tc.Notifies[pick].Locked)
                             {
@@ -139,7 +147,13 @@ namespace ZZZ.Editor.AnimationTool
             // ── MouseDrag ────────────────────────────────────────
             if (ev.type == EventType.MouseDrag && ev.button == 0)
             {
-                if (_dragWindowModule != null && _dragModuleClip != null)
+                if (_draggingCameraPathPointTime)
+                {
+                    DragCameraPathPointTime(ev.mousePosition.x);
+                    ev.Use();
+                    Repaint();
+                }
+                else if (_dragWindowModule != null && _dragModuleClip != null)
                 {
                     DragModuleWindow(ev.mousePosition.x);
                     ev.Use();
@@ -175,6 +189,8 @@ namespace ZZZ.Editor.AnimationTool
             if (ev.type == EventType.MouseUp && ev.button == 0)
             {
                 _draggingNotify = false;
+                _draggingCameraPathPointTime = false;
+                _dragCameraPathPointIndex = -1;
                 _dragModuleClip = null;
                 _dragWindowModule = null;
 
@@ -308,6 +324,83 @@ namespace ZZZ.Editor.AnimationTool
             }
         }
 
+        private bool TrySelectCameraPathPoint(Vector2 mousePosition)
+        {
+            if (_config == null
+                || _notifyClipIdx < 0
+                || _notifyClipIdx >= _config.Clips.Count)
+                return false;
+
+            TrackClip clip = _config.Clips[_notifyClipIdx];
+            if (_selectedNotify < 0
+                || _selectedNotify >= clip.Notifies.Count)
+                return false;
+
+            TrackNotify notify = clip.Notifies[_selectedNotify];
+            if (notify.Payload is not CameraNotifyPayload payload
+                || payload.Mode != CameraNotifyMode.Path)
+                return false;
+
+            float rowY = ClipRowTop(_notifyClipIdx) - _scrollY;
+            float markerY = rowY + ClipH - 33f;
+            for (int i = 0; i < payload.PathPoints.Count; i++)
+            {
+                float pointTime = GetCameraPathPointTrackTime(
+                    clip, _notifyClipIdx, notify, payload, i);
+                float pointX = LabelW + pointTime * _pxPerSec - _scrollX;
+                var hitRect = new Rect(pointX - 10f, markerY - 1f, 20f, 15f);
+                if (!hitRect.Contains(mousePosition)) continue;
+
+                _selectedCameraPathPoint = i;
+                _draggingCameraPathPointTime = true;
+                _dragCameraPathPointIndex = i;
+                MoveSceneViewToCameraPathPoint(payload, i);
+                SceneView.RepaintAll();
+                return true;
+            }
+            return false;
+        }
+
+        private void DragCameraPathPointTime(float mouseX)
+        {
+            if (_config == null
+                || _notifyClipIdx < 0
+                || _notifyClipIdx >= _config.Clips.Count)
+                return;
+
+            TrackClip clip = _config.Clips[_notifyClipIdx];
+            if (_selectedNotify < 0
+                || _selectedNotify >= clip.Notifies.Count)
+                return;
+
+            TrackNotify notify = clip.Notifies[_selectedNotify];
+            if (notify.Payload is not CameraNotifyPayload payload
+                || payload.Mode != CameraNotifyMode.Path
+                || _dragCameraPathPointIndex < 0
+                || _dragCameraPathPointIndex >= payload.PathPoints.Count
+                || payload.PathMoveDuration <= 0f)
+                return;
+
+            float pointerTime =
+                (mouseX - LabelW + _scrollX) / _pxPerSec;
+            float moveStartTime = GetCameraNotifyTrackTime(
+                clip, _notifyClipIdx, notify) + payload.PathBlendIn;
+            float moveNormalizedTime = Mathf.Clamp01(
+                (pointerTime - moveStartTime) / payload.PathMoveDuration);
+            float pathTime = payload.PathMoveCurve != null
+                ? Mathf.Clamp01(
+                    payload.PathMoveCurve.Evaluate(moveNormalizedTime))
+                : moveNormalizedTime;
+
+            Undo.RecordObject(_config, "Move Camera Path Point Time");
+            _dragCameraPathPointIndex = payload.SetPathPointTime(
+                _dragCameraPathPointIndex, pathTime);
+            _selectedCameraPathPoint = _dragCameraPathPointIndex;
+            EditorUtility.SetDirty(_config);
+            MoveSceneViewToCameraPathPoint(
+                payload, _dragCameraPathPointIndex);
+        }
+
         private void PasteNotify(int clipIndex, float normalizedTime)
         {
             if (_notifyClipboard == null
@@ -409,6 +502,53 @@ namespace ZZZ.Editor.AnimationTool
                             {
                                 preWrapMode = moveCurve.preWrapMode,
                                 postWrapMode = moveCurve.postWrapMode,
+                            };
+                        int pathPointCount = cameraPayload.PathPoints.Count;
+                        var pathPointTimes = new float[pathPointCount];
+                        var pathLookAtHeights = new float[pathPointCount];
+                        for (int i = 0; i < pathPointCount; i++)
+                        {
+                            pathPointTimes[i] =
+                                cameraPayload.GetPathPointTime(i);
+                            pathLookAtHeights[i] =
+                                cameraPayload.GetPathPointLookAtHeight(i);
+                        }
+                        clonedCamera.SetPathPointData(
+                            cameraPayload.PathPoints,
+                            pathPointTimes,
+                            pathLookAtHeights);
+                        clonedCamera.PathStartLookAtHeight =
+                            cameraPayload.PathStartLookAtHeight;
+                        clonedCamera.PathEndLookAtHeight =
+                            cameraPayload.PathEndLookAtHeight;
+                        clonedCamera.PathStartFieldOfView =
+                            cameraPayload.PathStartFieldOfView;
+                        clonedCamera.PathEndFieldOfView =
+                            cameraPayload.PathEndFieldOfView;
+                        clonedCamera.PathBlendIn = cameraPayload.PathBlendIn;
+                        clonedCamera.PathMoveDuration =
+                            cameraPayload.PathMoveDuration;
+                        clonedCamera.PathHold = cameraPayload.PathHold;
+                        clonedCamera.PathBlendOut = cameraPayload.PathBlendOut;
+                        clonedCamera.PathReturnBehindTarget =
+                            cameraPayload.PathReturnBehindTarget;
+                        AnimationCurve pathBlendCurve =
+                            cameraPayload.PathBlendCurve;
+                        clonedCamera.PathBlendCurve = pathBlendCurve == null
+                            ? null
+                            : new AnimationCurve(pathBlendCurve.keys)
+                            {
+                                preWrapMode = pathBlendCurve.preWrapMode,
+                                postWrapMode = pathBlendCurve.postWrapMode,
+                            };
+                        AnimationCurve pathMoveCurve =
+                            cameraPayload.PathMoveCurve;
+                        clonedCamera.PathMoveCurve = pathMoveCurve == null
+                            ? null
+                            : new AnimationCurve(pathMoveCurve.keys)
+                            {
+                                preWrapMode = pathMoveCurve.preWrapMode,
+                                postWrapMode = pathMoveCurve.postWrapMode,
                             };
                     }
                     break;

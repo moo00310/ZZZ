@@ -846,6 +846,25 @@ namespace ZZZ.Editor.AnimationTool
                 ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
             AnimationCurve shotMoveCurve = cameraPayload?.ShotMoveCurve
                 ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            float pathStartLookAtHeight =
+                cameraPayload?.PathStartLookAtHeight ?? 0.8f;
+            float pathEndLookAtHeight =
+                cameraPayload?.PathEndLookAtHeight ?? 1.5f;
+            float pathStartFieldOfView =
+                cameraPayload?.PathStartFieldOfView ?? 60f;
+            float pathEndFieldOfView =
+                cameraPayload?.PathEndFieldOfView ?? 60f;
+            float pathBlendIn = cameraPayload?.PathBlendIn ?? 0.08f;
+            float pathMoveDuration =
+                cameraPayload?.PathMoveDuration ?? 2.5f;
+            float pathHold = cameraPayload?.PathHold ?? 0.08f;
+            float pathBlendOut = cameraPayload?.PathBlendOut ?? 0.4f;
+            bool pathReturnBehindTarget =
+                cameraPayload?.PathReturnBehindTarget ?? true;
+            AnimationCurve pathBlendCurve = cameraPayload?.PathBlendCurve
+                ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            AnimationCurve pathMoveCurve = cameraPayload?.PathMoveCurve
+                ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
             if (type == NotifyType.Camera)
             {
                 cameraMode = (CameraNotifyMode)EditorGUILayout.EnumPopup(
@@ -868,7 +887,7 @@ namespace ZZZ.Editor.AnimationTool
                         new GUIContent("Envelope", "셰이크 세기가 시간에 따라 줄어드는 형태"),
                         cameraEnvelope);
                 }
-                else
+                else if (cameraMode == CameraNotifyMode.Shot)
                 {
                     shotBlendIn = Mathf.Max(0f, EditorGUILayout.FloatField(
                         new GUIContent("Blend In (s)",
@@ -898,6 +917,27 @@ namespace ZZZ.Editor.AnimationTool
                         "Move Curve", shotMoveCurve);
                     shotBlendCurve = EditorGUILayout.CurveField(
                         "Blend Curve", shotBlendCurve);
+                }
+                else
+                {
+                    pathBlendIn = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        "Blend In (s)", pathBlendIn));
+                    pathMoveDuration = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        "Move Duration (s)", pathMoveDuration));
+                    pathHold = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        "End Hold (s)", pathHold));
+                    pathBlendOut = Mathf.Max(0f, EditorGUILayout.FloatField(
+                        "Blend Out (s)", pathBlendOut));
+                    pathReturnBehindTarget = EditorGUILayout.Toggle(
+                        "Return Behind Target", pathReturnBehindTarget);
+                    pathStartFieldOfView = EditorGUILayout.Slider(
+                        "Start FOV", pathStartFieldOfView, 1f, 179f);
+                    pathEndFieldOfView = EditorGUILayout.Slider(
+                        "End FOV", pathEndFieldOfView, 1f, 179f);
+                    pathMoveCurve = EditorGUILayout.CurveField(
+                        "Move Curve", pathMoveCurve);
+                    pathBlendCurve = EditorGUILayout.CurveField(
+                        "Blend Curve", pathBlendCurve);
                 }
             }
 
@@ -1050,6 +1090,20 @@ namespace ZZZ.Editor.AnimationTool
                         shotReturnBehindTarget;
                     editedCamera.ShotBlendCurve = shotBlendCurve;
                     editedCamera.ShotMoveCurve = shotMoveCurve;
+                    editedCamera.PathStartLookAtHeight =
+                        pathStartLookAtHeight;
+                    editedCamera.PathEndLookAtHeight = pathEndLookAtHeight;
+                    editedCamera.PathStartFieldOfView =
+                        pathStartFieldOfView;
+                    editedCamera.PathEndFieldOfView = pathEndFieldOfView;
+                    editedCamera.PathBlendIn = pathBlendIn;
+                    editedCamera.PathMoveDuration = pathMoveDuration;
+                    editedCamera.PathHold = pathHold;
+                    editedCamera.PathBlendOut = pathBlendOut;
+                    editedCamera.PathReturnBehindTarget =
+                        pathReturnBehindTarget;
+                    editedCamera.PathBlendCurve = pathBlendCurve;
+                    editedCamera.PathMoveCurve = pathMoveCurve;
                 }
                 notify.Hit = hit;
                 if (notify.Payload is HitNotifyPayload editedHit)
@@ -1076,6 +1130,9 @@ namespace ZZZ.Editor.AnimationTool
             if (notify.Payload is CameraNotifyPayload shotPayload
                 && shotPayload.Mode == CameraNotifyMode.Shot)
                 DrawCameraShotTools(shotPayload);
+            else if (notify.Payload is CameraNotifyPayload pathPayload
+                && pathPayload.Mode == CameraNotifyMode.Path)
+                DrawCameraPathTools(pathPayload);
 
             if (notify.Type == NotifyType.Effect)
             {
@@ -1135,10 +1192,185 @@ namespace ZZZ.Editor.AnimationTool
                 MessageType.None);
         }
 
+        private void DrawCameraPathTools(CameraNotifyPayload payload)
+        {
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginChangeCheck();
+            _followPathCameraPreview = EditorGUILayout.ToggleLeft(
+                "Follow Timeline in Preview", _followPathCameraPreview);
+            if (EditorGUI.EndChangeCheck()
+                && _followPathCameraPreview)
+                PreviewSelectedCameraPathAtTime(_trackTime);
+            if (GUILayout.Button("Open Path Preview", GUILayout.Width(135f)))
+                OpenCameraPathPreview();
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField("Path Points", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Points are stored relative to the target. The camera follows "
+                + "a Catmull-Rom curve and automatically looks at the target's "
+                + "center axis. Drag P markers on the timeline to change "
+                + "arrival spacing. Points are reordered automatically by "
+                + "Path Time.",
+                MessageType.None);
+
+            for (int i = 0; i < payload.PathPoints.Count; i++)
+            {
+                Color previousBackgroundColor = GUI.backgroundColor;
+                if (_selectedCameraPathPoint == i)
+                    GUI.backgroundColor = new Color(1f, 0.65f, 0.2f);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                GUI.backgroundColor = previousBackgroundColor;
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField($"Point {i + 1}",
+                    EditorStyles.boldLabel);
+                if (GUILayout.Button("View", GUILayout.Width(52f)))
+                    MoveSceneViewToCameraPathPoint(payload, i);
+                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
+                {
+                    Undo.RecordObject(_config, "Remove Camera Path Point");
+                    payload.RemovePathPointAt(i);
+                    if (_selectedCameraPathPoint >= payload.PathPoints.Count)
+                        _selectedCameraPathPoint = payload.PathPoints.Count - 1;
+                    else if (_selectedCameraPathPoint == i)
+                        _selectedCameraPathPoint = -1;
+                    MarkCameraShotChanged();
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.EndVertical();
+                    return;
+                }
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 point = EditorGUILayout.Vector3Field(
+                    "Local Position", payload.PathPoints[i]);
+                float pointTime = payload.GetPathPointTime(i);
+                pointTime = EditorGUILayout.Slider(
+                    "Path Time", pointTime, 0f, 1f);
+                float lookAtHeight = EditorGUILayout.FloatField(
+                    "Look At Height",
+                    payload.GetPathPointLookAtHeight(i));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(_config, "Edit Camera Path Point");
+                    payload.SetPathPoint(i, point);
+                    payload.SetPathPointLookAtHeight(i, lookAtHeight);
+                    _selectedCameraPathPoint =
+                        payload.SetPathPointTime(i, pointTime);
+                    MarkCameraShotChanged();
+                    if (_selectedCameraPathPoint != i)
+                        GUIUtility.ExitGUI();
+                }
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Add Point"))
+            {
+                Vector3 point = payload.PathPoints.Count > 0
+                    ? payload.PathPoints[payload.PathPoints.Count - 1]
+                        + new Vector3(0f, 0.4f, 0.4f)
+                    : new Vector3(0.8f, 0.4f, -0.8f);
+                Undo.RecordObject(_config, "Add Camera Path Point");
+                payload.AddPathPoint(point);
+                _selectedCameraPathPoint = payload.PathPoints.Count - 1;
+                MarkCameraShotChanged();
+            }
+            using (new EditorGUI.DisabledScope(
+                       !CanCaptureCameraPathPoint()))
+            {
+                if (GUILayout.Button("Capture Scene View"))
+                    CaptureCameraPathPointFromSceneView(payload);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (payload.PathPoints.Count < 2)
+                EditorGUILayout.HelpBox(
+                    "Path playback requires at least two points.",
+                    MessageType.Warning);
+        }
+
+        private bool CanCaptureCameraPathPoint()
+        {
+            SceneView sceneView = FindEditingSceneView();
+            return _target != null
+                && sceneView != null
+                && sceneView.camera != null;
+        }
+
+        private void CaptureCameraPathPointFromSceneView(
+            CameraNotifyPayload payload)
+        {
+            SceneView sceneView = FindEditingSceneView();
+            if (sceneView == null || sceneView.camera == null || _target == null)
+                return;
+
+            Vector3 localPosition = _target.transform.InverseTransformPoint(
+                sceneView.camera.transform.position);
+            Undo.RecordObject(_config, "Capture Camera Path Point");
+            payload.AddPathPoint(localPosition);
+            _selectedCameraPathPoint = payload.PathPoints.Count - 1;
+            MarkCameraShotChanged();
+        }
+
+        private void MoveSceneViewToCameraPathPoint(
+            CameraNotifyPayload payload, int index)
+        {
+            if (index < 0 || index >= payload.PathPoints.Count)
+                return;
+
+            _selectedCameraPathPoint = index;
+            MoveTimelineToCameraPathPoint(payload, index);
+            SceneView sceneView = FindEditingSceneView();
+            if (sceneView == null || _target == null) return;
+
+            Transform anchor = _target.transform;
+            float normalizedTime = payload.PathPoints.Count > 1
+                ? (float)index / (payload.PathPoints.Count - 1)
+                : 0f;
+            Vector3 position = anchor.TransformPoint(payload.PathPoints[index]);
+            float lookAtHeight = payload.GetPathPointLookAtHeight(index);
+            Vector3 lookTarget = anchor.position + anchor.up * lookAtHeight;
+            Vector3 direction = lookTarget - position;
+            Quaternion rotation = direction.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(direction, anchor.up)
+                : anchor.rotation;
+            float fieldOfView = Mathf.Lerp(payload.PathStartFieldOfView,
+                payload.PathEndFieldOfView, normalizedTime);
+            MoveSceneViewToCameraPose(
+                sceneView, position, rotation, fieldOfView);
+        }
+
+        private void MoveTimelineToCameraPathPoint(
+            CameraNotifyPayload payload, int index)
+        {
+            if (_config == null
+                || _notifyClipIdx < 0
+                || _notifyClipIdx >= _config.Clips.Count)
+                return;
+
+            TrackClip clip = _config.Clips[_notifyClipIdx];
+            if (_selectedNotify < 0
+                || _selectedNotify >= clip.Notifies.Count)
+                return;
+
+            TrackNotify notify = clip.Notifies[_selectedNotify];
+            if (!ReferenceEquals(notify.Payload, payload)
+                || index < 0 || index >= payload.PathPoints.Count)
+                return;
+
+            float pointTime = GetCameraPathPointTrackTime(
+                clip, _notifyClipIdx, notify, payload, index);
+            _trackTime = Mathf.Clamp(pointTime, 0f, GetTotalDuration());
+            StopPreview();
+            SampleAtTime(_trackTime, false);
+            Repaint();
+        }
+
         private void CaptureCameraShotFromSceneView(
             CameraNotifyPayload payload, bool endPose)
         {
-            SceneView sceneView = SceneView.lastActiveSceneView;
+            SceneView sceneView = FindEditingSceneView();
             if (sceneView == null || sceneView.camera == null || _target == null)
                 return;
 
@@ -1170,7 +1402,7 @@ namespace ZZZ.Editor.AnimationTool
         private void MoveSceneViewToCameraShot(
             CameraNotifyPayload payload, bool endPose)
         {
-            SceneView sceneView = SceneView.lastActiveSceneView;
+            SceneView sceneView = FindEditingSceneView();
             if (sceneView == null || _target == null) return;
 
             Transform anchor = _target.transform;
@@ -1423,6 +1655,7 @@ namespace ZZZ.Editor.AnimationTool
                 else if (GUI.Button(notifyButtonRect, label, EditorStyles.miniButton))
                 {
                     _selectedNotify = idx; _notifyClipIdx = _selectedClip;
+                    _selectedCameraPathPoint = -1;
                     GUI.FocusControl(null);
                     Repaint();
                 }
@@ -1461,6 +1694,7 @@ namespace ZZZ.Editor.AnimationTool
 
         private void OnSceneGUI(SceneView sceneView)
         {
+            if (sceneView is CameraPathPreviewView) return;
             if (_target == null || _config == null) return;
             if (_notifyClipIdx < 0 || _notifyClipIdx >= _config.Clips.Count) return;
 
@@ -1468,9 +1702,13 @@ namespace ZZZ.Editor.AnimationTool
             if (_selectedNotify < 0 || _selectedNotify >= clip.Notifies.Count) return;
 
             TrackNotify notify = clip.Notifies[_selectedNotify];
-            if (notify?.Payload is CameraNotifyPayload cameraPayload
-                && cameraPayload.Mode == CameraNotifyMode.Shot)
-                DrawCameraShotHandles(cameraPayload);
+            if (notify?.Payload is CameraNotifyPayload cameraPayload)
+            {
+                if (cameraPayload.Mode == CameraNotifyMode.Shot)
+                    DrawCameraShotHandles(cameraPayload);
+                else if (cameraPayload.Mode == CameraNotifyMode.Path)
+                    DrawCameraPathHandles(cameraPayload);
+            }
 
             if (!_showHitPreviewGizmos) return;
             HitData hit = notify?.Payload is HitNotifyPayload
@@ -1535,6 +1773,97 @@ namespace ZZZ.Editor.AnimationTool
                 payload.ShotEulerAngles = localEulerAngles;
             }
             MarkCameraShotChanged();
+        }
+
+        private void DrawCameraPathHandles(CameraNotifyPayload payload)
+        {
+            Transform anchor = _target.transform;
+            int pointCount = payload.PathPoints.Count;
+            if (pointCount == 0) return;
+
+            const int sampleCount = 65;
+            if (pointCount >= 2)
+            {
+                var curvePoints = new Vector3[sampleCount];
+                for (int i = 0; i < sampleCount; i++)
+                {
+                    float normalizedTime = (float)i / (sampleCount - 1);
+                    curvePoints[i] = anchor.TransformPoint(
+                        CameraPathUtility.Evaluate(
+                            payload.PathPoints, normalizedTime));
+                }
+                using (new Handles.DrawingScope(
+                           new Color(1f, 0.5f, 0.1f, 0.95f)))
+                    Handles.DrawAAPolyLine(3f, curvePoints);
+            }
+
+            float minHeight = payload.GetPathPointLookAtHeight(0);
+            float maxHeight = minHeight;
+            for (int i = 1; i < pointCount; i++)
+            {
+                float height = payload.GetPathPointLookAtHeight(i);
+                minHeight = Mathf.Min(minHeight, height);
+                maxHeight = Mathf.Max(maxHeight, height);
+            }
+            using (new Handles.DrawingScope(
+                       new Color(1f, 0.85f, 0.15f, 0.75f)))
+            {
+                Handles.DrawDottedLine(
+                    anchor.position + anchor.up * minHeight,
+                    anchor.position + anchor.up * maxHeight, 3f);
+            }
+
+            for (int i = 0; i < pointCount; i++)
+            {
+                Vector3 position = anchor.TransformPoint(payload.PathPoints[i]);
+                float lookAtHeight =
+                    payload.GetPathPointLookAtHeight(i);
+                Vector3 lookTarget =
+                    anchor.position + anchor.up * lookAtHeight;
+                float size = HandleUtility.GetHandleSize(position) * 0.08f;
+                bool selected = _selectedCameraPathPoint == i;
+
+                using (new Handles.DrawingScope(
+                           selected
+                               ? Color.yellow
+                               : new Color(1f, 0.65f, 0.15f, 0.9f)))
+                {
+                    if (Handles.Button(position, Quaternion.identity,
+                            size, size * 1.25f, Handles.SphereHandleCap))
+                    {
+                        _selectedCameraPathPoint = i;
+                        MoveTimelineToCameraPathPoint(payload, i);
+                        Repaint();
+                    }
+                    Handles.DrawDottedLine(position, lookTarget, 4f);
+                }
+                Handles.Label(position + anchor.up * size, $"Path {i + 1}");
+
+                if (!selected) continue;
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 newLookTarget = Handles.Slider(
+                    lookTarget, anchor.up, size,
+                    Handles.ConeHandleCap, 0f);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(_config, "Edit Camera Path Look At");
+                    float newLookAtHeight = Vector3.Dot(
+                        newLookTarget - anchor.position, anchor.up);
+                    payload.SetPathPointLookAtHeight(i, newLookAtHeight);
+                    MarkCameraShotChanged();
+                }
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 newPosition = Handles.PositionHandle(
+                    position, anchor.rotation);
+                if (!EditorGUI.EndChangeCheck()) continue;
+
+                Undo.RecordObject(_config, "Edit Camera Path Point");
+                payload.SetPathPoint(
+                    i, anchor.InverseTransformPoint(newPosition));
+                MarkCameraShotChanged();
+            }
         }
 
         private static void DrawCameraShotMarker(Vector3 position,
