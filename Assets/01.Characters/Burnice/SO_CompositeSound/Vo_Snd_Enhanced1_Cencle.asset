@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 448385c2d502c5a48bc5e5e274b7e6a8, type: 3}
-  m_Name: Vo_Snd_IdleVoice
+  m_Name: Vo_Snd_Enhanced1_Cencle
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Audio.CompositeSound
   _clips:
-  - {fileID: 8300000, guid: 820758aad6785bc4e8411ab1055c23a0, type: 3}
-  - {fileID: 8300000, guid: 722afe1afe6282642866c5e2c5073f0d, type: 3}
-  _volume: 0.02
+  - {fileID: 8300000, guid: 115e5300c0b8d4f4982f34b631073db6, type: 3}
+  - {fileID: 8300000, guid: 9dff0825afc1b344b9966ea86837923c, type: 3}
+  _volume: 0.1
   _pitchRange: {x: 1, y: 1}
-  _spatialBlend: 0.1
+  _spatialBlend: 0.15
   _minimumDistance: 1
   _maximumDistance: 4
-  _output: {fileID: -3103691562337638561, guid: dc05beec4984fd545a35f8e72f1cf39f, type: 2}
+  _output: {fileID: 3522304351964963818, guid: dc05beec4984fd545a35f8e72f1cf39f, type: 2}
   _positionOffset: {x: 0, y: 0, z: 0}
