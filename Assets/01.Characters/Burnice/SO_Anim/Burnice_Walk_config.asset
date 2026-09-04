@@ -44,46 +44,22 @@ MonoBehaviour:
     - NormalizedTime: 0.11645569
       _payload:
         rid: 986220773871452223
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.3291139
       _payload:
         rid: 986220773871452224
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.5493671
       _payload:
         rid: 986220773871452225
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.7721518
       _payload:
         rid: 986220773871452226
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018940
@@ -105,24 +81,12 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220773871452228
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.37575758
       _payload:
         rid: 986220773871452229
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     Modules: []
   - SectionName: Walk_End
@@ -152,38 +116,21 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220773871452231
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.071717694
       _payload:
         rid: 986220773871452232
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.30062205
       _payload:
         rid: 986220773871452233
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     Modules:
     - rid: 6745857324881018942
+    - rid: 732621188000645183
   - SectionName: Walk_Start_End
     Clip: {fileID: 7400000, guid: 2133f36da93afca468642baadaf5cd04, type: 2}
     Speed: 1
@@ -211,26 +158,15 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220773871452234
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.149841
       _payload:
         rid: 986220773871452235
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
-    Modules: []
+    Modules:
+    - rid: 732621188000645184
   GlobalLinks:
   - TargetConfig: {fileID: 11400000, guid: cb54ee2069f5a844684ca76a4207fb5a, type: 2}
     TargetSection: Attack_ExSpecial_02
@@ -253,6 +189,22 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 732621188000645183
+      type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.25726143
+        End: 0.38174272
+        Distance: 0.2
+        Direction: 0
+        _keepInitialDirection: 0
+    - rid: 732621188000645184
+      type: {class: AdditionalMovementModule, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        Start: 0.055248618
+        End: 0.22099447
+        Distance: 0.3
+        Direction: 0
+        _keepInitialDirection: 0
     - rid: 986220773871452223
       type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:

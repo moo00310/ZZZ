@@ -80,13 +80,12 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783695
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129926
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 7723410972547481664
@@ -137,13 +136,12 @@ MonoBehaviour:
     - NormalizedTime: 0.0010771124
       _payload:
         rid: 986220762572783696
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129927
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 7723410972547481665
@@ -193,13 +191,12 @@ MonoBehaviour:
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783697
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129928
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018924
@@ -231,46 +228,27 @@ MonoBehaviour:
     - NormalizedTime: 0.88
       _payload:
         rid: 986220386215526488
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.88
       _payload:
         rid: 986220470650273861
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.83920527
       _payload:
         rid: 986220750427127887
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783698
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129929
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018926
@@ -302,46 +280,27 @@ MonoBehaviour:
     - NormalizedTime: 0.88
       _payload:
         rid: 986220386215526489
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.88
       _payload:
         rid: 986220470650273862
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.889204
       _payload:
         rid: 986220750427127889
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783699
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129930
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018928
@@ -373,46 +332,27 @@ MonoBehaviour:
     - NormalizedTime: 0.88
       _payload:
         rid: 986220386215526490
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.88
       _payload:
         rid: 986220470650273863
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.87920284
       _payload:
         rid: 986220750427127891
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783700
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129931
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 7723411149892091968
@@ -444,46 +384,27 @@ MonoBehaviour:
     - NormalizedTime: 0.92
       _payload:
         rid: 986220386215526491
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.92
       _payload:
         rid: 986220470650273864
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.8992034
       _payload:
         rid: 986220750427127893
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0
       _payload:
         rid: 986220762572783701
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0
+      _payload:
+        rid: 732621188923129932
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018930
@@ -496,6 +417,55 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
+    - rid: 732621188923129926
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129927
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129928
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129929
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129930
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129931
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129932
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 739ebe27485dbec47842f8bd1fc76d51, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
     - rid: 986220386215526488
       type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -541,7 +511,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_FireBeam_Enhance_L
+          _effectOriginKey: Eff_FireBeam_Enhance_L
           _positionOffset: {x: 0, y: 0, z: -0.5}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -605,7 +575,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_FireBeam_Enhance_R
+          _effectOriginKey: Eff_FireBeam_Enhance_R
           _positionOffset: {x: 0, y: 0, z: -0.5}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -669,7 +639,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_FireBeam_Enhance_R
+          _effectOriginKey: Eff_FireBeam_Enhance_R
           _positionOffset: {x: 0, y: 0, z: -0.5}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -733,7 +703,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_FireBeam_Enhance_L
+          _effectOriginKey: Eff_FireBeam_Enhance_L
           _positionOffset: {x: 0, y: 0, z: -0.5}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5

@@ -1365,6 +1365,7 @@ GameObject:
   - component: {fileID: 2124589125853794934}
   - component: {fileID: 497365268910310776}
   - component: {fileID: 5508322027037014441}
+  - component: {fileID: 6598271349827134982}
   - component: {fileID: 3724266460484320341}
   - component: {fileID: 7334887429754876192}
   - component: {fileID: 3731661064136392671}
@@ -1528,6 +1529,21 @@ MonoBehaviour:
   _inputBufferWindow: 0.25
   _showHitGizmos: 0
   _hitGizmoDuration: 1
+--- !u!114 &6598271349827134982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1430500293498163557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d4a7e2b91c54cf8a65023ff9c5e1d7b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentVoiceController
+  _parryWarningVoice: {fileID: 11400000, guid: c7523f1a60d74d55a14af5293a9bd7e2, type: 2}
+  _parryWarningPlayChance: 0.35
+  _parryWarningMinimumInterval: 2
 --- !u!114 &3724266460484320341
 MonoBehaviour:
   m_ObjectHideFlags: 0

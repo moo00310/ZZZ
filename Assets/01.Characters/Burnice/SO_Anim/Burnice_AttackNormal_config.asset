@@ -53,79 +53,42 @@ MonoBehaviour:
     - NormalizedTime: 0.049382716
       _payload:
         rid: 986220386215526494
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.09876543
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.047407407
       _payload:
         rid: 986220386215526479
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.19753087
       _payload:
         rid: 986220386215526480
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.19753087
       _payload:
         rid: 986220427068833793
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.34567901
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.19753087
       _payload:
         rid: 986220427068833861
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.43209878
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.19703704
       _payload:
         rid: 986220762572783678
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.047407407
       _payload:
         rid: 986220762572783680
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.19629629
+      _payload:
+        rid: 732621188923129856
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018880
@@ -212,68 +175,37 @@ MonoBehaviour:
     - NormalizedTime: 0.15729956
       _payload:
         rid: 986220386215526482
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.28105316
       _payload:
         rid: 986220386215526483
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.15492958
       _payload:
         rid: 986220427068833862
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.1971831
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.28169015
       _payload:
         rid: 986220427068833866
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.32394367
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.15446708
       _payload:
         rid: 986220762572783681
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.28122762
       _payload:
         rid: 986220762572783682
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.28040963
+      _payload:
+        rid: 732621188923129920
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018885
@@ -359,35 +291,22 @@ MonoBehaviour:
     - NormalizedTime: 0.28395063
       _payload:
         rid: 986220386215526484
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.28395063
       _payload:
         rid: 986220427068833867
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.61728394
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.28189382
       _payload:
         rid: 986220762572783683
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.2854369
+      _payload:
+        rid: 732621188923129921
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018890
@@ -473,46 +392,27 @@ MonoBehaviour:
     - NormalizedTime: 0.087389834
       _payload:
         rid: 986220386215526485
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.086419754
       _payload:
         rid: 986220427068833869
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.2962963
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.086419754
       _payload:
         rid: 986220427068833870
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.32098764
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.086419754
       _payload:
         rid: 986220762572783687
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.08617938
+      _payload:
+        rid: 732621188923129922
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018895
@@ -599,35 +499,27 @@ MonoBehaviour:
     - NormalizedTime: 0.058592666
       _payload:
         rid: 986220386215526486
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.048387095
       _payload:
         rid: 986220427068833874
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.48387095
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.05114588
       _payload:
         rid: 986220762572783689
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.05463239
+      _payload:
+        rid: 732621188923129923
+      EndNormalizedTime: 0
+      Locked: 0
+    - NormalizedTime: 0.18043883
+      _payload:
+        rid: 732621188923129924
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857304624365634
@@ -714,57 +606,32 @@ MonoBehaviour:
     - NormalizedTime: 0.02737669
       _payload:
         rid: 986220386215526487
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 1
     - NormalizedTime: 0.18309858
       _payload:
         rid: 986220445156769855
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.29577464
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.18309858
       _payload:
         rid: 986220445156769856
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0.4084507
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.023379901
       _payload:
         rid: 986220762572783690
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
       Locked: 0
     - NormalizedTime: 0.17830947
       _payload:
         rid: 986220762572783691
-      _legacyType: 0
-      _legacyEventName: 
-      _legacyEffect: {fileID: 0}
-      _legacyHit: {fileID: 0}
       EndNormalizedTime: 0
-      _legacyTransitionMode: 0
-      _legacyNextSection: 
+      Locked: 0
+    - NormalizedTime: 0.1824571
+      _payload:
+        rid: 732621188923129925
+      EndNormalizedTime: 0
       Locked: 0
     Modules:
     - rid: 6745857324881018904
@@ -821,6 +688,56 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
+    - rid: 732621188923129856
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 2c94d68efccb1344a8c322d44209e1ff, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129920
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 6901fe76633394149814277fe2a935a9, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129921
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: d370d56eab7390b40bbbec86a99db604, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129922
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 1b9675eade6c7d1479b8c1ede63af42f, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129923
+      type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _effect: {fileID: 0}
+        _hit:
+          rid: -2
+        _transitionMode: 0
+        _nextSection: 
+    - rid: 732621188923129924
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 2c94d68efccb1344a8c322d44209e1ff, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
+    - rid: 732621188923129925
+      type: {class: SoundNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
+      data:
+        _sound: {fileID: 11400000, guid: 2c94d68efccb1344a8c322d44209e1ff, type: 2}
+        _loop: 0
+        _nextSection: 
+        _modules: []
     - rid: 986220386215526479
       type: {class: EffectNotifyPayload, ns: ZZZ, asm: Assembly-CSharp}
       data:
@@ -898,7 +815,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_Melee
+          _effectOriginKey: Eff_Melee
           _positionOffset: {x: 0, y: 0.5, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 1
@@ -953,7 +870,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_Beam_R
+          _effectOriginKey: Eff_Beam_R
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -1008,7 +925,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: 
-          _effectKey: Eff_Beam_L
+          _effectOriginKey: Eff_Beam_L
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -1063,7 +980,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: 
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0.8, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 1
@@ -1118,7 +1035,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: 
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0.8, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 1
@@ -1173,7 +1090,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: 
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 4
@@ -1237,7 +1154,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: FX_R_Weapon
-          _effectKey: Eff_Beam04_L
+          _effectOriginKey: Eff_Beam04_L
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -1292,7 +1209,7 @@ MonoBehaviour:
           _origin: 2
           _originTracking: 0
           _socket: FX_L_Weapon
-          _effectKey: Eff_Beam04_R
+          _effectOriginKey: Eff_Beam04_R
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 5
@@ -1347,7 +1264,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: 
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0.5, z: 0}
           _eulerOffset: {x: 0, y: 0, z: 0}
           _shape: 1
@@ -1402,7 +1319,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: FX_R_Weapon
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: 30, z: 0}
           _shape: 5
@@ -1457,7 +1374,7 @@ MonoBehaviour:
           _origin: 0
           _originTracking: 0
           _socket: FX_R_Weapon
-          _effectKey: 
+          _effectOriginKey: 
           _positionOffset: {x: 0, y: 0, z: 0}
           _eulerOffset: {x: 0, y: -30, z: 0}
           _shape: 5
