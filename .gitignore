@@ -13,6 +13,11 @@ Assets/01.Characters/Burnice/Avatar_Female_Size02_Burnice.fbx
 [Uu]ser[Ss]ettings/
 MemoryCaptures/
 Recordings/
+/ProfilerCaptures/*.data
+/ProfilerCaptures/*.highlights
+/ProfilerCaptures/*.bc7
+/.utmp/
+/Android/
 
 # Asset meta data should only be ignored when reading to avoid
 # working in a repository shared by multiple people
