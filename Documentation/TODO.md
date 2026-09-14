@@ -1,107 +1,107 @@
-# ZZZ Unity Project — TODO.md
+# ZZZ Unity Project — TODO
 
-
-## 진행중
-
+> 다음 작업은 **Addressables/AssetBundle → 툰 셰이딩 → Android 통합 빌드**를 중심으로 진행한다.
+> 각 단계는 `변경 전 측정 → 구현 → 동일 조건 재측정 → 결과 기록`까지 완료해야 끝난 것으로 본다.
+> Deep Profile은 원인 추적에만 사용하고 최종 비교 수치는 끈 상태에서 기록한다.
 
 ## 최근 완료
 
-- [x] **페이로드 기반 Notify** — `TrackNotify`의 공통 타이밍과 `[SerializeReference] NotifyPayload`를 분리하고 기존 에셋을 마이그레이션
-- [x] **공용 타격 판정** — 플레이어·몬스터가 같은 `HitService`를 사용하며 Sphere/Cone/Box/Capsule/ExpandingSphere와 Overlap/Sweep 지원
-- [x] **이펙트 원점 바인딩** — `CompositeEffectEntry.EffectOriginKey`와 `HitData.EffectOriginKey`로 풀링된 실제 이펙트 Transform을 캐릭터별 스코프에서 추적
-- [x] **타격 범위 디버그** — AnimationConfigTool Scene View 편집 기즈모와 플레이 중 Game View 디버그 라인 지원
+- [x] **페이로드 기반 Notify** — `TrackNotify`의 공통 타이밍과 `[SerializeReference] NotifyPayload`를 분리하고 기존 에셋 마이그레이션
+- [x] **공용 타격 판정** — `HitService`에서 Sphere/Cone/Box/Capsule/ExpandingSphere와 Overlap/Sweep 지원
+- [x] **이펙트 원점 바인딩** — 풀링된 실제 이펙트 Transform을 캐릭터별 스코프에서 추적
+- [x] **타격 범위 디버그** — AnimationConfigTool Scene View 기즈모와 플레이 중 Game View 디버그 라인 지원
 - [x] **FireBeam 풀 반납 검증** — 최상위 ParticleSystem의 Stop Action을 Callback으로 설정하고 재사용 확인
+- [x] **핵심 코드 경계 분리** — Condition/Trigger, Module, `CharacterNotifyRunner`의 책임 분리
+- [x] **문자열 Notify 제거** — 전용 payload와 `ConfigEventType`을 사용하고 `SendMessage` 제거
 
+## 1. Addressables/AssetBundle 리소스 관리
 
-## 클라이언트 프로그래머 포트폴리오 우선순위
+> Addressables를 런타임 API로 사용하고, 하위 AssetBundle의 구성·의존성·캐싱·해제 원리를 함께 검증한다.
 
-> 목표: 프레임워크의 기능 수보다 **완성된 전투 루프, 안정성, 제작 효율과 측정 결과**를 먼저 증명한다.
-> 포트폴리오에서는 게임플레이를 먼저 보여주고, Animation/Effect Tool은 이를 빠르고 안전하게 제작하는 근거로 제시한다.
+### 설계와 기반 구성
 
-### P0 — 플레이 가능한 전투 수직 단면
+- [ ] **현재 리소스 기준값 측정** — 직접 참조 상태의 시작 메모리, 전투 진입 시간과 VFX 반복 재생 시 최고 메모리 기록
+- [ ] **Addressables 패키지와 Profile 구성** — 개발용 Local 경로를 먼저 구성하고 이후 Remote 확장이 가능한 구조로 설정
+- [ ] **그룹·주소·Label 규칙 정의** — 캐릭터, 공용 VFX와 캐릭터 전용 VFX의 분류 및 Bundle Pack Mode 결정
+- [ ] **AssetBundle 구성 검증** — Build Layout과 Analyze 결과로 중복 에셋, 번들 의존성과 예상치 못한 포함 관계 확인
+- [ ] **리소스 소유권 정의** — Addressables 핸들, `EffectService`, `EffectPool`과 생성 인스턴스의 소유·해제 순서 문서화
 
-- [ ] **적 공격 루프 완성** — 적이 거리와 상태에 따라 접근·공격을 선택하고 `OpenIncomingAttack`을 실제 AI 흐름에서 호출
-- [ ] **공방 상호작용 연결** — 공격 예고 → 회피/패링 → 피격/반격이 테스트 키 없이 연속해서 동작
-- [ ] **공격 결과를 게임 상태로 연결** — 체력, 경직, 다운과 사망 중 현재 데모 범위에 필요한 상태를 구현
-- [ ] **타격감 연출 연결** — 히트스톱, 카메라 반응, 사운드와 피격 이펙트를 Notify 흐름에 연결
-- [ ] **짧은 플레이 구간 완성** — 처음 실행한 사람이 설명 없이도 2~3분 동안 전투 시스템의 핵심을 확인할 수 있는 데모 구성
+### 실제 리소스 적용
 
-### P1 — 재사용성과 안정성 증명
+- [ ] **VFX Addressable 전환** — 공용 VFX 하나를 비동기로 로드해 기존 이펙트 풀과 연결
+- [ ] **풀과 핸들 수명주기 구현** — 풀 제거 → 인스턴스 파괴 → Addressables `Release` 순서를 보장
+- [ ] **캐릭터 Addressable 전환** — 캐릭터 로드·교체 시 이전 인스턴스와 핸들 해제를 검증
+- [ ] **중복 요청과 실패 처리** — 동시 로드 중복 방지, 취소, 타임아웃과 잘못된 주소의 복구 흐름 구현
+- [ ] **씬 전환 수명주기 검증** — 로드 중 전환, 호출자 파괴와 반복 진입에서도 참조와 인스턴스가 남지 않는지 테스트
 
-- [ ] **공용 CharacterActionRunner의 두 번째 소비자 완성** — 몬스터의 이동·공격·피격을 같은 실행 엔진으로 구동해 플레이어 전용 구조가 아님을 증명
-- [ ] **데이터만으로 공격 추가 사례 작성** — 코드 수정 없이 Config/Module 조합으로 새 공격을 제작하고 작업 과정과 소요 시간을 기록
-- [ ] **전이 로직 EditMode 테스트** — 전이 윈도우 경계, 입력 버퍼 소비, OnRelease/OnEndIfMatched와 피격 인터럽트 검증
-- [ ] **타격 판정 테스트** — Sweep 경계, 동일 대상 중복 타격 방지, EffectOriginKey 원점 바인딩과 판정 종료 검증
-- [ ] **이펙트 수명 테스트** — 지연 재생, 구간 이펙트 중단, Config 전환, 풀 반납과 재사용 시 상태 초기화 검증
-- [ ] **에디터 데이터 검증 강화** — 중복 Section, 누락된 대상/클립, 잘못된 Window와 EffectOriginKey를 저장 또는 재생 전에 명확히 표시
-- [x] **핵심 코드 경계 분리** — 입력 판단은 Condition/Trigger, 구간 동작은 Module, 외부 연출의 시간과 생명주기는 `CharacterNotifyRunner`로 분리
+### Profiler 검증
 
-### P2 — 포트폴리오 전달력
+- [ ] **로드 구간 측정 지점 추가** — 요청, 로드 완료, 풀 준비와 해제 구간에 `ProfilerMarker` 적용
+- [ ] **Memory Profiler 전후 비교** — 로드 전, 사용 중, 풀 정리 후 Snapshot으로 메모리 회수 여부 확인
+- [ ] **반복 부하 테스트** — 동일 VFX를 정해진 횟수만큼 재생하며 로드 시간, 최고 메모리, GC Alloc과 프레임 스파이크 기록
+- [ ] **Addressables 결과 문서화** — 직접 참조 방식과 변경 후의 메모리·로딩 수치 및 설계 트레이드오프 정리
 
-- [ ] **60~90초 대표 영상 제작** — 완성 전투 → 타임라인에서 전이/Notify 편집 → 실행 결과 확인 순서로 구성
-- [ ] **README 첫 화면 개선** — 대표 GIF/영상, 실행 방법, 조작법과 핵심 기술 3~5개를 문서 상단에 배치
-- [ ] **실행 가능한 빌드 제공** — PC 빌드를 우선 제공하고 배포 환경에서 정상 실행되는지 확인
-- [ ] **설계 트레이드오프 정리** — Animator 전이 대신 Config 실행기를 선택한 이유, 얻은 이점과 중앙 실행기 복잡도·직렬화 위험을 함께 기록
-- [ ] **본인 기여와 에셋 출처 명시** — 코드·툴·데이터 구성·연출 중 직접 작업한 범위와 캐릭터/애니메이션/VFX 원본 출처를 구분
-- [ ] **성과를 수치로 기록** — 새 공격 제작 시간, 런타임 GC, 프레임 시간, 풀링 전후 Instantiate 또는 메모리 수치를 가능한 범위에서 비교
+## 2. URP 툰 셰이딩
 
-### 후순위 원칙
+> Burnice 캐릭터 한 명을 기준으로 최소 기능을 완성한 뒤, 기능을 하나씩 추가하며 GPU 비용을 측정한다.
 
-- 툰 셰이더와 RenderFeature는 렌더링 직무용 확장보다 현재 전투 데모의 시각적 완성에 필요한 최소 범위를 우선한다.
-- Addressables는 실제 캐릭터/VFX 로드·해제와 메모리 전후를 측정할 수 있는 단계에서 진행한다.
-- 새로운 범용 시스템을 추가하기 전에 현재 시스템을 사용하는 실제 콘텐츠와 검증 사례를 먼저 추가한다.
+### 기본 셰이더
 
+- [ ] **기존 렌더링 기준값 측정** — 동일 장면에서 기존 머티리얼의 CPU/GPU 프레임 시간, Batches와 SetPass Calls 기록
+- [ ] **툰 셰이더 기본 패스 구현** — Base Map, 메인 라이트, 2단 명암과 그림자 색상 지원
+- [ ] **캐릭터 표현 확장** — 림 라이트, 하이라이트와 Emission을 독립적으로 켜고 조절할 수 있게 구현
+- [ ] **URP 필수 패스 검증** — Forward, ShadowCaster, DepthOnly/DepthNormals 동작 확인
+- [ ] **전투 연출 연결** — 피격·강조 효과를 머티리얼 복제 없이 `MaterialPropertyBlock`으로 적용
+- [ ] **ShaderGUI와 키워드 정리** — 사용하지 않는 기능의 Variant가 불필요하게 생성되지 않도록 관리
 
-## 예정 (로드맵)
+### 아웃라인과 RendererFeature
 
-- [ ] **몬스터 추격·워프 확장** — `MonsterMotor`의 `deltaPosition/deltaRotation` 적용과 `Bip001` 중복 수평 이동 제거는 완료. 사거리 밖 추격과 공격 타깃 워프를 추가하고 플레이 모드에서 충돌 이동을 검증
-- [ ] **적 공격 시스템** — `OpenIncomingAttack` 호출 주체(실제 적 AI). 현재 테스트키 K로 시뮬레이션
-- [ ] **이펙트 시스템 잔여** — 지연 재생과 구간 이펙트 트레일의 플레이 모드 실전 검증. 소켓 바인딩·풀링·프리웜(EffectPrewarmer)·**구간형(지속) 노티파이**(`TrackNotify.EndNormalizedTime`+`EffectHandle`)·툴은 구현 완료
-- [ ] **툰 셰이더 + RenderFeature** — 셀 셰이딩/림라이트 셰이더 + `ShaderGUI`(키워드 자동 관리), 아웃라인/포스트 RenderFeature. 전투 중 셰이더 연출은 `MaterialPropertyBlock`으로 적용(머티리얼 오염 금지). 렌더 타겟 디버거
+- [ ] **아웃라인 방식 비교** — Inverted Hull과 화면 공간 방식의 품질, 캐릭터 겹침과 모바일 비용 비교
+- [ ] **아웃라인 RendererFeature 구현** — 선택한 방식으로 PC/Mobile Renderer에서 동작하도록 구성
+- [ ] **렌더 패스 검증** — Frame Debugger로 실행 순서, 입력 Texture와 불필요한 패스 여부 확인
 
-## 모바일 빌드 & 최적화 (목표)
+### Profiler 검증
 
-> 최종 목표: **Android 실기 빌드 + 안정적 프레임(목표 30/60fps)**. 모바일 타겟이 있어야 최적화·메모리 관리에 명확한 기준이 생김.
-> 원칙: **측정 먼저(Profiler) → 병목 확인 → 최적화**. 감으로 고치지 않기.
+- [ ] **기능별 비용 측정** — 기본 명암, 림, 하이라이트, 그림자와 아웃라인을 하나씩 켜며 GPU 시간 비교
+- [ ] **캐릭터 수 증가 테스트** — 동일 캐릭터 수를 단계적으로 늘려 Batches, SetPass Calls와 CPU/GPU 시간을 기록
+- [ ] **모바일 셰이더 최적화** — `half` 정밀도, 텍스처 샘플 수, 추가 광원과 그림자 비용을 점검
+- [ ] **툰 셰이더 결과 문서화** — 기존/툰 셰이더의 품질 이미지, 프레임 비용과 선택한 트레이드오프 정리
 
-### 1) 빌드 환경
-- [ ] Android 빌드 타겟 설정 (IL2CPP, ARM64) — 실기 1대에서 돌아가는 최소 빌드부터
-- [ ] 모바일용 URP Renderer/Quality 에셋 분리 — MSAA·HDR·그림자 해상도 등 모바일 프로파일
+## 3. Android 빌드와 실기 최적화
 
-### 2) 측정 (베이스라인)
-- [ ] Profiler / Frame Debugger / Memory Profiler로 현재 프레임·draw call·메모리 베이스라인 기록
-- [ ] 전투 연출(스킬 난사) 시 스파이크 구간 식별
+> Addressables와 툰 셰이딩 전에 스모크 빌드로 환경을 확인하고, 두 기능을 통합한 뒤 최종 실기 성능을 측정한다.
 
-#### 화염방사 충돌 최적화 비교
+### 초기 스모크 빌드
 
-- [ ] 현재 `ExpandingCone`을 기준으로 아래 판정 방식을 동일한 공격 데이터와 몬스터 배치에서 비교
-  - `ExpandingCone`: `OverlapSphereNonAlloc` 후보를 거리와 각도로 필터링
-  - 확장 캡슐/원기둥: 진행 방향의 길이와 반경을 시간에 따라 확장
-  - 이동 구체 + `SphereCast`: 화염 속도에 맞춰 논리 구체를 이동시키고 이전 위치부터 현재 위치까지 Sweep
-  - 박스: `OverlapBoxNonAlloc`으로 화염 전체 영역을 한 번에 근사
-- [ ] Hit Notify에 실험용 판정 모드를 추가하되, 피격 쿨다운과 타깃별 중복 방지 조건은 모든 방식에서 동일하게 유지
-- [ ] 실제 파티클에 콜라이더를 추가하지 않고, 이동 구체는 `HitService`가 관리하는 논리 판정으로 구현
-- [ ] Deep Profile을 끈 동일 빌드에서 몬스터 수와 공격 반복 시간을 고정하고 다음 항목을 기록
-  - 프레임당 물리 쿼리 횟수와 `HitService` CPU 시간
-  - 쿼리 후보 수와 최종 유효 타격 수
-  - GC Alloc과 최대·평균 프레임 시간
-  - 낮은 프레임레이트에서의 관통 또는 타격 누락
-  - 판정 경계와 이펙트의 시각적 일치도
-- [ ] 반복 공격의 타격 누락·의도하지 않은 중복 타격이 없는 후보 중 성능이 가장 좋은 방식을 최종 선택
+- [ ] **Android 프로젝트 설정 검증** — 애플리케이션 ID, IL2CPP, ARM64, Min/Target SDK와 빌드 씬 확인
+- [ ] **모바일 품질 설정 검증** — 기존 Mobile RP Asset/Renderer의 HDR, Render Scale, 그림자와 후처리 설정 확인
+- [x] **Development Build 실기 실행** — Android 기기에서 실행, 입력, 화면 비율과 그래픽 오류 확인
+- [ ] **초기 실기 베이스라인 기록** — CPU·메모리·렌더링 기준값 기록 완료, Android Vulkan GPU 시간 측정은 별도 도구로 보완 필요 (`AndroidPerformanceBaseline.md`)
 
-### 3) 메모리 관리 — 리소스 비동기 로딩 (Addressables)
-> 무거운 에셋을 필요할 때 비동기 로드, 안 쓰면 `Release`로 메모리에서 해제. 모바일에서 효과 큼.
-- [ ] Addressables 패키지 설치 + Group 기본 세팅
-- [ ] **스킬 VFX/파티클(02.Effects) Addressable 전환** — 스킬 사용 직전 로드, 종료 후 `Release` (메모리 before/after 비교)
-- [ ] 캐릭터 프리팹(Burnice 등) Addressable 로드 — 캐릭터 전환 시 이전 인스턴스 `Release`
+### 고정 성능 시나리오
 
-### 4) 렌더/성능 최적화
-- [ ] 툰 셰이더 모바일 대응 — half precision, 연산 절감 (예정인 툰 셰이더 작업과 연계)
-- [ ] SRP Batcher / GPU Instancing 확인, draw call 절감
-- [ ] 텍스처 압축(ASTC)·해상도 정리, 이펙트 파티클 수 예산 설정
+- [ ] **재현 가능한 테스트 장면 구성** — 기기, 품질, 캐릭터·몬스터 수, 공격 종류와 반복 시간을 고정
+- [ ] **측정 양식 작성** — 빌드 버전, 평균·최대 프레임 시간, GC Alloc, 메모리, 로딩 시간과 발열 상태 기록
+- [ ] **필요 구간에 ProfilerMarker 적용** — `HitService`, 리소스 로드와 이펙트 재생 구간을 Timeline에서 구분
 
-### 5) GC / 런타임 메모리 (코드)
-- [x] **문자열 Notify 제거** — Camera/Sound는 전용 payload만 실행하고, Custom은 `ConfigEventType` enum으로 직렬화한다. `HitShake`는 `IAnimatorBridge.PlayHitShake()`를 명시적으로 호출하며 `SendMessage`와 `CharacterActionContext.GameObject`는 제거했다.
+### 화염방사 판정 방식 비교
+
+- [ ] **화염방사 판정 방식 비교**
+  - 동일한 공격 데이터와 몬스터 배치에서 ExpandingCone, 확장 Capsule, SphereCast와 Box 비교
+  - 물리 쿼리 횟수, `HitService` CPU, 후보/유효 타격 수, GC와 평균·최대 프레임 시간 기록
+  - 낮은 프레임레이트의 타격 누락, 중복 타격과 시각적 일치도를 확인해 최종 방식 선정
+- [ ] **동일 판정 조건 보장** — 모든 방식에 같은 레이어, 피격 쿨다운과 대상별 중복 방지 조건 적용
+- [ ] **실기기 반복 측정** — Deep Profile을 끈 동일 빌드에서 공격 횟수와 몬스터 수를 고정해 비교
+- [ ] **최종 판정 방식 확정** — 정확도 조건을 만족하는 후보 중 가장 안정적인 방식을 선택하고 근거 기록
+
+### 통합 빌드와 최종 검증
+
+- [ ] **Addressables 콘텐츠 빌드 검증** — 번들, 카탈로그와 런타임 로드 경로가 Android 빌드에서 정상 동작
+- [ ] **툰 셰이더 빌드 검증** — 필요한 Variant와 RenderFeature가 포함되고 분홍색 머티리얼이나 누락 패스가 없는지 확인
+- [ ] **장시간 전투 테스트** — 동일 전투를 10분 이상 반복하며 메모리 증가, GC 스파이크와 발열 이후 성능 확인
+- [ ] **30/60fps 프레임 예산 평가** — 33.3ms/16.7ms 초과 구간을 찾아 CPU 또는 GPU 병목으로 구분
+- [ ] **확인된 병목 개선** — 측정으로 확인된 병목 하나 이상을 수정하고 동일 조건의 전후 수치 비교
+- [ ] **최종 결과 정리** — Addressables, 툰 셰이더와 화염방사 판정의 설계·측정·개선 결과를 포트폴리오 문서에 연결
 
 ## 발견된 버그
 
