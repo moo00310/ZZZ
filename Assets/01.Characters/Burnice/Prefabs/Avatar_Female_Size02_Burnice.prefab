@@ -1369,7 +1369,6 @@ GameObject:
   - component: {fileID: 3724266460484320341}
   - component: {fileID: 7334887429754876192}
   - component: {fileID: 3731661064136392671}
-  - component: {fileID: 7641824737164803945}
   m_Layer: 0
   m_Name: Avatar_Female_Size02_Burnice
   m_TagString: Untagged
@@ -1527,7 +1526,7 @@ MonoBehaviour:
     _reinterruptThreshold: 0.3
     _entryBlend: 0.03
   _inputBufferWindow: 0.25
-  _showHitGizmos: 0
+  _showHitGizmos: 1
   _hitGizmoDuration: 1
 --- !u!114 &6598271349827134982
 MonoBehaviour:
@@ -1589,25 +1588,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Agent.AgentResources
   _dashMaxCharges: 2
   _dashRechargeTime: 2
---- !u!114 &7641824737164803945
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1430500293498163557}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 80638e4034da53145ac0f45386dd383c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.PlayerStateHUD
-  _actionController: {fileID: 0}
-  _motor: {fileID: 0}
-  _toggleKey: 105
-  _visible: 1
-  _origin: {x: 12, y: 12}
-  _width: 400
-  _successDisplayDuration: 1.5
 --- !u!1 &1457782752490627230
 GameObject:
   m_ObjectHideFlags: 0
