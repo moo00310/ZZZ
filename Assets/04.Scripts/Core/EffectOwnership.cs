@@ -1,105 +1,191 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using ZZZ.Effects;
+using ZZZ.ResourceManagement;
+using Object = UnityEngine.Object;
 
 namespace ZZZ
 {
-    // 캐릭터가 '무엇을 쓰는지'는 AnimationConfig의 Effect Notify와 피드백 프로필에 이미 있다.
-    // 그래서 소유권을 별도 프리팹 목록으로 다시 나열하지 않고 원본 데이터 참조에서 유도한다.
-    // 캐릭터 로드 시 Register, 파괴 시 Unregister를 부르면 전역 풀(EffectService)이 그 프리팹들을 프리웜/회수한다.
-    // 프리웜 개수·상한은 각 프리팹의 EffectPoolConfig가 정한다 — 여기선 '누가 소유하냐'만 다룬다.
     public static class EffectOwnership
     {
-        public static void Register(Object owner, IEnumerable<AnimationConfig> configs)
+        private sealed class Scope
         {
-            if (owner == null) return;
-            foreach (GameObject prefab in CollectPrefabs(configs))
-                EffectService.RegisterOwner(prefab, owner);
-        }
+            private readonly Object _owner;
+            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+            private readonly List<AssetLease<GameObject>> _leases = new List<AssetLease<GameObject>>();
+            private readonly HashSet<GameObject> _prefabs = new HashSet<GameObject>();
+            private Task _release;
 
-        public static void Unregister(Object owner, IEnumerable<AnimationConfig> configs)
-        {
-            if (owner == null) return;
-            foreach (GameObject prefab in CollectPrefabs(configs))
-                EffectService.UnregisterOwner(prefab, owner);
-        }
+            public Task<bool> Ready { get; private set; }
 
-        // 편의 오버로드 — 개별 config를 그대로 넘길 때(예: 몬스터의 idle/hit).
-        public static void Register(Object owner, params AnimationConfig[] configs)
-            => Register(owner, (IEnumerable<AnimationConfig>)configs);
-        public static void Unregister(Object owner, params AnimationConfig[] configs)
-            => Unregister(owner, (IEnumerable<AnimationConfig>)configs);
-
-        public static void Register(Object owner, CompositeEffect composite)
-        {
-            if (owner == null) return;
-            var prefabs = new HashSet<GameObject>();
-            AddComposite(prefabs, composite);
-            foreach (GameObject prefab in prefabs)
-                EffectService.RegisterOwner(prefab, owner);
-        }
-
-        public static void Unregister(Object owner, CompositeEffect composite)
-        {
-            if (owner == null) return;
-            var prefabs = new HashSet<GameObject>();
-            AddComposite(prefabs, composite);
-            foreach (GameObject prefab in prefabs)
-                EffectService.UnregisterOwner(prefab, owner);
-        }
-
-        public static void Register(
-            Object owner, IEnumerable<CompositeEffect> composites)
-        {
-            if (owner == null || composites == null) return;
-            var prefabs = new HashSet<GameObject>();
-            foreach (CompositeEffect composite in composites)
-                AddComposite(prefabs, composite);
-            foreach (GameObject prefab in prefabs)
-                EffectService.RegisterOwner(prefab, owner);
-        }
-
-        public static void Unregister(
-            Object owner, IEnumerable<CompositeEffect> composites)
-        {
-            if (owner == null || composites == null) return;
-            var prefabs = new HashSet<GameObject>();
-            foreach (CompositeEffect composite in composites)
-                AddComposite(prefabs, composite);
-            foreach (GameObject prefab in prefabs)
-                EffectService.UnregisterOwner(prefab, owner);
-        }
-
-        // config들의 Effect Notify가 참조하는 프리팹을 distinct로 모은다.
-        // Notify는 클립(섹션)별로 달리므로 Clips → Notifies 순으로 훑는다.
-        private static HashSet<GameObject> CollectPrefabs(IEnumerable<AnimationConfig> configs)
-        {
-            var set = new HashSet<GameObject>();
-            if (configs == null) return set;
-
-            foreach (AnimationConfig config in configs)
+            public Scope(Object owner, List<CompositeEffectEntry> entries)
             {
-                if (config == null) continue;
-                foreach (TrackClip clip in config.Clips)
+                _owner = owner;
+                _cancellation.CancelAfter(TimeSpan.FromSeconds(30));
+                Ready = PrepareAsync(entries);
+            }
+
+            private async Task<bool> PrepareAsync(List<CompositeEffectEntry> entries)
+            {
+                try
                 {
-                    if (clip == null) continue;
-                    foreach (TrackNotify notify in clip.Notifies)
+                    var keys = new HashSet<string>();
+                    foreach (CompositeEffectEntry entry in entries)
                     {
-                        if (notify?.Payload is EffectNotifyPayload effectPayload)
-                            AddComposite(set, effectPayload.Effect);
+                        GameObject prefab;
+                        if (entry.PrefabReference != null && entry.PrefabReference.RuntimeKeyIsValid())
+                        {
+                            string key = entry.PrefabReference.AssetGUID;
+                            if (!keys.Add(key)) continue;
+                            AssetLease<GameObject> lease = await AddressableResources.AcquirePrefabAsync(
+                                key, _cancellation.Token);
+                            _leases.Add(lease);
+                            prefab = lease.Asset;
+                        }
+                        else prefab = entry.LegacyPrefab;
+
+                        _cancellation.Token.ThrowIfCancellationRequested();
+                        if (_owner == null) throw new OperationCanceledException();
+                        if (prefab != null && _prefabs.Add(prefab))
+                            EffectService.RegisterOwner(prefab, _owner);
                     }
+                    _cancellation.CancelAfter(Timeout.Infinite);
+                    return true;
+                }
+                catch (Exception exception)
+                {
+                    if (_owner != null && !_cancellation.IsCancellationRequested)
+                        Debug.LogError($"VFX preparation failed for {_owner.name}: {exception.Message}", _owner);
+                    await ReleaseResourcesAsync();
+                    return false;
                 }
             }
-            return set;
+
+            public async Task CloseAsync()
+            {
+                _cancellation.Cancel();
+                await Ready;
+                await ReleaseResourcesAsync();
+                _cancellation.Dispose();
+            }
+
+            private Task ReleaseResourcesAsync()
+            {
+                if (_release == null) _release = ReleaseCoreAsync();
+                return _release;
+            }
+
+            private async Task ReleaseCoreAsync()
+            {
+                var releases = new List<Task>();
+                foreach (GameObject prefab in _prefabs)
+                    releases.Add(EffectService.UnregisterOwnerAsync(prefab, _owner));
+                await Task.WhenAll(releases);
+                _prefabs.Clear();
+                foreach (AssetLease<GameObject> lease in _leases) lease.Dispose();
+                _leases.Clear();
+            }
         }
 
-        private static void AddComposite(
-            HashSet<GameObject> set, CompositeEffect composite)
+        private static Dictionary<Object, Scope> _scopes = new Dictionary<Object, Scope>();
+        private static Dictionary<Object, Task> _closing = new Dictionary<Object, Task>();
+
+        public static bool IsReady(Object owner)
         {
-            if (composite == null) return;
+            return !ReferenceEquals(owner, null) && _scopes.TryGetValue(owner, out Scope scope)
+                && scope.Ready.Status == TaskStatus.RanToCompletion && scope.Ready.Result;
+        }
+
+        public static Task<bool> WaitUntilReady(Object owner)
+        {
+            return !ReferenceEquals(owner, null) && _scopes.TryGetValue(owner, out Scope scope)
+                ? scope.Ready : Task.FromResult(false);
+        }
+
+        public static void Register(Object owner, IEnumerable<AnimationConfig> configs)
+        {
+            var entries = new List<CompositeEffectEntry>();
+            var visited = new HashSet<AnimationConfig>();
+            if (configs != null)
+                foreach (AnimationConfig config in configs) CollectConfig(config, visited, entries);
+            RegisterEntries(owner, entries);
+        }
+
+        public static void Register(Object owner, params AnimationConfig[] configs)
+            => Register(owner, (IEnumerable<AnimationConfig>)configs);
+
+        public static void Register(Object owner, CompositeEffect composite)
+            => Register(owner, new[] { composite });
+
+        public static void Register(Object owner, IEnumerable<CompositeEffect> composites)
+        {
+            var entries = new List<CompositeEffectEntry>();
+            if (composites != null)
+                foreach (CompositeEffect composite in composites) CollectComposite(composite, entries);
+            RegisterEntries(owner, entries);
+        }
+
+        public static void Unregister(Object owner, IEnumerable<AnimationConfig> configs) => Unregister(owner);
+        public static void Unregister(Object owner, params AnimationConfig[] configs) => Unregister(owner);
+        public static void Unregister(Object owner, CompositeEffect composite) => Unregister(owner);
+        public static void Unregister(Object owner, IEnumerable<CompositeEffect> composites) => Unregister(owner);
+        public static void Unregister(Object owner) => _ = UnregisterAsync(owner);
+
+        public static Task UnregisterAsync(Object owner)
+        {
+            if (ReferenceEquals(owner, null)) return Task.CompletedTask;
+            if (_closing.TryGetValue(owner, out Task closing)) return closing;
+            if (!_scopes.TryGetValue(owner, out Scope scope)) return Task.CompletedTask;
+            _scopes.Remove(owner);
+            Task release = scope.CloseAsync();
+            _closing.Add(owner, release);
+            _ = ForgetClosedScopeAsync(owner, release);
+            return release;
+        }
+
+        private static async Task ForgetClosedScopeAsync(Object owner, Task release)
+        {
+            try { await release; }
+            finally { _closing.Remove(owner); }
+        }
+
+        private static void RegisterEntries(Object owner, List<CompositeEffectEntry> entries)
+        {
+            if (owner == null || _scopes.ContainsKey(owner)) return;
+            _scopes.Add(owner, new Scope(owner, entries));
+        }
+
+        private static void CollectConfig(
+            AnimationConfig config, HashSet<AnimationConfig> visited, List<CompositeEffectEntry> entries)
+        {
+            if (config == null || !visited.Add(config)) return;
+            foreach (ClipLink link in config.GlobalLinks)
+                if (link != null) CollectConfig(link.TargetConfig, visited, entries);
+            foreach (TrackClip clip in config.Clips)
+            {
+                if (clip == null) continue;
+                foreach (ClipLink link in clip.Links)
+                    if (link != null) CollectConfig(link.TargetConfig, visited, entries);
+                foreach (TrackNotify notify in clip.Notifies)
+                    if (notify?.Payload is EffectNotifyPayload payload) CollectComposite(payload.Effect, entries);
+            }
+        }
+
+        private static void CollectComposite(CompositeEffect composite, List<CompositeEffectEntry> entries)
+        {
+            if (composite == null || composite.Entries == null) return;
             foreach (CompositeEffectEntry entry in composite.Entries)
-                if (entry != null && entry.Prefab != null)
-                    set.Add(entry.Prefab);
+                if (entry != null) entries.Add(entry);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetState()
+        {
+            _scopes = new Dictionary<Object, Scope>();
+            _closing = new Dictionary<Object, Task>();
         }
     }
 }

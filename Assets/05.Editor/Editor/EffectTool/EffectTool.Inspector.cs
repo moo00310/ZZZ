@@ -40,8 +40,8 @@ namespace ZZZ.Editor.EffectTool
             for (int i = 0; i < entries.arraySize; i++)
             {
                 var e = entries.GetArrayElementAtIndex(i);
-                var prefabProp = e.FindPropertyRelative("Prefab");
-                var prefab = prefabProp.objectReferenceValue as GameObject;
+                var prefabProp = e.FindPropertyRelative("_prefabReference");
+                var prefab = EffectEditorShared.GetPrefab(e);
                 string title = prefab != null ? prefab.name : "(프리팹 미지정)";
                 float delay = e.FindPropertyRelative("StartDelay").floatValue;
 
@@ -89,7 +89,7 @@ namespace ZZZ.Editor.EffectTool
                 int n = entries.arraySize;
                 entries.InsertArrayElementAtIndex(n);
                 var e = entries.GetArrayElementAtIndex(n);
-                e.FindPropertyRelative("Prefab").objectReferenceValue = null;
+                EffectEditorShared.ClearPrefab(e);
                 e.FindPropertyRelative("EffectOriginKey").stringValue = "";
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
                 e.FindPropertyRelative("Duration").floatValue = 0f;

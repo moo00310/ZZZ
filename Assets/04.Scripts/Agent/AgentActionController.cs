@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 using ZZZ;
 
 using ZZZ.Combat;
 using ZZZ.Effects;
+using ZZZ.ResourceManagement;
 
 namespace ZZZ.Agent
 {
@@ -160,7 +163,17 @@ namespace ZZZ.Agent
         }
 
         // Start는 모든 Awake가 끝난 뒤 실행 → CharacterAnimatorBridge 초기화 보장
-        private void Start() => StartActions();
+        private async void Start()
+        {
+            if (await EffectOwnership.WaitUntilReady(this) && this != null && gameObject.activeInHierarchy)
+                StartActions();
+        }
+
+        public Task<bool> PrepareResourcesAsync(CancellationToken cancellationToken)
+        {
+            EffectOwnership.Register(this, OwnedConfigs());
+            return ResourceTask.WaitAsync(EffectOwnership.WaitUntilReady(this), cancellationToken);
+        }
 
         private void Update()
         {
@@ -315,7 +328,7 @@ namespace ZZZ.Agent
 
         public void StartActions()
         {
-            if (_isRunning) return;
+            if (_isRunning || !EffectOwnership.IsReady(this)) return;
             _isRunning = true;
             _runner.Enter();
         }

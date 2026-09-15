@@ -13,8 +13,14 @@ MonoBehaviour:
   m_Name: Cmp_AN5_01
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
-  - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
-    BindingKey: 
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: 49f79e315fbfbc543a2b18cded756146
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -48,8 +54,14 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
-  - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
-    BindingKey: 
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: 31338900c374ca24ab5908b07f8bad30
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0.085
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -78,8 +90,14 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
-  - Prefab: {fileID: 7127868586447008791, guid: 31338900c374ca24ab5908b07f8bad30, type: 3}
-    BindingKey: 
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: 31338900c374ca24ab5908b07f8bad30
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0.085
     MaterialOverride: {fileID: 0}
     Duration: 0

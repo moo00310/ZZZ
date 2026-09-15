@@ -92,6 +92,7 @@ namespace ZZZ.Monster
 
         private void Update()
         {
+            if (!EffectOwnership.IsReady(this)) return;
             _runner.SetHitDebug(_showHitGizmos, _hitGizmoDuration);
             _runner.Update(_hitLagSpeed);
         }
@@ -156,7 +157,7 @@ namespace ZZZ.Monster
 
         private bool TryPlay(AnimationConfig config, string section = null)
         {
-            if (config == null) return false;
+            if (config == null || !EffectOwnership.IsReady(this)) return false;
 
             _runner.InterruptWith(config, section);
             return true;

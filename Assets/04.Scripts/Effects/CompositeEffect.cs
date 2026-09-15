@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.AddressableAssets;
+using ZZZ.ResourceManagement;
 
 namespace ZZZ.Effects
 {
@@ -12,7 +14,7 @@ namespace ZZZ.Effects
     }
 
     // 이펙트 프리팹 여러 개를 상대 시차/배치로 묶어 "하나의 연출"로 재생하는 조합 데이터.
-    // 원자(개별 이펙트)는 별도 SO 없이 프리팹을 직접 참조하고, 풀링/배치/반납 설정은 각 Entry가 들고 있다.
+    // 개별 이펙트는 Addressables 참조로 보관하고, 소유 스코프가 원본을 로드해 풀과 연결한다.
     // 풀링은 프리팹 단위(EffectPool)로 이뤄져, 같은 프리팹을 여러 조합이 써도 풀은 공유된다.
     // Notify는 이 SO 하나만 참조한다(단일 이펙트도 Entry 1개짜리 조합으로 표현).
     [CreateAssetMenu(menuName = "ZZZ/Effects/Composite Effect", fileName = "Cmp_")]
@@ -24,7 +26,33 @@ namespace ZZZ.Effects
     [Serializable]
     public class CompositeEffectEntry
     {
-        public GameObject Prefab;                    // 재생할 이펙트 프리팹 (서브파티클 + 내부 Start Delay 포함)
+        [FormerlySerializedAs("Prefab")]
+        [SerializeField, HideInInspector] private GameObject _legacyPrefab;
+        [SerializeField] private AssetReferenceGameObject _prefabReference = new AssetReferenceGameObject("");
+
+        public AssetReferenceGameObject PrefabReference => _prefabReference;
+        public GameObject LegacyPrefab => _legacyPrefab;
+        public GameObject Prefab
+        {
+            get
+            {
+                if (_prefabReference != null && _prefabReference.RuntimeKeyIsValid())
+                    return AddressableResources.TryGetPrefab(_prefabReference.AssetGUID, out GameObject prefab)
+                        ? prefab : null;
+                return _legacyPrefab;
+            }
+            set
+            {
+                _legacyPrefab = value;
+                _prefabReference = new AssetReferenceGameObject("");
+            }
+        }
+
+        public void SetPrefabReference(AssetReferenceGameObject reference)
+        {
+            _prefabReference = reference;
+            _legacyPrefab = null;
+        }
         [FormerlySerializedAs("BindingKey")]
         public string EffectOriginKey = "";          // Hit가 이 실행 인스턴스를 판정 원점으로 찾는 캐릭터 스코프 키
         public float      StartDelay = 0f;            // 이 조합 안에서의 상대 시차(초)

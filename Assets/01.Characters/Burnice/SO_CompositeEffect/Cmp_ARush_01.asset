@@ -13,13 +13,20 @@ MonoBehaviour:
   m_Name: Cmp_ARush_01
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
-  - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: 49f79e315fbfbc543a2b18cded756146
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
-    Socket:
+    Socket: 
     PositionOffset: {x: 0, y: 0.5, z: 0.8}
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1.7, y: 1.7, z: 2.2}
@@ -52,13 +59,20 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
-  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: b2c151f2210a98344a870cf3dba70e7b
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0.19
     MaterialOverride: {fileID: 0}
     Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
-    Socket:
+    Socket: 
     PositionOffset: {x: 0, y: 0, z: 0}
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}
@@ -84,13 +98,20 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
-  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: b2c151f2210a98344a870cf3dba70e7b
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0.19
     MaterialOverride: {fileID: 0}
     Duration: 0
     PlaybackSpeed: 1
     StartLifetime: 0
-    Socket:
+    Socket: 
     PositionOffset: {x: 0, y: 0, z: 0}
     EulerOffset: {x: 0, y: 0, z: 0}
     Scale: {x: 1, y: 1, z: 1}

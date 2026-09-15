@@ -13,8 +13,14 @@ MonoBehaviour:
   m_Name: Cmp_AEn1_Ex
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
-  - Prefab: {fileID: 1738888438281591883, guid: 49f79e315fbfbc543a2b18cded756146, type: 3}
-    BindingKey: 
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: 49f79e315fbfbc543a2b18cded756146
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0
