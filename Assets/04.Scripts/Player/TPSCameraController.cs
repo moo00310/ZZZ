@@ -126,7 +126,7 @@ namespace ZZZ.Player
 
         private void ReadLookInput()
         {
-            if (!_lookInputEnabled) return;
+            if (!_lookInputEnabled || Mouse.current == null) return;
 
             Vector2 delta = Mouse.current.delta.ReadValue();
             _yaw   += delta.x * _sensitivityX;
@@ -464,7 +464,7 @@ namespace ZZZ.Player
         // ESC로 커서 잠금 해제 (에디터 작업 편의용)
         private void Update()
         {
-            if (Keyboard.current.escapeKey.wasPressedThisFrame)
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 bool locked = Cursor.lockState == CursorLockMode.Locked;
                 Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
