@@ -20,23 +20,23 @@
 
 ### 설계와 기반 구성
 
-- [ ] **현재 리소스 기준값 측정** — 직접 참조 상태의 시작 메모리, 전투 진입 시간과 VFX 반복 재생 시 최고 메모리 기록
-- [ ] **Addressables 패키지와 Profile 구성** — 개발용 Local 경로를 먼저 구성하고 이후 Remote 확장이 가능한 구조로 설정
-- [ ] **그룹·주소·Label 규칙 정의** — 캐릭터, 공용 VFX와 캐릭터 전용 VFX의 분류 및 Bundle Pack Mode 결정
-- [ ] **AssetBundle 구성 검증** — Build Layout과 Analyze 결과로 중복 에셋, 번들 의존성과 예상치 못한 포함 관계 확인
-- [ ] **리소스 소유권 정의** — Addressables 핸들, `EffectService`, `EffectPool`과 생성 인스턴스의 소유·해제 순서 문서화
+- [ ] **현재 리소스 기준값 측정** — 직접 참조 상태의 Idle·공격 메모리 기준값은 `AndroidPerformanceBaseline.md`에 기록 완료. 시작 메모리와 전투 진입 시간은 보완 필요
+- [x] **Addressables 패키지와 Profile 구성** — 개발용 Local 경로를 먼저 구성하고 이후 Remote 확장이 가능한 구조로 설정
+- [x] **그룹·주소·Label 규칙 정의** — 캐릭터, 공용 VFX와 캐릭터 전용 VFX의 분류 및 Bundle Pack Mode 결정
+- [x] **AssetBundle 구성 검증** — Android Packed Build Layout으로 중복 에셋 0건, 번들 의존성과 포함 관계 확인
+- [x] **리소스 소유권 정의** — Addressables 핸들, `EffectService`, `EffectPool`과 생성 인스턴스의 소유·해제 순서 문서화
 
 ### 실제 리소스 적용
 
-- [ ] **VFX Addressable 전환** — 공용 VFX 하나를 비동기로 로드해 기존 이펙트 풀과 연결
-- [ ] **풀과 핸들 수명주기 구현** — 풀 제거 → 인스턴스 파괴 → Addressables `Release` 순서를 보장
-- [ ] **캐릭터 Addressable 전환** — 캐릭터 로드·교체 시 이전 인스턴스와 핸들 해제를 검증
-- [ ] **중복 요청과 실패 처리** — 동시 로드 중복 방지, 취소, 타임아웃과 잘못된 주소의 복구 흐름 구현
-- [ ] **씬 전환 수명주기 검증** — 로드 중 전환, 호출자 파괴와 반복 진입에서도 참조와 인스턴스가 남지 않는지 테스트
+- [x] **VFX Addressable 전환** — VFX Entry 32개를 참조로 변환하고 비동기 원본 로드를 기존 풀과 연결
+- [x] **풀과 핸들 수명주기 구현** — 마지막 소유자 해제 → 대기·대여 인스턴스 파괴 완료 → 원본 사용권 반환
+- [x] **캐릭터 Addressable 전환** — SampleScene 스쿼드를 비동기로 준비하고 일반 교체에서는 명단을 유지, 종료 시 인스턴스와 사용권 반환
+- [x] **중복 요청과 실패 처리** — 동시 로드 공유, 개별 대기 취소, 30초 타임아웃 및 실패 후 재요청 구현
+- [x] **씬 전환 수명주기 검증** — 에디터 Use Asset Database 모드에서 로드 중 이탈과 반복 진입·종료 검증, Android 실기 검증은 아래 통합 단계에서 진행
 
 ### Profiler 검증
 
-- [ ] **로드 구간 측정 지점 추가** — 요청, 로드 완료, 풀 준비와 해제 구간에 `ProfilerMarker` 적용
+- [x] **로드 구간 측정 지점 추가** — 요청, 로드 완료, 풀 준비와 해제 구간에 `ProfilerMarker` 적용
 - [ ] **Memory Profiler 전후 비교** — 로드 전, 사용 중, 풀 정리 후 Snapshot으로 메모리 회수 여부 확인
 - [ ] **반복 부하 테스트** — 동일 VFX를 정해진 횟수만큼 재생하며 로드 시간, 최고 메모리, GC Alloc과 프레임 스파이크 기록
 - [ ] **Addressables 결과 문서화** — 직접 참조 방식과 변경 후의 메모리·로딩 수치 및 설계 트레이드오프 정리

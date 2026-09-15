@@ -40,6 +40,11 @@ Agent 프리팹
 
 ## 캐릭터 교체 순서
 
+전투 진입 시 명단의 Addressable 캐릭터와 필요한 VFX를 비동기로 준비한다.
+비활성 루트에서 생성해 풀 예열 전에 행동이 시작되지 않도록 하며 입력과 인트로는 준비 완료를 기다린다.
+일반 교체에서 캐릭터와 풀을 유지하고, 씬 이탈 또는 `ShutdownAsync`에서 풀 정리와 인스턴스 파괴 후
+원본 사용권을 반환한다. 자세한 소유권은 `AddressablesArchitecture.md`를 따른다.
+
 `Previous` 또는 `Next` 액션이 들어오면 다음 순서로 교체한다.
 
 1. 현재 입력 타깃을 해제하고 남은 입력을 초기화한다.
@@ -60,7 +65,8 @@ Agent 프리팹
 3. `Action Controller`에 루트의 `AgentActionController`를 연결한다.
 4. 프리팹 하위에 `CameraPoint`를 만들고 `Camera Point`에 연결한다.
 5. 캐릭터를 프리팹으로 저장한다.
-6. 씬의 `PlayerRuntime > SquadController > Character Prefabs` 목록에 프리팹을 추가한다.
+6. 캐릭터 프리팹을 Addressables 캐릭터 그룹에 등록한다.
+7. 씬의 `PlayerRuntime > SquadController > Agent References` 목록에 프리팹을 추가한다.
 
 캐릭터 프리팹에는 `PlayerInput`, `PlayerInputRouter`, 메인 카메라를 넣지 않는다.
 씬에 캐릭터 인스턴스를 별도로 배치하지 않아도 `SquadController`가 시작 시 생성한다.

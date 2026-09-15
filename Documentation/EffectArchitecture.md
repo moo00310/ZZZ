@@ -31,7 +31,8 @@
 | 구성 요소 | 역할 |
 |---|---|
 | `CompositeEffect` | 여러 Entry의 재생 순서와 조합 설정을 저장 |
-| `CompositeEffectEntry` | 프리팹, 지연, 소켓, 위치와 재생 옵션을 정의 |
+| `CompositeEffectEntry` | Addressable 프리팹 참조, 지연, 소켓, 위치와 재생 옵션을 정의 |
+| `EffectOwnership` | 소유자별 VFX 원본 로드·풀 준비와 사용권 반환을 관리 |
 | `CharacterNotifyRunner` | Effect Notify의 발동 시점과 실행 중 Handle의 생명주기 관리 |
 | `EffectService` | 재생 요청을 받고 프리팹별 풀을 조회·생성 |
 | `EffectPool` | 원시 프리팹 인스턴스를 대여하고 회수 |
@@ -43,6 +44,11 @@
 ### 실행은 조합 단위, 풀링은 프리팹 단위
 
 게임 로직은 `CompositeEffect` 하나만 요청한다. `EffectService`는 내부 Entry를 펼쳐 각 프리팹의 풀에서 인스턴스를 가져온다. 같은 불꽃 프리팹을 여러 조합에서 사용해도 풀과 원본 설정은 공유한다.
+
+Entry는 `AssetReferenceGameObject`를 저장한다. 재생 전에 `EffectOwnership`이 필요한 프리팹을 비동기로
+로드하고 풀을 준비한다. 준비 완료 후 캐릭터 행동과 피격 연출을 허용한다. 일반 교체에서는 사용권을
+유지하고 소유자 파괴 시 반환한다. 마지막 풀 소유자가 사라지면 대기·대여 인스턴스를 모두 정지·파괴하고
+실제 파괴 완료 후 원본 사용권을 반환한다. 공유 로드와 취소 규칙은 `AddressablesArchitecture.md`를 따른다.
 
 ### 재생 설정과 런타임 상태를 분리한다
 
