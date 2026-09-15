@@ -302,7 +302,17 @@ namespace ZZZ.Effects
         {
             CancelInvoke();
             NotifyPlaybackStopped();
-            _pool.Release(gameObject);
+            if (_pool != null) _pool.Release(gameObject);
+        }
+
+        internal void StopForTeardown()
+        {
+            CancelInvoke();
+            NotifyPlaybackStopped();
+            if (_moduleRunner != null) _moduleRunner.RequestStop();
+            _pool = null;
+            StopEmitting();
+            gameObject.SetActive(false);
         }
 
         private void NotifyPlaybackStopped()

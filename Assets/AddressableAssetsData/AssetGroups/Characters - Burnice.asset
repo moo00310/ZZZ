@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Characters - Burnice
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Characters - Burnice
+  m_GUID: 0b36da80bb59a7f4ab667311383057b0
+  m_SerializeEntries:
+  - m_GUID: 6bd74e68a084be14ca8b756e96fb5838
+    m_Address: characters/burnice/prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - burnice
+    - character
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: f6f4eb0585cee574bb1b280fafb8c8ec, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: bf7d3a564e6c6fa4a85a68cf8ad36952, type: 2}
+    - {fileID: 11400000, guid: f0f632ae6e248964d9a95cfcebf938ce, type: 2}

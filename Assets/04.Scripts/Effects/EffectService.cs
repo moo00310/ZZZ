@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 using ZZZ.Combat;
+using ZZZ.ResourceManagement;
 
 namespace ZZZ.Effects
 {
@@ -157,6 +160,8 @@ namespace ZZZ.Effects
     // 같은 프리팹을 서로 다른 조합에서 다른 시차/배치로 재사용할 수 있다(풀은 공유).
     public static class EffectService
     {
+        private static readonly ProfilerMarker PoolPrepareMarker = new ProfilerMarker("ZZZ.Effects.PoolPrepare");
+        private static readonly ProfilerMarker PoolReleaseMarker = new ProfilerMarker("ZZZ.Effects.PoolRelease");
         private static Dictionary<GameObject, EffectPool> s_pools;
         private static Transform            s_poolRoot;
         private static EffectServiceRunner  s_runner;
@@ -193,6 +198,7 @@ namespace ZZZ.Effects
             GetRunner().EnqueueLateUpdate(() =>
             {
                 if (context.Spawner == null || context.CharacterRoot == null
+                    || !context.CharacterRoot.gameObject.activeInHierarchy
                     || (handle != null && handle.IsStopped)) return;
                 PlayEntries(composite, context, handle, true);
             });
@@ -230,12 +236,15 @@ namespace ZZZ.Effects
                     var h = handle;
                     GetRunner().Delay(entry.StartDelay, () =>
                     {
-                        if (context.Spawner == null || context.CharacterRoot == null) return;
+                        if (context.Spawner == null || context.CharacterRoot == null
+                            || !context.CharacterRoot.gameObject.activeInHierarchy
+                            || (h != null && h.IsStopped)) return;
                         if (afterAnimation)
                         {
                             GetRunner().EnqueueLateUpdate(() =>
                             {
                                 if (context.Spawner == null || context.CharacterRoot == null
+                                    || !context.CharacterRoot.gameObject.activeInHierarchy
                                     || (h != null && h.IsStopped)) return;
                                 var lateSpawned = PlayEntry(e, context);
                                 h?.Add(lateSpawned);
@@ -253,8 +262,10 @@ namespace ZZZ.Effects
         private static PooledEffectHandle PlayEntry(
             CompositeEffectEntry entry, EffectPlayContext context)
         {
+            if (entry.Prefab == null) return null;
             EffectPool pool     = GetOrCreatePool(entry.Prefab);
             GameObject instance = pool.Get();
+            if (instance == null) return null;
 
             if (context.HasWorldPose)
             {
@@ -357,18 +368,31 @@ namespace ZZZ.Effects
             var cfg = prefab.GetComponent<EffectPoolConfig>();
             if (cfg != null) { count = cfg.PrewarmCount; maxSize = cfg.MaxSize; }
 
-            Prewarm(prefab, count, maxSize);
-            GetOrCreatePool(prefab).AddOwner(owner);
+            using (PoolPrepareMarker.Auto())
+            {
+                Prewarm(prefab, count, maxSize);
+                GetOrCreatePool(prefab).AddOwner(owner);
+            }
         }
 
-        // 소유권 해제 — 캐릭터 언로드 시(OnDestroy). 마지막 owner가 빠지면 풀이 teardown되어
-        // 대기 인스턴스를 파괴하고, 재생 중이던 것도 끝나는 대로 회수된다(EffectPool.RemoveOwner).
-        // 텍스처 등 에셋 메모리까지 실제로 내리려면 씬 전환 등 적절한 시점에 Resources.UnloadUnusedAssets() 호출.
+        // Last-owner teardown must finish before the scope releases its source prefab lease.
         public static void UnregisterOwner(GameObject prefab, Object owner)
         {
-            if (prefab == null || owner == null || s_pools == null) return;
-            if (s_pools.TryGetValue(prefab, out EffectPool pool))
+            _ = UnregisterOwnerAsync(prefab, owner);
+        }
+
+        public static Task UnregisterOwnerAsync(GameObject prefab, Object owner)
+        {
+            if (prefab == null || ReferenceEquals(owner, null) || s_pools == null)
+                return Task.CompletedTask;
+            using (PoolReleaseMarker.Auto())
+            {
+                if (!s_pools.TryGetValue(prefab, out EffectPool pool)) return Task.CompletedTask;
                 pool.RemoveOwner(owner);
+                if (!pool.TearingDown) return Task.CompletedTask;
+                s_pools.Remove(prefab);
+                return ResourceLifetime.WaitForDestructionAsync(pool.RetiredInstances);
+            }
         }
 
         private static Transform GetPoolRoot()

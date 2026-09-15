@@ -141,7 +141,7 @@ namespace ZZZ.Editor.AnimationTool
             {
                 foreach (CompositeEffectEntry entry in notify.Effect.Entries)
                 {
-                    if (entry == null || entry.Prefab == null) continue;
+                    if (entry == null || EffectEditorShared.GetPrefab(entry) == null) continue;
                     SpawnFxAtom(_notifyClipIdx, notify, entry);
                 }
                 return;
@@ -163,7 +163,7 @@ namespace ZZZ.Editor.AnimationTool
                         || effectNotify.Effect == null) continue;
                     foreach (CompositeEffectEntry entry in effectNotify.Effect.Entries)
                     {
-                        if (entry == null || entry.Prefab == null
+                        if (entry == null || EffectEditorShared.GetPrefab(entry) == null
                             || !string.Equals(
                                 entry.EffectOriginKey?.Trim(), effectOriginKey,
                                 System.StringComparison.Ordinal)) continue;
@@ -183,7 +183,7 @@ namespace ZZZ.Editor.AnimationTool
                 ? _target.transform
                 : entry.FollowSpawner ? socket : null;
 
-            var go = Instantiate(entry.Prefab, parent);
+            var go = Instantiate(EffectEditorShared.GetPrefab(entry), parent);
             go.hideFlags = HideFlags.DontSave;
 
             var top = new List<ParticleSystem>();
@@ -407,8 +407,8 @@ namespace ZZZ.Editor.AnimationTool
             for (int i = 0; i < entries.arraySize; i++)
             {
                 var e = entries.GetArrayElementAtIndex(i);
-                var prefabProp = e.FindPropertyRelative("Prefab");
-                var prefab = prefabProp.objectReferenceValue as GameObject;
+                var prefabProp = e.FindPropertyRelative("_prefabReference");
+                var prefab = EffectEditorShared.GetPrefab(e);
                 string title = prefab != null ? prefab.name : "(프리팹 미지정)";
                 float delay = e.FindPropertyRelative("StartDelay").floatValue;
 
@@ -466,7 +466,7 @@ namespace ZZZ.Editor.AnimationTool
                 int n = entries.arraySize;
                 entries.InsertArrayElementAtIndex(n);
                 var e = entries.GetArrayElementAtIndex(n);
-                e.FindPropertyRelative("Prefab").objectReferenceValue = null;
+                EffectEditorShared.ClearPrefab(e);
                 e.FindPropertyRelative("EffectOriginKey").stringValue = "";
                 e.FindPropertyRelative("StartDelay").floatValue = 0f;
                 e.FindPropertyRelative("Duration").floatValue = 0f;

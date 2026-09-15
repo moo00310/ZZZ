@@ -13,7 +13,14 @@ MonoBehaviour:
   m_Name: Cmp_ExA1_02
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Effects.CompositeEffect
   Entries:
-  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: b2c151f2210a98344a870cf3dba70e7b
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0.0525
     MaterialOverride: {fileID: 0}
     Duration: 0
@@ -43,7 +50,14 @@ MonoBehaviour:
         m_RotationOrder: 0
       OverrideStartColor: 0
       StartColor: {r: 0, g: 0, b: 0, a: 0}
-  - Prefab: {fileID: 8332751439672670870, guid: b2c151f2210a98344a870cf3dba70e7b, type: 3}
+  - _legacyPrefab: {fileID: 0}
+    _prefabReference:
+      m_AssetGUID: b2c151f2210a98344a870cf3dba70e7b
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+    EffectOriginKey: 
     StartDelay: 0
     MaterialOverride: {fileID: 0}
     Duration: 0

@@ -14,9 +14,11 @@
 | 04.Scripts/Combat | `ZZZ.Combat` |
 | 04.Scripts/Audio | `ZZZ.Audio` |
 | 04.Scripts/Monster | `ZZZ.Monster` |
+| 04.Scripts/ResourceManagement | `ZZZ.ResourceManagement` |
 | 05.Editor/Editor/AnimationTool | `ZZZ.Editor.AnimationTool` |
 | 05.Editor/Editor/Audio | `ZZZ.Editor.Audio` |
 | 05.Editor/Editor/Profiling | `ZZZ.Editor.Profiling` |
+| 05.Editor/Editor/Addressables | `ZZZ.Editor.Addressables` |
 
 > `Core/`의 공유 타입(`AnimationConfig` / `CharacterActionDriving` / `LinkCondition`)과 `Movement/`는 폴더와 무관하게 루트 `ZZZ`를 쓴다. Agent와 Monster가 공유하는 타입이기 때문이다.
 > 사용자 입력과 스쿼드 전환은 `ZZZ.Player`, 조작 캐릭터 구현은 `ZZZ.Agent`, 몬스터 구현은 `ZZZ.Monster`로 구분한다.

@@ -1,0 +1,6 @@
+{
+    "name": "ZZZ.ResourceManagement",
+    "rootNamespace": "ZZZ.ResourceManagement",
+    "references": ["Unity.Addressables", "Unity.ResourceManager"],
+    "autoReferenced": true
+}

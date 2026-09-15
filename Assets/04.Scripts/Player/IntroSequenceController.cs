@@ -87,14 +87,14 @@ namespace ZZZ.Player
         {
             yield return null;
 
-            float initializationElapsed = 0f;
             while (_squadController != null
                 && _squadController.ActiveAgent == null
-                && initializationElapsed < _introTimeout)
+                && _squadController.IsLoading)
             {
-                initializationElapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
+
+            if (_squadController != null && _squadController.IsShuttingDown) yield break;
 
             if (_squadController == null
                 || _squadController.ActiveAgent == null)
@@ -111,6 +111,9 @@ namespace ZZZ.Player
 
             if (_blackHoldDuration > 0f)
                 yield return new WaitForSecondsRealtime(_blackHoldDuration);
+
+            if (actionController == null || _squadController == null
+                || _squadController.IsShuttingDown) yield break;
 
             if (!actionController.TryPlayIntro(_introBlendDuration))
             {

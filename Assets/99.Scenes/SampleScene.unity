@@ -3500,10 +3500,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf5e652cea36426f86844ae3102439a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZZZ.Player.SquadController
-  _agentPrefabs:
-  - {fileID: 3724266460484320341, guid: 6bd74e68a084be14ca8b756e96fb5838, type: 3}
+  _agentPrefabs: []
+  _agentReferences:
+  - m_AssetGUID: 6bd74e68a084be14ca8b756e96fb5838
+    m_SubObjectName: 
+    m_SubObjectType: 
+    m_SubObjectGUID: 
+    m_EditorAssetChanged: 0
   _initialIndex: 0
   _agentParent: {fileID: 0}
+  _loadTimeout: 30
   _cameraController: {fileID: 330585548}
 --- !u!114 &7000000000000000005
 MonoBehaviour:

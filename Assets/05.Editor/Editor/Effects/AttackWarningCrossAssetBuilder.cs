@@ -214,6 +214,8 @@ namespace ZZZ.Editor.Effects
                     Lifetime = AttackWarningCrossEffect.DEFAULT_DURATION,
                 },
             };
+            composite.Entries[0].SetPrefabReference(new UnityEngine.AddressableAssets.AssetReferenceGameObject(
+                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(prefab))));
             AssetDatabase.CreateAsset(composite, COMPOSITE_PATH);
             return composite;
         }

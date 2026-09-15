@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: VFX - Shared
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: VFX - Shared
+  m_GUID: 7b17a5f4cf42dce4ab97eea777a92e50
+  m_SerializeEntries:
+  - m_GUID: 31338900c374ca24ab5908b07f8bad30
+    m_Address: vfx/shared/melee-string
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 49f79e315fbfbc543a2b18cded756146
+    m_Address: vfx/shared/light-bloom
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a3428f0e490f425419bfcb9640a53175
+    m_Address: vfx/shared/attack-warning-cross
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2c151f2210a98344a870cf3dba70e7b
+    m_Address: vfx/shared/particle-sprite
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d999b6831c1cf3d46a3674a042e57af3
+    m_Address: vfx/shared/flare
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e1b08032bec16ba4eb1ae23cbd572664
+    m_Address: vfx/shared/big-explosion
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fa35d75604d172d48b7a6b62a07c7dbf
+    m_Address: vfx/shared/particles-light
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - shared
+    - vfx
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: f6f4eb0585cee574bb1b280fafb8c8ec, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 413e928d382e7244cba0eb0c58168030, type: 2}
+    - {fileID: 11400000, guid: 0853bc886e0e6904db659ded70c90ab1, type: 2}

@@ -132,7 +132,7 @@ namespace ZZZ.Editor.EffectTool
             if (_selectedComposite != null)
                 foreach (var e in _selectedComposite.Entries)
                 {
-                    if (e == null || e.Prefab == null) continue;
+                    if (e == null || EffectEditorShared.GetPrefab(e) == null) continue;
                     SpawnPreviewInstance(e);
                 }
 
@@ -142,7 +142,7 @@ namespace ZZZ.Editor.EffectTool
 
         private void SpawnPreviewInstance(CompositeEffectEntry entry)
         {
-            var go = Instantiate(entry.Prefab, _previewRoot.transform);
+            var go = Instantiate(EffectEditorShared.GetPrefab(entry), _previewRoot.transform);
             if (go == null) return;
             go.hideFlags = HideFlags.DontSave;
 

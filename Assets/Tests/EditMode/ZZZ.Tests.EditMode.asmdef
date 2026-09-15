@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "ZZZ.Movement"
+        "ZZZ.Movement",
+        "ZZZ.ResourceManagement"
     ],
     "includePlatforms": [
         "Editor"

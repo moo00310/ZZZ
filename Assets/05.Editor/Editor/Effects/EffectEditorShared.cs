@@ -18,6 +18,34 @@ namespace ZZZ.Editor.Effects
         };
 
         // ── 길이(초) 근사 ──
+        public static GameObject GetPrefab(CompositeEffectEntry entry)
+        {
+            if (entry == null) return null;
+            if (entry.PrefabReference != null && entry.PrefabReference.RuntimeKeyIsValid())
+                return AssetDatabase.LoadAssetAtPath<GameObject>(
+                    AssetDatabase.GUIDToAssetPath(entry.PrefabReference.AssetGUID));
+            return entry.LegacyPrefab;
+        }
+
+        public static GameObject GetPrefab(SerializedProperty entry)
+        {
+            string guid = entry.FindPropertyRelative("_prefabReference")
+                .FindPropertyRelative("m_AssetGUID").stringValue;
+            if (!string.IsNullOrEmpty(guid))
+                return AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+            return entry.FindPropertyRelative("_legacyPrefab").objectReferenceValue as GameObject;
+        }
+
+        public static void ClearPrefab(SerializedProperty entry)
+        {
+            SerializedProperty reference = entry.FindPropertyRelative("_prefabReference");
+            reference.FindPropertyRelative("m_AssetGUID").stringValue = "";
+            reference.FindPropertyRelative("m_SubObjectName").stringValue = "";
+            reference.FindPropertyRelative("m_SubObjectType").stringValue = "";
+            reference.FindPropertyRelative("m_SubObjectGUID").stringValue = "";
+            entry.FindPropertyRelative("_legacyPrefab").objectReferenceValue = null;
+        }
+
         public static float PrefabDuration(GameObject prefab)
         {
             if (prefab == null) return 0f;
@@ -35,7 +63,7 @@ namespace ZZZ.Editor.Effects
         // (Duration 컷 후 잔여 파티클 소멸 꼬리는 무시한다 — 타임라인 표시/프리뷰용)
         public static float EntryDuration(CompositeEffectEntry e)
         {
-            if (e == null || e.Prefab == null) return 0f;
+            if (e == null || GetPrefab(e) == null) return 0f;
             float speed   = EffectModuleSettings.PlaybackSpeed(e);
             float natural = PrefabNaturalDuration(e) / speed;
             float duration = EffectModuleSettings.Duration(e);
@@ -47,9 +75,9 @@ namespace ZZZ.Editor.Effects
         private static float PrefabNaturalDuration(CompositeEffectEntry e)
         {
             float startLifetime = EffectModuleSettings.StartLifetime(e);
-            if (startLifetime <= 0f) return PrefabDuration(e.Prefab);
+            if (startLifetime <= 0f) return PrefabDuration(GetPrefab(e));
             float baseDur = 0f;
-            var ps = e.Prefab.GetComponentInChildren<ParticleSystem>(true);
+            var ps = GetPrefab(e).GetComponentInChildren<ParticleSystem>(true);
             if (ps != null) baseDur = ps.main.duration;
             return baseDur + startLifetime;
         }
@@ -60,7 +88,7 @@ namespace ZZZ.Editor.Effects
             float max = 0f;
             foreach (var e in c.Entries)
             {
-                if (e == null || e.Prefab == null) continue;
+                if (e == null || GetPrefab(e) == null) continue;
                 float end = e.StartDelay + EntryDuration(e);
                 if (end > max) max = end;
             }
@@ -228,6 +256,8 @@ namespace ZZZ.Editor.Effects
             // 구조 필드 — 변경 시 재생성
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(prefabProp, new GUIContent("Prefab"));
+            if (!string.IsNullOrEmpty(prefabProp.FindPropertyRelative("m_AssetGUID").stringValue))
+                e.FindPropertyRelative("_legacyPrefab").objectReferenceValue = null;
             SerializedProperty effectOriginKey =
                 e.FindPropertyRelative("EffectOriginKey");
             EditorGUILayout.PropertyField(effectOriginKey,
@@ -490,10 +520,10 @@ namespace ZZZ.Editor.Effects
                 var e = c.Entries[i];
                 if (i % 2 == 1) EditorGUI.DrawRect(new Rect(area.x, y, area.width, rowH), new Color(1f, 1f, 1f, 0.02f));
 
-                string label = e != null && e.Prefab != null ? e.Prefab.name : "(none)";
+                string label = e != null && GetPrefab(e) != null ? GetPrefab(e).name : "(none)";
                 GUI.Label(new Rect(area.x + 4f, y + 2f, labelW - 6f, rowH - 2f), label, EditorStyles.miniLabel);
 
-                if (e != null && e.Prefab != null)
+                if (e != null && GetPrefab(e) != null)
                 {
                     float dur  = Mathf.Max(EntryDuration(e), 0.05f);
                     float barX = timeX + e.StartDelay * pxPerSec;
@@ -565,7 +595,7 @@ namespace ZZZ.Editor.Effects
                         float d = (e.mousePosition.x - barX) / pxPerSec;
                         if (e.control || e.command) d = Mathf.Round(d * 20f) / 20f;   // 0.05s 스냅
                         float speed   = EffectModuleSettings.PlaybackSpeed(entry);
-                        float natural = PrefabDuration(entry.Prefab) / speed;
+                        float natural = PrefabDuration(GetPrefab(entry)) / speed;
                         Undo.RecordObject(c, "Edit Effect Duration");
                         float duration = d >= natural - 0.01f ? 0f : Mathf.Max(0.05f, d);
                         ParticlePlaybackEffectModule playback = EffectModuleSettings.Playback(entry);
