@@ -5,28 +5,32 @@ using ZZZ.Effects;
 
 namespace ZZZ
 {
+    // 캐릭터 동작 하나(회피, 일반 공격 콤보 등)를 이루는 섹션과 전이 규칙.
+    // CharacterActionRunner가 이 데이터를 해석하고, Animator는 클립 재생만 맡는다.
     [CreateAssetMenu(menuName = "ZZZ/Animation Config", fileName = "AnimationConfig")]
     public class AnimationConfig : ScriptableObject
     {
         public string TrackName = "New Track";
 
-        [Header("Playback")]
-        public bool LoopTrack = false;        // 트랙 끝까지 재생 후 처음으로 되돌려 무한 반복
+        // 편집 툴의 콤보 미리보기 전용 설정이다. 런타임 재생에는 영향이 없다.
+        [Header("Editor Preview")]
+        public bool LoopTrack = false;
 
+        // OnEnd·OnEndIfMatched 링크가 '클립 끝'으로 보는 진행도. 0이면 클립의 마지막 프레임 시점을 쓴다.
         [Header("Combo Timing")]
-        public float DoneThreshold  = 0f;     // OnEnd 발동 normalizedTime. 0 = 자동(클립 마지막 프레임 = 1 - 1/frames)
+        public float DoneThreshold = 0f;
 
+        // 이 config로 진입할 때 재생할 섹션. 비어 있으면 첫 섹션부터 재생한다.
         [Header("Entry")]
-        public string EntrySection = "";      // 트랙 시작 시 재생할 섹션 (빈 값 = 첫 클립)
+        public string EntrySection = "";
 
         public List<TrackClip> Clips = new List<TrackClip>();
 
-        [Header("Global Links — 모든 클립에 적용 (Any State 전이)")]
-        // 여기에 둔 링크는 어떤 섹션이 재생 중이든 매 프레임 평가된다.
-        // 예: Idle config 어디서든 이동 입력 시 Walk로. 클립마다 같은 링크를 달 필요 없음.
+        // 재생 중인 섹션과 관계없이 매 프레임 평가하는 링크(Animator의 Any State 전이에 해당).
+        // 모든 섹션에 같은 링크를 반복해 달지 않으려고 둔다. 예: 대기 중 어디서든 이동 입력이 오면 걷기로.
+        [Header("Global Links")]
         public List<ClipLink> GlobalLinks = new List<ClipLink>();
 
-        // 섹션 이름으로 클립 인덱스 검색 (-1 = 없음)
         public int IndexOfSection(string section)
         {
             if (string.IsNullOrEmpty(section)) return -1;
@@ -36,115 +40,120 @@ namespace ZZZ
         }
     }
 
+    // 섹션 하나는 클립 하나와, 그 클립에 붙은 링크·Notify·모듈로 이루어진다.
     [Serializable]
     public class TrackClip
     {
-        public string        SectionName = "";   // 섹션 식별자 (Montage 스타일)
+        public string        SectionName = "";
         public AnimationClip Clip;
 
         [Header("Playback")]
         public float Speed = 1f;
 
         [Header("Movement")]
-        public MoveMode MoveMode     = MoveMode.None;  // 이 클립 동안 캐릭터 이동 방식
+        public MoveMode MoveMode = MoveMode.None;
 
-        [Header("Links")]   // 이 섹션에서 분기 가능한 다음 섹션들
+        // GlobalLinks보다 먼저, 위에서부터 평가해 처음 발동한 링크 하나만 탄다. 순서가 곧 우선순위다.
+        [Header("Links")]
         public List<ClipLink> Links = new List<ClipLink>();
 
         public List<TrackNotify> Notifies = new List<TrackNotify>();
 
-        [Header("Modules — 섹션 기능 (i-frame 등). 있는 것만 실행 (폴리모픽)")]
+        // 무적·패링·타깃 워프 같은 구간 기능. 실행기는 구체 타입을 모른 채 호출한다.
+        [Header("Modules")]
         [SerializeReference] public List<SectionModule> Modules = new List<SectionModule>();
 
         public bool UseRootMotion => MoveMode == MoveMode.RootMotion;
 
-        // 루프 여부는 클립 임포트 설정(Loop Time)에서 가져온다 — config가 따로 관리하지 않음(표시용)
+        // 루프 여부는 config에 따로 두지 않고 클립 임포트 설정(Loop Time)을 따른다.
         public bool IsLooping => Clip != null && Clip.isLooping;
     }
 
-    // 클립 재생 중 캐릭터 이동 방식.
-    // None = Animator 루트 델타를 버림(중력만 적용). RootMotion = Animator.deltaPosition/deltaRotation을 적용.
-    // 값 1은 과거 Planar(코드 이동) 자리 — 폐기했지만 RootMotion=2 직렬화 호환 위해 비워 둔다.
+    // 섹션 재생 중 캐릭터 이동 방식.
+    // 값 1은 비워 둔다. 기존 에셋에 RootMotion이 정수 2로 저장돼 있어서, 번호를 당기면 값이 달라진다.
     public enum MoveMode
     {
-        None       = 0,   // 제자리 (이동 없음, 중력만)
-        RootMotion = 2    // Animator 루트 모션 적용 — 걷기/달리기/공격/대시
+        None       = 0,   // Animator 루트 델타를 버리고 제자리에 둔다 (중력만 적용)
+        RootMotion = 2    // Animator 루트 모션을 그대로 적용한다
     }
 
-    // 섹션 간 전이 정의.
-    // 조건(Condition, 폴리모픽)이 타이밍(Timing) 규칙에 맞게 충족되면 전이한다.
-    //   조건 = LinkCondition (InputCondition=공격+방향 / AlwaysCondition / 몬스터 거리·체력 등)
-    //   타이밍 = 언제 그 조건을 평가/발동할지 (즉시 / 윈도우 통과 시 / 클립 끝 / 릴리스)
+    // 섹션 간 전이. '언제 볼지'(Timing, Window)와 '무엇을 볼지'(Condition)를 나눠 둔다.
+    // 덕분에 플레이어 입력 조건과 몬스터 AI 조건이 같은 타이밍 규칙을 그대로 쓴다.
     [Serializable]
     public class ClipLink
     {
-        // 전이 대상. TargetConfig가 비어있으면 현재 config 내 전이,
-        // 지정되면 그 config로 갈아끼우고 TargetSection(비면 EntrySection)으로 진입.
-        public AnimationConfig TargetConfig;        // null = 현재 config
-        public string          TargetSection = "";  // 빈 값 = (현재)복귀 / (타겟)EntrySection
-        public float           BlendDuration = 0.01f;  // 이 전이가 발동할 때 CrossFade 시간(초)
-        // 이 전이로 진입 시 대상 섹션을 이 normalizedTime 지점부터 재생 (0 = 처음부터). 윈드업 스킵 등.
-        // 이 지점 이전의 Notify는 발동하지 않는다. ※ E 트리거(InterruptWith) 진입엔 적용 안 됨 — 링크 전이 전용.
+        // TargetConfig가 비어 있으면 현재 config 안의 TargetSection으로 간다. 그 섹션이 없으면 캐릭터의 기본 config로 돌아간다.
+        // TargetConfig를 지정하면 그 config로 바꾸고 TargetSection(비어 있으면 그 config의 EntrySection)으로 진입한다.
+        public AnimationConfig TargetConfig;
+        public string          TargetSection = "";
+        public float           BlendDuration = 0.01f;   // CrossFade 시간(초)
+
+        // 대상 섹션을 이 진행도부터 재생한다(윈드업 생략 등). 이 지점 이전의 Notify는 발동하지 않는다.
+        // 링크 전이에만 적용되고, 회피·피격 트리거가 InterruptWith로 끼어드는 진입에는 적용되지 않는다.
         [Range(0f, 1f)] public float EntryOffset = 0f;
 
-        [Header("Condition — 전이 조건 (다형성)")]
-        // 무엇이 충족인지를 정의 — 플레이어 입력(InputCondition) / 무조건(AlwaysCondition) / (몬스터)거리·체력 등.
-        // null이면 CharacterActionRunner가 항상 true(Always)로 취급한다. [SerializeReference] 다형성 .
+        // 비어 있으면 항상 충족으로 취급한다.
+        [Header("Condition")]
         [SerializeReference] public LinkCondition Condition;
 
-        [Header("Timing — 언제 평가할지")]
+        // Window는 조건을 보는 구간이다. OnEnd는 Window를 쓰지 않는다.
+        [Header("Timing")]
         public LinkTiming Timing = LinkTiming.WhenMatched;
-        [Range(0f, 1f)] public float WindowStart = 0f;   // 평가 구간 시작 (normalizedTime)
-        [Range(0f, 1f)] public float WindowEnd   = 1f;   // 평가 구간 끝
+        [Range(0f, 1f)] public float WindowStart = 0f;
+        [Range(0f, 1f)] public float WindowEnd   = 1f;
     }
 
-    // 전이 조건을 언제 평가/발동할지
     public enum LinkTiming
     {
-        WhenMatched,    // 윈도우 구간 안에서 조건이 충족되는 즉시 (콤보 입력 / 방향 이동 / 복귀)
-        OnRelease,      // 이 링크의 Attack 키를 손에서 뗀 순간 발동 (홀드 차지 → 릴리스).
-                        //   [WindowStart,End] 안에서 떼야 함. press 버퍼가 아니라 릴리스 신호를 보므로
-                        //   CharacterActionRunner에서 ConditionMatches 게이트를 우회해 따로 처리한다.
-        OnEnd,          // 클립이 끝나면 (조건은 가드로 작동). 루프 클립엔 무효
-        OnEndIfMatched  // 윈도우 안에서 조건이 '한 번이라도' 충족되면 래치 → 섹션 끝에 발동.
-                        //   WhenMatched=즉시 캔슬, 이건 "섹션 끝까지 재생 후 입력 여부로 분기"(카운터 예약 등).
-                        //   래치 안 되면 발동 안 함 → 뒤에 둔 OnEnd(Attack=None) 등으로 폴백.
+        // Window 안에서 조건이 충족되는 즉시 전이한다. 콤보 입력, 이동 캔슬 등.
+        WhenMatched,
+
+        // Window 안에서 조건의 '뗌' 신호가 오면 전이한다. 홀드 차지 후 발사용.
+        // 누르고 있는 동안에는 전이하면 안 되므로, 누름을 보는 Matches 대신 ReleaseTriggered로 판정한다.
+        OnRelease,
+
+        // 클립 끝에서 조건이 충족돼 있으면 전이한다. 루프 클립은 매 반복의 끝에서 판정한다.
+        OnEnd,
+
+        // Window 안에서 조건이 한 번이라도 충족되면 기억해 두었다가 클립 끝에서 전이한다.
+        // WhenMatched가 즉시 캔슬이라면, 이쪽은 끝까지 재생한 뒤 입력 여부로 분기한다(카운터 예약 등).
+        // 충족된 적이 없으면 발동하지 않으므로, 기본 전이는 뒤에 OnEnd 링크로 따로 둔다.
+        OnEndIfMatched
     }
 
-    // ※ Unity는 이 enum을 '정수'로 직렬화한다(.asset의 Attack: N은 이름이 아니라 인덱스).
-    //    순서를 바꾸면 정수가 바뀌므로 기존 config의 Attack 값을 함께 리맵해야 한다.
+    // Unity는 enum을 이름이 아니라 정수로 직렬화한다(.asset의 "Attack: 2").
+    // 순서를 바꾸면 기존 에셋의 값이 다른 입력을 가리키게 되므로, 새 값은 끝에 추가한다.
     public enum ComboInput
     {
-        None,     // 공격 입력 없음 (특수 토큰)
-        Any,      // 아무 공격 (특수 토큰)
-        Normal,   // 일반공격 — 좌클릭 탭
-        Strong,   // 강공격 — 좌클릭 홀드
-        Enhance,  // 강화공격 — E
-        Dodge,    // 회피 (push 트리거)
-        Parry     // 패링 (push 트리거)
+        None,     // 공격 입력을 요구하지 않음
+        Any,      // 어떤 공격 입력이든
+        Normal,   // 일반 공격 (좌클릭 탭)
+        Strong,   // 강공격 (좌클릭 홀드)
+        Enhance,  // 강화 공격 (E)
+        Dodge,    // 회피
+        Parry     // 패링
     }
 
-    // 적 공격의 강도 — 일반 피격 반응과 패링 쳐냄(ParryAid_L/H)을 결정한다.
-    // 적 공격 시스템이 OpenIncomingAttack에 실어 보낸다 (예고 시점에 선언).
+    // 적 공격의 강도. 피격 반응과 패링 성공 시 반응(ParryAid_L/H)을 고르는 데 쓴다.
+    // 적이 공격을 예고할 때(OpenIncomingAttack) 함께 넘긴다.
     public enum AttackStrength
     {
-        Light,   // 약공 → ParryAid_L
-        Heavy    // 강공 → ParryAid_H
+        Light,
+        Heavy
     }
 
-    // 이동키 방향 조건
+    // 링크 조건에 쓰는 이동 입력 방향.
     public enum MoveDir
     {
-        Any,        // 이동 상관없음
-        Neutral,    // 이동 입력 없음 (정지)
-        Moving,     // 아무 방향이든 이동 중
-        Forward,    // W
-        Back,       // S
-        Left,       // A
-        Right,      // D
-        // 관계형 — 카메라 절대 방향이 아니라 "현재 진행(facing) 방향의 반대"로 입력.
-        // 절대 enum끼리 비교(MoveMatches)로는 못 잡아 CharacterActionRunner에서 dot으로 특수 처리한다.
-        // 런 루프 중 반대키 입력 → 180 턴 전이용.
+        Any,        // 이동 입력과 관계없음
+        Neutral,    // 이동 입력 없음
+        Moving,     // 방향과 관계없이 이동 중
+        Forward,
+        Back,
+        Left,
+        Right,
+        // 고정 방향이 아니라 '현재 바라보는 방향의 반대' 입력. 달리기 중 반대키로 180도 턴할 때 쓴다.
+        // 고정 방향끼리 비교해서는 판정할 수 없어 InputCondition에서 내적으로 따로 판정한다.
         Reverse
     }
 
@@ -152,19 +161,17 @@ namespace ZZZ
     public class TrackNotify
     {
         [Range(0f, 1f)]
-        public float      NormalizedTime;
+        public float NormalizedTime;
 
         [SerializeReference] private NotifyPayload _payload;
 
-        // 구간(Interval) 이펙트 — End > NormalizedTime이면 [NormalizedTime, End] 동안 '유지'되는 지속 연출.
-        // 시작 시점에 스폰해 계속 방출하다가 End에서(또는 섹션 이탈/캔슬 시) 방출을 멈춘다 —
-        // 트레일/오라/차지처럼 '한 시점'이 아니라 '구간'에 걸리는 이펙트용. End<=Time = 기존 단발(point).
-        // Effect 타입에만 의미. 프리팹은 루프 방출 + DespawnMode.ParticleStopped 권장(정지 후 자연 소멸).
+        // NormalizedTime보다 크면 구간 Notify가 된다. 이펙트는 이 구간 동안 방출을 유지하고(트레일, 오라, 차지 등),
+        // 타격은 이 구간 동안 판정을 유지한다. NormalizedTime 이하이면 그 시점에 한 번만 발동한다.
         [Range(0f, 1f)]
         public float EndNormalizedTime = 0f;
 
-        // 고정(Lock): 켜지면 타임라인에서 드래그로 시점이 밀리지 않는다 — 값이 확정된 Notify를
-        // 실수로 옮기는 사고 방지용. 선택/편집(인스펙터)·삭제는 그대로 가능, 이동만 막는다.
+        // 편집 툴에서 드래그로 시점이 밀리지 않게 고정한다. 값이 확정된 Notify를 실수로 옮기지 않기 위해서이며,
+        // 선택·편집·삭제는 그대로 할 수 있다.
         public bool Locked = false;
 
         public NotifyPayload Payload
