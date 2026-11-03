@@ -211,9 +211,9 @@ EffectTool과 AnimationConfigTool 프리뷰는 GUID를 AssetDatabase로 해석�
 
 공유 로드·개별 취소·전부 취소 후 늦은 완료·실패 재시도 테스트와 SampleScene 반복 진입·종료,
 로드 중 씬 이탈 및 대여 중인 풀 인스턴스 파괴 테스트로 수명주기를 검증한다.
-2026-09-15 Unity 컴파일 및 전체 EditMode 테스트 15개가 통과했다.
-이 결과는 Play Mode 직접 종료 회귀 테스트 추가 전의 실행 기록이다. 이후 추가한 직접 종료 테스트는
-열려 있는 Unity 프로젝트 때문에 별도 배치 실행이 시작되지 못했으며, 수정 코드의 컴파일만 확인했다.
+2026-09-16 Unity 컴파일과 EditMode 테스트 16개가 통과했다. 기존 테스트 15개를 전체 실행하고,
+Play Mode 직접 종료 회귀 테스트를 수정 후 별도로 실행했다. 직접 종료 로그에서 ResourceLifetime
+잔존 경고가 발생하지 않는 것도 확인했다.
 측정 Marker는 ZZZ.Resources.LoadRequest, LoadComplete, Release와 ZZZ.Effects.PoolPrepare, PoolRelease다.
 Marker는 호출과 처리 구간을 표시하며 비동기 대기 전체 시간은 요청·완료 시점 사이에서 측정한다.
 

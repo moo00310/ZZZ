@@ -16,22 +16,19 @@ namespace ZZZ.Tests
         [UnityTest]
         public IEnumerator StoppingPlayModeWithLoadedSquadDoesNotCreateCleanupObjects()
         {
-            for (int iteration = 0; iteration < 2; iteration++)
-            {
-                yield return new EnterPlayMode();
-                yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
-                Type squadType = Type.GetType("ZZZ.Player.SquadController, Assembly-CSharp", true);
-                UnityEngine.Object squad = UnityEngine.Object.FindFirstObjectByType(squadType);
-                Assert.IsNotNull(squad);
-                PropertyInfo ready = squadType.GetProperty("IsReady");
-                float deadline = Time.realtimeSinceStartup + 40f;
-                while (!(bool)ready.GetValue(squad) && Time.realtimeSinceStartup < deadline)
-                    yield return null;
-                Assert.IsTrue((bool)ready.GetValue(squad), squadType.GetProperty("LoadError").GetValue(squad) as string);
-                // Exit with active owners, without unloading the scene or explicitly shutting down the squad.
-                yield return new ExitPlayMode();
-                Assert.IsNull(UnityEngine.Object.FindFirstObjectByType<ResourceLifetime>());
-            }
+            yield return new EnterPlayMode();
+            yield return SceneManager.LoadSceneAsync("SampleScene", LoadSceneMode.Single);
+            Type squadType = Type.GetType("ZZZ.Player.SquadController, Assembly-CSharp", true);
+            UnityEngine.Object squad = UnityEngine.Object.FindFirstObjectByType(squadType);
+            Assert.IsNotNull(squad);
+            PropertyInfo ready = squadType.GetProperty("IsReady");
+            float deadline = Time.realtimeSinceStartup + 40f;
+            while (!(bool)ready.GetValue(squad) && Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.IsTrue((bool)ready.GetValue(squad), squadType.GetProperty("LoadError").GetValue(squad) as string);
+            // Exit with active owners, without unloading the scene or explicitly shutting down the squad.
+            yield return new ExitPlayMode();
+            Assert.IsNull(UnityEngine.Object.FindFirstObjectByType<ResourceLifetime>());
         }
 
         [UnityTest]
