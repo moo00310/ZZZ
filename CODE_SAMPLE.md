@@ -64,8 +64,8 @@
 
 ## 읽는 순서
 
-1. **데이터 모델** (①) — [AnimationConfig.cs L39-99](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/AnimationConfig.cs#L39-L99)
-   예시의 섹션이 `TrackClip`, 링크가 `ClipLink`입니다. 다형 필드인 `Modules`(L57)와 `Condition`(L93)을 보시면 됩니다.
+1. **데이터 모델** (①) — [AnimationConfig.cs L43-104](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/AnimationConfig.cs#L43-L104)
+   예시의 섹션이 `TrackClip`, 링크가 `ClipLink`입니다. 다형 필드인 `Modules`(L64)와 `Condition`(L97)을 보시면 됩니다.
 2. **프레임 루프** (①②) — [CharacterActionRunner.cs L85-155](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/CharacterAction/CharacterActionRunner.cs#L85-L155)
    매 프레임 Notify → Module → Link 순서로 평가합니다. 조건은 `Matches()` 호출 하나로만 다룹니다.
 3. **전이와 섹션 진입** (①) — [CharacterActionRunner.cs L208-263](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/CharacterAction/CharacterActionRunner.cs#L208-L263)
