@@ -12,7 +12,7 @@
 콤보 입력 구간, 캔슬, 무적 구간을 `AnimationConfig`(ScriptableObject)에 담습니다. `CharacterActionRunner`(실행기) 하나가 이 데이터를 해석하고, Animator는 클립 재생만 맡습니다.
 
 **② 플레이어와 몬스터가 같은 실행기를 씁니다**
-플레이어 입력 조건 [`InputCondition`](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/LinkCondition.cs#L53-L126)과 몬스터 AI 조건 [`AIDecisionCondition`](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Monster/MonsterConditionContext.cs#L76-L95)은 둘 다 `LinkCondition`을 구현합니다. 실행기는 어느 쪽인지 모르고 같은 방식으로 평가합니다.
+플레이어 입력 조건 [`InputCondition`](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Core/LinkCondition.cs#L53-L126)과 몬스터 AI 조건 [`AIDecisionCondition`](https://github.com/moo00310/ZZZ/blob/main/Assets/04.Scripts/Monster/MonsterConditionContext.cs#L76-L95)은 둘 다 `LinkCondition`을 구현합니다. 실행기는 어느 쪽인지 모르고 같은 방식으로 평가합니다. ([처음엔 플레이어 전용이었던 구조를 바꾼 과정](#몬스터를-붙이며-바꾼-구조))
 
 **③ 기능 추가는 클래스 하나로**
 무적, 패링, 타깃 워프, 회전 잠금 등 구간 기능 14종을 모두 `SectionModule` 상속으로 추가했습니다. `[SerializeReference]`로 저장되고 편집 툴에도 자동으로 등록되며, 실행기에는 타입별 분기가 없습니다.
@@ -35,7 +35,32 @@
 
 ## 왜 데이터로 만들었나
 
-이런 조건을 Animator 전이나 캐릭터 스크립트에 나눠 두면, 회피 무적 시간 하나를 바꾸는 데도 Animator Controller, 스크립트의 타이머, 애니메이션 이벤트를 모두 열어 봐야 합니다. 몬스터에게 같은 동작 규칙이 필요하면 그 로직을 한 번 더 작성해야 합니다. 지금은 위 표의 숫자만 고치면 됩니다.
+이전 팀 프로젝트(조선 관문 일지)에서는 동작 하나를 고칠 때마다 Animator 전이, 코드, 툴을 오가며 디버깅해야 했습니다. 그래서 이번에는 Unreal의 Anim Montage처럼 클립을 구간으로 나누고 전이 규칙을 데이터에 두는 구조를 Unity에 맞게 다시 설계했습니다.
+
+- Animator는 재생·블렌딩·루트 모션만 맡고, 전이 판단은 C# 실행기가 합니다. 전투 규칙이 한 곳에 모입니다.
+- 구간은 비율(0~1)로 저장해서, 클립 길이가 바뀌어도 타이밍이 유지됩니다.
+
+## 몬스터를 붙이며 바꾼 구조
+
+처음 만든 실행기(당시 `ConfigState`)는 플레이어 전용이었습니다. `PlayerController`, `PlayerStateMachine` 같은 플레이어 타입을 직접 참조했고, 링크 조건도 `ClipLink`의 공격·방향 입력 필드로 고정돼 있었습니다. 입력이 없는 몬스터는 이 실행기로 전이 조건을 표현할 수 없었습니다.
+
+그래서 몬스터를 붙이기 전에 두 가지를 바꿨습니다([PR #5](https://github.com/moo00310/ZZZ/pull/5)).
+
+```diff
+  // 1. 플레이어 타입 대신 인터페이스(이동·Animator·컨텍스트·상태 신호)에 의존
+- public ConfigState(PlayerStateContext ctx, PlayerStateMachine machine, AnimationConfig homeConfig)
++ public ConfigState(IConfigContext ctx, IConfigSignals signals,
++     ILinkConditionContext condCtx, AnimationConfig homeConfig)
+
+  // 2. 입력 필드 고정 조건을 다형 조건(LinkCondition)으로 교체
+- if (!ConditionMatches(link, moveDir)) continue;
++ if (!Cond(link).Matches(_condCtx)) continue;
+
+- if (link.Attack != ComboInput.None) Machine.ConsumeInput();
++ Cond(link).Consume(_condCtx);
+```
+
+이미 만들어 둔 에셋이 깨지지 않도록, 조건이 비어 있는 링크는 기존 입력 필드로 `InputCondition`을 즉석에서 만들어 쓰게 했습니다. 그 뒤 에디터 메뉴로 에셋을 일괄 변환하고, 레거시 필드는 [PR #8](https://github.com/moo00310/ZZZ/pull/8)에서 제거했습니다. 바로 다음에 몬스터를 붙인 [커밋](https://github.com/moo00310/ZZZ/commit/b91438d)에서는 몬스터 쪽 클래스만 추가했고, 실행기 파일은 한 줄도 바뀌지 않았습니다.
 
 ## 읽는 순서
 
